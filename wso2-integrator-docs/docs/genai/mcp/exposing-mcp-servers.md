@@ -8,16 +8,31 @@ description: "Turn your existing services and automations into MCP-compatible se
 
 You can take any service or automation built in WSO2 Integrator and expose it as an MCP server. Once exposed, any MCP-compatible client — Claude, ChatGPT, custom agents, or other AI applications — can discover your tools and invoke them. This guide walks you through the full process.
 
+:::note What is an MCP Service?
+An MCP service acts as a bridge between AI assistants and external systems. It exposes a set of tools — functions that AI assistants can call to perform specific tasks like fetching data, executing operations, or interacting with APIs. The AI assistant discovers available tools through the MCP protocol and invokes them as needed during conversations.
+:::
+
 ## Step 1: Create the Project
 
-1. Open VS Code and launch the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
-2. Select **WSO2 Integrator: Create New Project**.
-3. Name the project `mcp_weather_service`.
-4. Choose **Service** as the project type.
+1. Click on the **BI** icon in the sidebar.
+2. Click on the **Create New Integration** button.
+3. Enter the project name as `mcp_weather_service`.
+4. Select a directory location by clicking on the **Select Path** button.
+5. Click **Create New Integration** to generate the project.
+
+![Create a new integration project](/img/genai/mcp/create-a-new-integration-project.gif)
 
 ## Step 2: Create the MCP Service
 
-Define an MCP service with the `@mcp:ServiceConfig` annotation. This provides metadata that MCP clients use during discovery.
+1. In the design screen, click on **+ Add Artifact**.
+2. Select **MCP Service** under the **AI Integration** artifact category.
+3. Enter the service name as `Weather MCP`.
+4. Leave the other fields at their default values.
+5. Click **Create** to open the MCP service editor.
+
+![Create an MCP service](/img/genai/mcp/create-an-mcp-service.gif)
+
+In pro-code, this is represented with the `@mcp:ServiceConfig` annotation, which provides metadata that MCP clients use during discovery.
 
 ```ballerina
 import ballerinax/ai.mcp;
@@ -35,6 +50,29 @@ service on new mcp:Listener(3000) {
 ```
 
 ## Step 3: Define Tools
+
+Tools are the core building blocks of an MCP service. Each tool represents a specific capability that AI assistants can invoke.
+
+### Using the visual designer
+
+1. Under the **Tools** section of the MCP service, click on **+ Add Tool**.
+2. Configure the tool with the following details:
+   - **Tool Name**: `getCurrentWeather`
+   - **Description**: `Retrieve current weather data for a specified location.`
+3. Under **Input Parameters**, add a parameter:
+   - **Name**: `location`
+   - **Type**: `string`
+   - **Description**: `The location for which to retrieve the current weather.`
+4. Set the **Return Type** to `string`.
+5. Click **Save** to add the tool.
+
+![Define tools for the MCP service](/img/genai/mcp/define-a-tool.gif)
+
+:::tip
+Tool descriptions are critical — they help AI assistants understand when and how to use each tool. Write clear, concise descriptions that explain what the tool does and what input it expects.
+:::
+
+### In pro-code
 
 Each tool is a resource function annotated with `@mcp:Tool`. The annotation includes the tool name, description, and parameter definitions that the LLM reads to understand how to call the tool.
 
@@ -95,6 +133,34 @@ Write tool descriptions as if you are explaining the function to a colleague who
 :::
 
 ## Step 4: Implement Tool Logic
+
+Now you'll implement the logic that executes when the tool is invoked. In the visual designer:
+
+1. Click on the **getCurrentWeather** tool to open its implementation flow diagram.
+2. Hover over the flow line and click the **+** icon to open the side panel.
+3. Select **If** from the **Control** section.
+4. In the condition field, enter: `location == "New York"`
+5. Click **Add Else Block** to handle other locations.
+6. Click **Save** to add the conditional block.
+7. In the **If** block, add a **Return** node with value `"Sunny, 72°F"`.
+8. In the **Else** block, add a **Return** node with value `"Weather data not available for this location."`.
+
+![Implement tool logic](/img/genai/mcp/implement-tool-logic.gif)
+
+:::note
+This example uses simple conditional logic for demonstration purposes. In a real-world scenario, you would integrate with actual weather APIs using [HTTP connectors](/docs/connectors) or other data sources available in WSO2 Integrator.
+:::
+
+### Adding more tools
+
+You can extend your MCP service with additional tools to provide more capabilities:
+
+1. Click on `mcp:Service` in the left panel to return to the MCP service overview.
+2. Click on **+ Tool** and repeat the process from Step 3 to define and implement more tools.
+
+![Add more tools](/img/genai/mcp/add-more-tools.gif)
+
+### Pro-code implementation
 
 Behind each tool, implement the actual business logic. This is standard Ballerina code — you can call connectors, query databases, or invoke other services.
 
@@ -167,21 +233,31 @@ SSE transport is recommended for production. It supports authentication, works b
 
 ## Step 6: Test with MCP Inspector
 
-MCP Inspector is a debugging tool that lets you interact with your MCP server directly:
+Once you have defined and implemented your tools, you can test the MCP service to ensure it works correctly.
 
-1. Start your MCP server:
-   ```bash
-   bal run
-   ```
+### Using the built-in Try It feature
 
-2. Open MCP Inspector and connect to `http://localhost:3000/mcp`.
+1. In the left panel, click on `mcp:Service` to return to the MCP service overview.
+2. Click on the **Try It** button in the top-right corner.
+3. When prompted, install the **MCP Inspector** extension by clicking **Install**.
+4. Once the installation is complete, click **Try It** again to open the MCP Inspector.
+5. In the MCP Inspector:
+   - Click **Connect** to establish a connection with your MCP service.
+   - Click **List Tools** to view all tools exposed by the service.
 
-3. You should see your tools listed with their descriptions and parameter schemas.
+:::info Connecting AI Assistants
+Once your MCP service is running, AI assistants can connect to it using the MCP protocol. The service URL and available tools will be discoverable through the standard MCP handshake process.
+:::
 
-4. Test each tool by providing sample parameters and verifying the response.
+### Testing with curl
+
+You can also test directly with curl:
 
 ```bash
-# Alternatively, test with curl
+# Start the MCP server
+bal run
+
+# Test a tool
 curl -X POST http://localhost:3000/mcp/tools/getCurrentWeather \
   -H "Content-Type: application/json" \
   -d '{"location": "London", "units": "celsius"}'

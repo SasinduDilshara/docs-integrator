@@ -1,39 +1,128 @@
 ---
 sidebar_position: 4
 title: "Responsible AI Practices"
-description: "Implement transparency, bias mitigation, human-in-the-loop patterns, and audit trails for AI-powered integrations."
+description: "Understand how WSO2 Integrator handles AI data privacy, authentication, BYOK options, and responsible usage guidelines."
 ---
 
 # Responsible AI Practices
 
-Deploying AI in production integrations comes with responsibilities beyond technical correctness. You need transparency about when and how AI is used, safeguards against bias, human oversight for high-stakes decisions, and audit trails for accountability. WSO2 Integrator's architecture supports these patterns natively, and this guide shows you how to implement them.
+WSO2 Integrator includes an AI-powered Copilot that assists you while building integrations. This page explains exactly how your data is handled, what security measures are in place, and what practices you should follow to use AI features responsibly. Transparency is a core principle -- you should always know where your data goes and how long it stays there.
 
-## Data Privacy and Zero Retention
+## Macro architecture
 
-The WSO2 Intelligence Endpoint operates as an intermediary between your integrations and LLM providers with a strict zero-retention policy. No prompts, responses, or user data are stored by the intermediary layer.
+The AI Copilot consists of several layers, each with a clear boundary:
 
-:::info
-When using the WSO2 Intelligence Endpoint, all requests are authenticated through Asgardeo. This provides identity-based access control and ensures that only authorized integrations can invoke LLM services.
+1. **AI Copilot Code** -- a VS Code extension running on your local machine that provides in-editor assistance such as code completion, explanations, and suggestions.
+2. **Language Server** -- powers intelligent features inside the IDE, including syntax awareness and integration with Copilot services. Processes requests locally and forwards AI-related calls.
+3. **BI Intelligence Endpoint** -- a lightweight intermediary service that routes requests to the LLM provider. This layer performs **no data retention**.
+4. **LLM Provider** -- Anthropic (directly) or Amazon Bedrock, depending on your configuration.
+
+<!-- TODO: Add diagram showing AI macro architecture -->
+
+:::note
+The BI Intelligence Endpoint is intentionally lightweight. It authenticates the request, forwards it to the configured LLM provider, and returns the response. No prompts, code snippets, or responses are stored at this layer.
 :::
 
-### Bring-Your-Own-Key
+## Authentication
 
-If your organization requires direct provider relationships, use the bring-your-own-key option:
+All AI Copilot requests require authentication to maintain security:
+
+- Users must **log in** before using AI features.
+- **Social login** options are supported for ease of use.
+- Authentication and session management are handled by **[Asgardeo](https://wso2.com/asgardeo/)**, WSO2's identity provider.
+
+This ensures that only authorized users in your organization can access AI features.
+
+:::info
+Asgardeo handles session tokens, so you do not need to manage API keys when using the default WSO2 model provider. Tokens are session-scoped and expire automatically.
+:::
+
+## Data flow and zero-retention policy
+
+Understanding how data moves through the system is essential for compliance and trust. The three key principles are:
+
+<!-- TODO: Add diagram showing AI data flow -->
+
+### Direct forwarding to the LLM provider
+
+Prompts and code context are forwarded directly from the BI Intelligence Endpoint to the configured LLM provider (Anthropic or Bedrock). There is no intermediate storage, caching, or logging of prompt content.
+
+### No local storage at BI Intelligence
+
+The BI Intelligence Endpoint does not write prompts, responses, or any user data to disk, database, or any persistent store. It operates as a pure pass-through.
+
+### Real-time processing only
+
+All processing happens in real time. Once the LLM response is returned to the client, no residual data remains at the intermediary layer.
+
+## Bring Your Own Key (BYOK)
+
+Organizations can configure integrations to run using their own model provider accounts. This ensures enterprise-level control over data governance and billing.
+
+### Anthropic deployment
+
+Connect directly to Anthropic's public deployments using your own API key. Data flows directly between your environment and Anthropic without WSO2 retaining it.
 
 ```toml
 [ai]
-provider = "openai"
-apiKey = "${OPENAI_API_KEY}"
-# Requests go directly to OpenAI, bypassing the WSO2 intermediary
+provider = "anthropic"
+apiKey = "${ANTHROPIC_API_KEY}"
+# Requests go directly to Anthropic, bypassing the WSO2 intermediary
+```
+
+### Amazon Bedrock deployment
+
+Run Claude models on your own Amazon Bedrock environment. This gives you full control over the cloud region, VPC configuration, and billing. Requires an active Claude deployment in your Amazon Bedrock environment.
+
+```toml
+[ai]
+provider = "bedrock"
+region = "${AWS_REGION}"
+accessKeyId = "${AWS_ACCESS_KEY_ID}"
+secretAccessKey = "${AWS_SECRET_ACCESS_KEY}"
 ```
 
 :::warning
-When using bring-your-own-key, you are subject to the provider's data retention and privacy policies. Review your provider's terms to ensure compliance with your organization's data governance requirements.
+When using BYOK, you are subject to the provider's data retention and privacy policies. Review your provider's terms to ensure compliance with your organization's data governance requirements.
 :::
 
-## Transparency: Disclosing AI Use
+## Open-source Copilot code
 
-Always inform users when they are interacting with AI-generated content:
+The Ballerina AI Copilot code is **open source** and fully auditable. This means:
+
+- The full source code is available for inspection, download, and modification.
+- Security teams can validate the behavior of the Copilot and review what data is sent to the LLM provider.
+- Enterprises can extend or customize the Copilot to meet internal compliance requirements.
+
+:::tip
+If your organization has specific compliance needs, consider forking the Copilot extension and adding custom guardrails -- such as stripping sensitive patterns from prompts before they are sent to the LLM.
+:::
+
+All operations are subject to the [Anthropic Data Usage Policy](https://privacy.anthropic.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data) or the chosen model provider's terms.
+
+## Feedback data handling
+
+WSO2 collects feedback data only when you explicitly choose to provide it:
+
+**Retention period:**
+- Feedback data (such as thumbs up/down ratings) is retained for **1 week only**.
+- After 1 week, feedback records are **permanently deleted**.
+
+**Collection scope:**
+- Feedback is collected **only when a user explicitly provides it** through the Copilot interface.
+- No hidden or passive data collection is performed.
+
+**Transparency:**
+- The feedback interface clearly explains what is being collected and why.
+- Users always have control over whether to provide feedback.
+
+:::note
+Feedback helps improve the AI experience, but it is entirely optional. If you never click the feedback buttons, no feedback data is collected or transmitted.
+:::
+
+## Transparency: Disclosing AI use
+
+Always inform end users when they are interacting with AI-generated content. Include metadata in your API responses that clearly marks content as AI-generated:
 
 ```ballerina
 import ballerinax/ai;
@@ -67,11 +156,13 @@ type QueryRequest record {|
 |};
 ```
 
-## Bias Mitigation
+Adding an `aiGenerated` flag and a `disclaimer` field to your responses builds trust and meets emerging regulatory requirements around AI transparency.
+
+## Bias mitigation
 
 LLMs can reflect and amplify biases from their training data. In integration workflows, this matters most when AI influences decisions about people.
 
-### Bias Detection in Output
+### Bias detection in output
 
 ```ballerina
 type BiasCheckResult record {|
@@ -91,7 +182,7 @@ function checkForBias(string llmOutput, string context) returns BiasCheckResult|
 }
 ```
 
-### Balanced Prompt Design
+### Balanced prompt design
 
 Structure prompts to reduce bias:
 
@@ -111,7 +202,7 @@ string balancedPrompt = string `
 `;
 ```
 
-## Human-in-the-Loop Patterns
+## Human-in-the-loop patterns
 
 For high-stakes decisions, route AI outputs through human review before acting:
 
@@ -170,7 +261,7 @@ function generateRequestId() returns string {
 Set your auto-approval threshold conservatively at first (e.g., 0.95) and adjust downward as you build confidence in the model's accuracy for your specific use case.
 :::
 
-## Audit Trails
+## Audit trails
 
 Log every AI decision with enough context to reconstruct the reasoning:
 
@@ -213,19 +304,36 @@ function createAuditEntry(string requestId, string model, string input,
 }
 ```
 
-## Security Recommendations
+## Security recommendations
 
 Follow these practices for secure AI-powered integrations:
 
 1. **Rotate API keys regularly** -- Use WSO2 Integrator's secrets management for key rotation.
-2. **Limit model access** -- Grant LLM access only to integrations that need it.
+2. **Limit model access** -- Grant LLM access only to integrations and users that need it.
 3. **Monitor for anomalies** -- Watch for unusual token usage spikes or unexpected request patterns.
 4. **Encrypt data in transit** -- All WSO2 Intelligence Endpoint communication uses TLS.
-5. **Review prompts** -- Audit system prompts periodically for information leakage risks.
+5. **Review prompts periodically** -- Audit system prompts for information leakage risks.
 
-## Feedback Collection
+## Best practices for organizations
 
-Collect user feedback on AI outputs to improve quality over time:
+To ensure maximum security and privacy, avoid sending organizational-specific details such as:
+
+- Customer personal information (names, emails, phone numbers, national IDs)
+- Passwords or authentication credentials
+- Proprietary business data
+- Sensitive internal communications
+
+General best practices:
+
+- **Review all AI-generated code** before implementation -- AI output may contain bugs, security vulnerabilities, or logic errors.
+- **Be mindful of what information you include in prompts** -- use generic examples rather than real production data.
+- **Follow your organization's data governance policies** -- check with your security team before enabling AI features if your organization has specific data handling policies.
+
+:::warning
+AI-generated code is a starting point, not a finished product. Always review suggestions for correctness, security, and alignment with your coding standards before committing them to your codebase.
+:::
+
+## Feedback collection
 
 ```ballerina
 type FeedbackEntry record {|
@@ -241,8 +349,18 @@ function recordFeedback(FeedbackEntry feedback) returns error? {
 }
 ```
 
-## What's Next
+## Data retention summary
+
+| Data Type | Retention Period | Notes |
+|---|---|---|
+| Code Prompts and Responses | Not stored by BI Intelligence | Forwarded directly to Anthropic or Bedrock |
+| User Feedback | 1 week | Retained only when explicitly provided by the user |
+| Authentication Tokens | Session-based | Managed securely by Asgardeo |
+| Organizational Data | Not stored | Zero-retention policy at BI Intelligence |
+
+## What's next
 
 - [Add Input and Output Guardrails](input-output-guardrails.md) -- Technical safeguards for AI inputs and outputs
+- [Content Filtering](content-filtering.md) -- Filter harmful or inappropriate content from AI interactions
+- [Token and Cost Management](token-cost-management.md) -- Control spending across models and providers
 - [Trace Agent Execution](/docs/genai/observability/agent-tracing) -- Monitor AI decision-making in production
-- [Authentication and Security](/docs/deploy-operate/secure/authentication) -- Secure your integration endpoints

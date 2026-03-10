@@ -10,6 +10,116 @@ An ingestion pipeline takes your raw documents and transforms them into searchab
 
 This guide walks you through building a complete ingestion integration in WSO2 Integrator, from loading documents to storing embeddings.
 
+## Build an Ingestion Pipeline in the Visual Designer
+
+This walkthrough creates a complete ingestion flow using the low-code visual designer. You'll load a markdown file, chunk the content, generate embeddings, and store them in a vector knowledge base.
+
+:::note
+This tutorial uses an in-memory vector store for simplicity. For production, use external vector stores like Pinecone, Milvus, or Weaviate. An in-memory vector store holds data in RAM — fast and easy to set up, but data is erased when you stop the integration.
+:::
+
+### Step 1: Create a new integration project
+
+1. Click on the **BI** icon in the sidebar.
+2. Click on the **Create New Integration** button.
+3. Enter the project name as `rag_ingestion`.
+4. Select a directory location by clicking on the **Select Path** button.
+5. Click **Create New Integration** to generate the project.
+
+![Create a new integration project](/img/genai/rag/ingestion/create-a-new-integration-project.gif)
+
+### Step 2: Create an automation
+
+An automation runs automatically when the integration starts. This ensures your data is loaded and ingested as soon as the application is running.
+
+1. In the design screen, click on **+ Add Artifact**.
+2. Select **Automation** under the **Automation** artifact category.
+3. Click **Create** to open the flow editor.
+
+![Create an automation](/img/genai/rag/ingestion/create-an-automation.gif)
+
+### Step 3: Create a text data loader
+
+1. Hover over the flow line and click the **+** icon to open the side panel.
+2. Click on **Data Loader** from the **AI** section.
+3. Click **+ Add Data Loader** to create a new instance.
+4. Choose **Text Data Loader**.
+5. Under the **paths** field, click on **+ Add Another Value** and add the path to your markdown file.
+6. Set **Data Loader Name** as `loader`.
+7. Click **Save** to continue.
+
+![Create a data loader](/img/genai/rag/ingestion/create-a-data-loader.gif)
+
+### Step 4: Load data using the data loader
+
+1. In the **Data Loaders** section, click on `loader`.
+2. Click on **load** to open the configuration panel.
+3. Name the result as `doc`.
+4. Click **Save** to complete the data loading step.
+
+![Load data using the data loader](/img/genai/rag/ingestion/load-from-the-data-loader.gif)
+
+This step wraps the file content into an `ai:Document` record, preparing it for chunking and embedding.
+
+:::note
+In WSO2 Integrator, an `ai:Document` is a generic container that wraps the content of any data source — such as a file, webpage, or database entry. It holds the main content plus optional metadata, which becomes useful during retrieval operations.
+:::
+
+### Step 5: Create a vector knowledge base
+
+A vector knowledge base manages the ingestion and retrieval of documents through a vector store.
+
+1. Hover over the flow line and click the **+** icon.
+2. Select **Vector Knowledge Bases** under the **AI** section.
+3. Click **+ Add Vector Knowledge Base** to create a new instance.
+4. In the **Vector Store** section, click **+ Create New Vector Store** and choose **InMemory Vector Store**, then click **Save**.
+5. In the **Embedding Model** section, click **+ Create New Embedding Model**, select **Default Embedding Provider (WSO2)**, then click **Save**.
+6. For the **Chunker** setting, leave it at the default value of **AUTO** or create a new chunker.
+7. Set the **Vector Knowledge Base Name** to `knowledgeBase`.
+8. Click **Save** to complete the configuration.
+
+![Create a vector knowledge base](/img/genai/rag/ingestion/create-a-vector-knowledge-base.gif)
+
+:::warning Embedding Dimensions
+The **Default Embedding Provider (WSO2)** generates dense vectors with **1536 dimensions**. If you're using an external vector store (Pinecone, Milvus, Weaviate, etc.), ensure your vector store index is configured to support 1536-dimensional vectors.
+:::
+
+### Step 6: Ingest data into the knowledge base
+
+1. In the **Vector Knowledge Bases** section, click on `knowledgeBase`.
+2. Click on **ingest** to open the configuration panel.
+3. Provide `doc` as the input for **Documents**.
+4. Click **Save** to complete the ingestion step.
+
+![Ingest data into the knowledge base](/img/genai/rag/ingestion/ingest-data-with-vector-knowlege-base.gif)
+
+This step chunks the document and sends the chunks to the vector store, converting each chunk into an embedding and storing them for future retrieval.
+
+### Step 7: Add a confirmation message
+
+1. Hover over the flow line and click the **+** icon.
+2. Select **Log Info** under the **Logging** section.
+3. Enter `"Ingestion completed."` in the **Msg** field.
+4. Click **Save**.
+
+![Add a confirmation message](/img/genai/rag/ingestion/add-a-confirmation-message.gif)
+
+### Step 8: Configure default WSO2 provider and run
+
+1. As the workflow uses the `Default Embedding Provider (WSO2)`, configure its settings:
+   - Press `Ctrl/Cmd + Shift + P` to open the VS Code command palette.
+   - Run the command: `Ballerina: Configure default WSO2 model provider`.
+2. Click the **Run** button in the top-right corner to execute the integration.
+3. Once the integration runs successfully, you will see the message `"Ingestion completed."` in the console.
+
+![Configure default WSO2 provider and run the integration](/img/genai/rag/ingestion/run-the-integration.gif)
+
+---
+
+## Build an Ingestion Pipeline in Pro-Code
+
+For more control and customization, you can build the pipeline entirely in Ballerina code.
+
 ## Data Flow Overview
 
 ```

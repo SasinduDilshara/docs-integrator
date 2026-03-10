@@ -87,9 +87,62 @@ Always wrap MCP tool calls in error handling. External MCP servers may be unavai
 
 The most powerful use of MCP is binding MCP tools to an agent. The agent discovers the tools, decides when to call them during its reasoning loop, and incorporates the results into its responses.
 
-### Weather Assistant Example
+### Weather Assistant — Visual Designer Walkthrough
 
-This example builds an agent that uses a weather MCP server to answer weather-related questions:
+This walkthrough creates a Weather AI Assistant that connects to an MCP server for real-time weather data.
+
+:::note Prerequisites
+Before you begin, ensure you have a running MCP Server connected to a weather service. You can set up one using [this guide](https://github.com/xlight05/mcp-openweathermap).
+:::
+
+**Create the AI agent** by following Steps 1 to 5 in the [Create a Chat Agent](../agents/chat-agents) guide. Configure the agent with:
+
+**Role:**
+
+```text
+Weather AI Assistant
+```
+
+**Instructions:**
+
+```text
+You are Nova, a smart AI assistant dedicated to providing accurate and timely weather information.
+
+Your primary responsibilities include:
+- Current Weather: Provide detailed and user-friendly current weather information for a given location.
+- Weather Forecast: Share reliable weather forecasts according to user preferences (e.g., hourly, daily).
+
+Guidelines:
+- Always communicate in a natural, friendly, and professional tone.
+- Provide concise summaries unless the user explicitly requests detailed information.
+- Confirm location details if ambiguous and suggest alternatives when data is unavailable.
+```
+
+**Step 1: Add the MCP server**
+
+1. In Agent Flow View, click the **+** button at the bottom-right of the `AI Agent` box.
+2. Under **Add Tools** section, select **Use MCP Server**.
+3. Provide the necessary configuration details, then click **Save Tool**.
+
+![Add MCP Server](/img/genai/agents/external-endpoints/ai-agent-add-mcp-server.gif)
+
+**Step 2: Customize the MCP server**
+
+You can further customize the MCP configuration to include additional weather tools to suit your use case.
+
+![Edit MCP Server](/img/genai/agents/external-endpoints/ai-agent-edit-mcp-server.gif)
+
+**Step 3: Interact with the agent**
+
+1. Click the **Chat** button located at the top-left corner of the interface.
+2. You will be prompted to run the integration. Click **Run Integration**.
+3. Start chatting with your weather assistant.
+
+![Interact with the weather agent](/img/genai/agents/external-endpoints/ai-agent-interact-mcp-server.gif)
+
+### Weather Assistant — Pro-Code Example
+
+This example builds the same weather agent in pro-code:
 
 ```ballerina
 import ballerinax/ai;

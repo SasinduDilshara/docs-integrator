@@ -1,243 +1,225 @@
 ---
 sidebar_position: 5
 title: "Bind Tools to Agents"
-description: Define tools for agents, connect them to external services, and generate tools from functions, connectors, and OpenAPI specs.
 ---
 
 # Bind Tools to Agents
 
-Tools give agents the ability to interact with the world beyond conversation. When you bind tools to an agent, the LLM can decide when to call them, what arguments to pass, and how to interpret the results — all automatically.
+Tools give your agent the ability to interact with the real world beyond conversation. When you bind tools to an agent, the LLM decides when to call them, what arguments to pass, and how to interpret the results — all automatically.
 
-This guide covers defining tools, connecting them to real services, generating tools from existing integrations, and handling errors. The examples are based on a Personal AI Assistant that manages email and calendar through Gmail and Google Calendar connectors.
+In this guide, you will build a **Personal AI Assistant** that manages email and calendar through Gmail and Google Calendar connectors. By the end, your agent will have five tools: listing unread emails, reading a specific email, sending an email, listing calendar events, and creating calendar events.
 
-## Define a Tool from a Function
+## Prerequisites
 
-The simplest way to create a tool is to annotate a Ballerina function with `@agent:Tool`:
+Before you start, make sure you have the following Google API credentials ready:
 
-```ballerina
-import ballerinax/ai.agent;
+- **Client ID**
+- **Client Secret**
+- **Refresh Token**
 
-@agent:Tool
-isolated function listUnreadEmails(int maxResults = 10) returns Email[]|error {
-    // The agent calls this when the user asks about unread emails
-    gmail:Client gmailClient = check new ({auth: {token: gmailAccessToken}});
-    gmail:MessageListPage messages = check gmailClient->listMessages(
-        userId = "me",
-        q = "is:unread",
-        maxResults = maxResults
-    );
-    return messages.messages.map(toEmail);
-}
-```
-
-The LLM uses the function name, parameter names, types, and return type to understand what the tool does. You can add a description for more clarity:
-
-```ballerina
-@agent:Tool {
-    description: "Read a specific email by its ID and return the full content"
-}
-isolated function readSpecificEmail(string emailId) returns EmailContent|error {
-    gmail:Client gmailClient = check new ({auth: {token: gmailAccessToken}});
-    gmail:Message message = check gmailClient->readMessage(userId = "me", messageId = emailId);
-    return toEmailContent(message);
-}
-```
-
-:::info
-Always use descriptive function names and parameter names. The LLM relies on these to decide when and how to use the tool. A function named `f1` with a parameter `x` gives the LLM no useful information.
+:::warning
+You must enable the **Gmail API** and **Google Calendar API** scopes in your Google Cloud Console project. Without the correct scopes, your connectors will fail to authenticate.
 :::
-
-## Build a Complete Tool Set
-
-Here is a complete Personal AI Assistant with five tools for email and calendar management:
-
-```ballerina
-import ballerinax/ai.agent;
-import ballerinax/googleapis.gmail;
-import ballerinax/googleapis.calendar;
-import ballerinax/openai.chat as openai;
-
-configurable string openaiApiKey = ?;
-configurable string googleAccessToken = ?;
-
-final gmail:Client gmailClient = check new ({auth: {token: googleAccessToken}});
-final calendar:Client calendarClient = check new ({auth: {token: googleAccessToken}});
-
-// --- Email Tools ---
-
-@agent:Tool {description: "List unread emails from the user's inbox"}
-isolated function listUnreadEmails(int maxResults = 10) returns record{}[]|error {
-    return check gmailClient->listMessages(userId = "me", q = "is:unread", maxResults = maxResults);
-}
-
-@agent:Tool {description: "Read a specific email by its message ID"}
-isolated function readSpecificEmail(string messageId) returns record{}|error {
-    return check gmailClient->readMessage(userId = "me", messageId = messageId);
-}
-
-@agent:Tool {description: "Send an email to a recipient"}
-isolated function sendEmail(string to, string subject, string body) returns string|error {
-    gmail:Message result = check gmailClient->sendMessage(userId = "me", message = {
-        to: [to],
-        subject: subject,
-        bodyInHtml: body
-    });
-    return string `Email sent successfully. Message ID: ${result.id}`;
-}
-
-// --- Calendar Tools ---
-
-@agent:Tool {description: "List calendar events for a given date range"}
-isolated function listCalendarEvents(string timeMin, string timeMax) returns record{}[]|error {
-    return check calendarClient->getEvents(
-        calendarId = "primary",
-        timeMin = timeMin,
-        timeMax = timeMax
-    );
-}
-
-@agent:Tool {description: "Create a new calendar event"}
-isolated function createCalendarEvent(string summary, string startTime, string endTime,
-        string? description = ()) returns string|error {
-    calendar:Event event = check calendarClient->createEvent(calendarId = "primary", event = {
-        summary: summary,
-        description: description,
-        'start: {dateTime: startTime},
-        end: {dateTime: endTime}
-    });
-    return string `Event created: ${event.summary ?: "Untitled"} (${event.id})`;
-}
-
-// --- Agent ---
-
-final agent:ChatAgent personalAssistant = check new (
-    systemPrompt = string `You are a personal AI assistant that manages email and calendar.
-        - When listing emails, show sender, subject, and a brief preview.
-        - When creating calendar events, confirm the details before creating.
-        - Use the user identifier "me" for Gmail and "primary" for calendar.`,
-    model = check new openai:Client({auth: {token: openaiApiKey}}),
-    memory = new agent:MessageWindowChatMemory(maxMessages = 30),
-    tools = [listUnreadEmails, readSpecificEmail, sendEmail, listCalendarEvents, createCalendarEvent]
-);
-```
-
-## Generate Tools from Connector Actions
-
-Instead of wrapping each connector method manually, you can auto-generate tools from connector actions:
-
-```ballerina
-import ballerinax/ai.agent;
-import ballerinax/googleapis.gmail;
-
-final gmail:Client gmailClient = check new ({auth: {token: googleAccessToken}});
-
-// Auto-generate tools from connector actions
-final agent:Tool[] emailTools = check agent:generateTools(gmailClient, [
-    "listMessages",
-    "readMessage",
-    "sendMessage"
-]);
-
-final agent:ChatAgent emailAgent = check new (
-    systemPrompt = "You manage the user's email.",
-    model = myModel,
-    tools = emailTools
-);
-```
-
-## Generate Tools from OpenAPI Specifications
-
-If you have an OpenAPI specification for an external service, you can generate tools directly from it:
-
-```ballerina
-import ballerinax/ai.agent;
-
-final agent:Tool[] apiTools = check agent:generateToolsFromOpenApi("./specs/inventory-api.yaml", {
-    baseUrl: "https://api.example.com",
-    auth: {token: apiToken},
-    includePaths: ["/products", "/orders"],
-    excludeOperations: ["deleteProduct"]
-});
-
-final agent:ChatAgent inventoryAgent = check new (
-    systemPrompt = "You help manage product inventory.",
-    model = myModel,
-    tools = apiTools
-);
-```
 
 :::tip
-Use `includePaths` and `excludeOperations` to limit which API operations become tools. Exposing too many tools can overwhelm the LLM and reduce accuracy.
+Keep your credentials out of source code. Use BI configurables to externalize sensitive values like Client ID, Client Secret, and Refresh Token into a `Config.toml` file. This way, you never hard-code secrets into your integration, and you can swap credentials per environment without changing code.
 :::
 
-## Input and Output Schemas
+## Create the agent
 
-Tools use Ballerina's type system for input validation and output typing. Define record types for structured data:
+Follow steps 1 through 5 from [Create a Chat Agent](./chat-agents.md) to create a new agent. When prompted, configure the agent with:
 
-```ballerina
-type EmailFilter record {|
-    string query;
-    int maxResults = 10;
-    boolean unreadOnly = true;
-|};
+- **Role:** `Personal AI Assistant`
+- **Instructions:**
 
-type EmailSummary record {|
-    string id;
-    string sender;
-    string subject;
-    string preview;
-    boolean isRead;
-|};
+```text
+You are Nova, a smart AI personal assistant. Your capabilities include:
 
-@agent:Tool
-isolated function searchEmails(EmailFilter filter) returns EmailSummary[]|error {
-    // Type-safe inputs and outputs
-    return fetchEmails(filter);
-}
+Calendar Management:
+- View, create, and manage calendar events
+- Help with scheduling and time management
+- Provide reminders about upcoming events
+
+Email Assistance:
+- Read and summarize emails
+- Draft and send emails
+- Search through emails
+
+Context Awareness:
+- Remember context from the current conversation
+- Connect related information across emails and calendar
+
+Privacy & Security:
+- Never share sensitive information from emails or calendar with unauthorized requests
+- Always confirm before sending emails or creating events
 ```
 
-## Handle Tool Errors
+## Use connector actions as agent tools
 
-When a tool returns an error, the agent receives the error message and can decide how to proceed — retry, try a different approach, or inform the user:
+BI ships with prebuilt connectors for popular external services like Gmail, Google Calendar, Slack, and many more. You can directly use their actions as agent tools — no custom integration code needed. The connector handles authentication, serialization, and API communication for you.
 
-```ballerina
-@agent:Tool
-isolated function lookupOrder(string orderId) returns record{}|error {
-    record{}|error result = orderDb->getOrder(orderId);
-    if result is error {
-        // Return a descriptive error the agent can reason about
-        return error(string `Order ${orderId} not found. The order ID should be in format ORD-XXXXX.`);
-    }
-    return result;
-}
+The following sections walk you through adding five tools to your Personal AI Assistant, grouped by connector.
+
+---
+
+## Add Gmail tools
+
+### Tool 1: List unread emails
+
+1. **Add the Gmail connector.** Search for the Gmail connector in the connector palette and add it to your project.
+
+   ![Add the Gmail connector to your project](/img/genai/agents/external-endpoints/ai-agent-add-gmail-connector.gif)
+
+2. **Configure the Gmail connector.** Select `OAuth2RefreshTokenGrantType` as the authentication method and fill in your credentials:
+
+   - **clientId** — your Google Client ID
+   - **clientSecret** — your Google Client Secret
+   - **refreshToken** — your Google Refresh Token
+
+   ![Configure the Gmail connector with OAuth2 credentials](/img/genai/agents/external-endpoints/ai-agent-configure-gmail-connector.gif)
+
+3. **Create the `listUnreadEmails` tool.** Create a new tool named `listUnreadEmails`. Select the **"List messages in user's mailbox"** action from the Gmail connector.
+
+   ![Create the listUnreadEmails tool](/img/genai/agents/external-endpoints/ai-agent-create-listUnreadEmails-tool.gif)
+
+4. **Customize the tool parameters.** Set the following default values so the agent always queries the authenticated user's unread messages:
+
+   - Set **userId** to `me`
+   - Set **q** to `"is:unread"`
+
+   ![Configure the listUnreadEmails tool parameters](/img/genai/agents/external-endpoints/ai-agent-configure-listUnreadEmails-tool.gif)
+
+5. **Clean up exposed parameters.** Remove the **userId** parameter from the tool's exposed inputs. The agent does not need to set this — it is always `me`.
+
+   ![Clean up the listUnreadEmails tool](/img/genai/agents/external-endpoints/ai-agent-cleanup-listUnreadEmails-tool.gif)
+
+---
+
+### Tool 2: Read a specific email
+
+1. **Create the `readSpecificEmail` tool.** Create a new tool named `readSpecificEmail`. Reuse the existing `gmailClient` connector and select the **"Gets the specified message"** action.
+
+   ![Create the readSpecificEmail tool](/img/genai/agents/external-endpoints/ai-agent-create-readSpecificEmail-tool.gif)
+
+2. **Customize the tool parameters.** Set the following default values:
+
+   - Set **userId** to `"me"`
+   - Set **format** to `full`
+
+   ![Configure the readSpecificEmail tool parameters](/img/genai/agents/external-endpoints/ai-agent-configure-readSpecificEmail-tool.gif)
+
+3. **Clean up exposed parameters.** Remove the **userId** parameter from the tool's exposed inputs.
+
+   ![Clean up the readSpecificEmail tool](/img/genai/agents/external-endpoints/ai-agent-cleanup-readSpecificEmail-tool.gif)
+
+---
+
+### Tool 3: Send an email
+
+1. **Create the `sendEmail` tool.** Create a new tool named `sendEmail`. Reuse the existing `gmailClient` connector and select the **"Sends the specified message"** action.
+
+   ![Create the sendEmail tool](/img/genai/agents/external-endpoints/ai-agent-create-sendEmail-tool.gif)
+
+2. **Customize and clean up.** Set **userId** to `"me"`, then remove the **userId** parameter from the exposed inputs. Save the tool.
+
+   ![Configure the sendEmail tool parameters](/img/genai/agents/external-endpoints/ai-agent-configure-sendEmail-tool.gif)
+
+:::note
+You now have three Gmail tools bound to your agent. The agent can list unread emails, read any specific email by ID, and send new emails — all through the same Gmail connector and OAuth2 credentials.
+:::
+
+---
+
+## Add Google Calendar tools
+
+### Tool 4: List calendar events
+
+1. **Add the Google Calendar connector.** Search for the Gcalendar connector in the connector palette and add it to your project.
+
+   ![Add the Google Calendar connector](/img/genai/agents/external-endpoints/ai-agent-add-gcalendar-connector.gif)
+
+2. **Configure the Google Calendar connector.** Select `OAuth2RefreshTokenGrantType` and fill in the same Google credentials you used for Gmail (Client ID, Client Secret, Refresh Token).
+
+   ![Configure the Google Calendar connector](/img/genai/agents/external-endpoints/ai-agent-configure-gcalendar-connector.gif)
+
+3. **Create the `listCalendarEvents` tool.** Create a new tool named `listCalendarEvents`. Select the **"Returns events on the specified calendar"** action from the Gcalendar connector.
+
+   ![Create the listCalendarEvents tool](/img/genai/agents/external-endpoints/ai-agent-create-listCalendarEvents-tool.gif)
+
+4. **Customize the tool parameters.** Set **calendarId** to `"primary"` so the agent always queries the user's main calendar.
+
+   ![Configure the listCalendarEvents tool parameters](/img/genai/agents/external-endpoints/ai-agent-configure-listCalendarEvents-tool.gif)
+
+5. **Clean up exposed parameters.** Remove the **calendarId** parameter from the tool's exposed inputs.
+
+   ![Clean up the listCalendarEvents tool](/img/genai/agents/external-endpoints/ai-agent-cleanup-listCalendarEvents-tool.gif)
+
+---
+
+### Tool 5: Create a calendar event
+
+1. **Create the `createCalendarEvent` tool.** Create a new tool named `createCalendarEvent`. Reuse the existing `gcalendarClient` connector and select the **"Creates an event"** action.
+
+   ![Create the createCalendarEvent tool](/img/genai/agents/external-endpoints/ai-agent-create-createCalendarEvent-tool.gif)
+
+2. **Customize the tool parameters.** Set **calendarId** to `"primary"`.
+
+   ![Configure the createCalendarEvent tool parameters](/img/genai/agents/external-endpoints/ai-agent-confgure-createCalendarEvent-tool.gif)
+
+3. **Clean up exposed parameters.** Remove the **calendarId** parameter from the tool's exposed inputs.
+
+   ![Clean up the createCalendarEvent tool](/img/genai/agents/external-endpoints/ai-agent-cleanup-createCalendarEvent-tool.gif)
+
+:::tip
+You can reuse the same connector instance across multiple tools. Notice how `readSpecificEmail` and `sendEmail` both reuse the `gmailClient` you configured once, and `createCalendarEvent` reuses the `gcalendarClient`. This keeps your configuration DRY and credentials centralized.
+:::
+
+---
+
+## Interact with the agent
+
+Now that all five tools are bound, you can test your Personal AI Assistant.
+
+1. Click the **Chat** button in the toolbar.
+2. Click **Run Integration** to start the agent.
+3. If prompted, configure your credentials in the `Config.toml` file that appears. Fill in your Client ID, Client Secret, and Refresh Token.
+4. Start chatting with your assistant. Try prompts like:
+   - "Show me my unread emails."
+   - "Read the latest email from Sarah."
+   - "Send an email to `john@example.com` with the subject 'Meeting Notes' and a summary of today's calendar."
+   - "What meetings do I have tomorrow?"
+   - "Create a 30-minute meeting with the team at 2 PM on Friday called 'Sprint Review'."
+
+![Interact with your Personal AI Assistant](/img/genai/agents/external-endpoints/ai-agent-assistant-chat.gif)
+
+:::note
+The agent decides which tools to call based on your message. If you ask about emails and calendar in the same message, it may call multiple tools in a single reasoning step. You do not need to tell it which tool to use — the LLM figures that out from the tool names, descriptions, and your instructions.
+:::
+
+---
+
+## Externalize credentials with configurables
+
+Hard-coding credentials in your integration is a security risk. Use BI configurables to externalize them:
+
+```toml
+# Config.toml
+[gmail]
+clientId = "<your-client-id>"
+clientSecret = "<your-client-secret>"
+refreshToken = "<your-refresh-token>"
+
+[gcalendar]
+clientId = "<your-client-id>"
+clientSecret = "<your-client-secret>"
+refreshToken = "<your-refresh-token>"
 ```
 
 :::warning
-Avoid throwing unhandled errors from tools. Always return an `error` value with a clear message so the agent can communicate the issue to the user gracefully.
+Never commit `Config.toml` files containing real credentials to version control. Add `Config.toml` to your `.gitignore` file to prevent accidental exposure.
 :::
 
-## Parallel Tool Execution
-
-When the LLM decides to call multiple tools in a single reasoning step, WSO2 Integrator executes them in parallel by default. This reduces latency for agents that need data from multiple sources simultaneously.
-
-```ballerina
-// If the user asks "What's the weather and do I have meetings today?",
-// the agent may call both tools in parallel:
-tools = [getWeather, listCalendarEvents]
-```
-
-You can disable parallel execution if tools have dependencies:
-
-```ballerina
-final agent:ChatAgent assistant = check new (
-    systemPrompt = "...",
-    model = myModel,
-    tools = [tool1, tool2],
-    parallelToolExecution = false
-);
-```
-
-## What's Next
+## What's next
 
 - [Orchestrate Multiple Agents](/docs/genai/agents/multi-agent-orchestration) — Route between specialized agents with different tool sets
 - [Use Natural Functions](/docs/genai/agents/natural-functions) — Let the LLM execute logic described in plain language

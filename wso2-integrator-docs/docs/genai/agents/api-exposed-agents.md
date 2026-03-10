@@ -1,188 +1,127 @@
 ---
 sidebar_position: 3
-title: "Expose an Agent as an API"
-description: Expose agents as HTTP/REST endpoints for programmatic access, and embed inline agents inside GraphQL resolvers and service logic.
+title: "API-Exposed Agents (Inline Agents)"
 ---
 
-# Expose an Agent as an API
+When you build a [chat agent](chat-agents.md), WSO2 Integrator automatically exposes it as a REST API endpoint with a built-in chat interface, session management, and memory. That is perfect for user-facing conversations — but it is not the only way to use agents.
 
-While chat agents provide a built-in conversational interface, you often need agents that operate programmatically — called from other services, embedded in GraphQL resolvers, or triggered by webhooks. WSO2 Integrator supports two patterns for this: HTTP-exposed agents and inline agents.
-
-This guide covers both approaches so you can choose the right one for your use case.
-
-## HTTP-Exposed Chat Agent
-
-A chat agent automatically exposes a REST endpoint. You can call it from any HTTP client without using the built-in chat interface:
-
-```ballerina
-import ballerinax/ai.agent;
-import ballerinax/openai.chat as openai;
-
-configurable string openaiApiKey = ?;
-
-final agent:ChatAgent supportAgent = check new (
-    systemPrompt = "You are a customer support agent for an e-commerce platform.",
-    model = check new openai:Client({auth: {token: openaiApiKey}}),
-    memory = new agent:MessageWindowChatMemory(maxMessages = 30),
-    tools = [lookupOrder, checkInventory, createTicket]
-);
-```
-
-### Request and Response Format
-
-Send a POST request to the agent's chat endpoint:
-
-```bash
-curl -X POST http://localhost:9090/supportAgent/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "sessionId": "user-123",
-    "message": "Where is my order #45678?"
-  }'
-```
-
-Response:
-
-```json
-{
-  "sessionId": "user-123",
-  "response": "Your order #45678 is currently in transit. It was shipped on March 8 and the estimated delivery date is March 12.",
-  "toolCalls": [
-    {
-      "tool": "lookupOrder",
-      "arguments": {"orderId": "45678"},
-      "result": "shipped"
-    }
-  ]
-}
-```
-
-### Session Management
-
-The `sessionId` field links messages to a conversation session. Messages with the same `sessionId` share memory context:
-
-- **Same session** — The agent remembers previous messages in the conversation.
-- **New session** — A fresh conversation with no prior context.
-- **No session ID** — Each message is treated as an independent interaction.
-
-:::tip
-For production deployments, use a session store (Redis, database) to persist sessions across restarts. See [Configure Agent Memory](/docs/genai/agents/memory-configuration) for persistent memory options.
-:::
-
-### Authentication
-
-Protect your agent endpoint with standard HTTP authentication:
-
-```ballerina
-import ballerina/http;
-
-listener http:Listener securedListener = check new (9090, {
-    secureSocket: {
-        key: {certFile: "cert.pem", keyFile: "key.pem"}
-    }
-});
-
-@http:ServiceConfig {
-    auth: [
-        {oauth2IntrospectionConfig: {url: "https://auth.example.com/introspect"}}
-    ]
-}
-service on securedListener {
-    // Agent resources are now protected
-}
-```
-
-See [Authentication](/docs/deploy-operate/secure/authentication) for full details on securing service endpoints.
-
-## Inline Agents
-
-Inline agents run inside your existing service logic rather than exposing their own endpoint. You create them on demand and call them programmatically.
-
-### Inline Agent in an HTTP Service
-
-```ballerina
-import ballerina/http;
-import ballerinax/ai.agent;
-import ballerinax/openai.chat as openai;
-
-configurable string openaiApiKey = ?;
-
-service /api on new http:Listener(8080) {
-
-    resource function post summarize(@http:Payload record {|string document;|} request) returns string|error {
-        agent:InlineAgent summarizer = check new (
-            systemPrompt = "Summarize the given document in 3 bullet points.",
-            model = check new openai:Client({auth: {token: openaiApiKey}})
-        );
-        agent:ChatMessage response = check summarizer.run(request.document);
-        return response.content;
-    }
-}
-```
-
-### Inline Agent in a GraphQL Resolver
-
-Inline agents work naturally inside GraphQL resolvers. This pattern lets you add AI capabilities to specific fields without restructuring your entire service:
-
-```ballerina
-import ballerina/graphql;
-import ballerinax/ai.agent;
-import ballerinax/openai.chat as openai;
-
-configurable string openaiApiKey = ?;
-
-@agent:Tool
-isolated function searchProducts(string query) returns record{}[]|error {
-    // Search product database
-    return [{name: "Widget Pro", price: 29.99, rating: 4.5}];
-}
-
-@agent:Tool
-isolated function getProductReviews(string productId) returns string[]|error {
-    return ["Great product!", "Works as expected."];
-}
-
-service /graphql on new graphql:Listener(4000) {
-
-    resource function get recommendation(string userQuery) returns string|error {
-        agent:InlineAgent recommender = check new (
-            systemPrompt = string `You recommend products based on user preferences.
-                Always explain why you recommend each product.`,
-            model = check new openai:Client({auth: {token: openaiApiKey}}),
-            tools = [searchProducts, getProductReviews]
-        );
-        agent:ChatMessage response = check recommender.run(userQuery);
-        return response.content;
-    }
-
-    remote function addReview(string productId, string reviewText) returns string|error {
-        agent:InlineAgent moderator = check new (
-            systemPrompt = "You moderate product reviews. Flag inappropriate content.",
-            model = check new openai:Client({auth: {token: openaiApiKey}})
-        );
-        agent:ChatMessage result = check moderator.run(reviewText);
-        return result.content;
-    }
-}
-```
-
-:::info
-Inline agents are stateless by default — they do not maintain memory across calls. If you need conversational context, pass the history explicitly or use a chat agent instead.
-:::
-
-## Choosing Between Chat Agents and Inline Agents
+**Inline agents** flip the model. Instead of living behind their own API endpoint, they are invoked programmatically from anywhere within your integration logic — inside an HTTP resource, a GraphQL resolver, an event handler, or any other service function. Think of them as on-demand AI helpers you call like a regular function.
 
 | Factor | Chat Agent | Inline Agent |
-|---|---|---|
-| User-facing conversations | Best fit | Not ideal |
-| Programmatic single-task calls | Possible | Best fit |
-| Built-in memory management | Yes | Manual |
+| --- | --- | --- |
+| Exposed as a REST API | Yes — automatic endpoint | No — you call it from code |
 | Built-in chat interface | Yes | No |
+| Built-in memory / sessions | Yes | Manual (stateless by default) |
 | Embedded in existing services | No | Yes |
-| GraphQL resolver integration | No | Yes |
+| Best for | User-facing conversations | Programmatic, single-task AI calls |
 
-## What's Next
+:::tip
+Use a **chat agent** when you need an interactive conversation with memory. Use an **inline agent** when you need to run a one-shot AI task inside existing service logic — summarization, moderation, classification, or tool-augmented reasoning.
+:::
 
-- [Configure Agent Memory](/docs/genai/agents/memory-configuration) — Set up memory for chat agents and stateful inline agents
-- [Bind Tools to Agents](/docs/genai/agents/tool-binding) — Give agents the ability to call external services
-- [Orchestrate Multiple Agents](/docs/genai/agents/multi-agent-orchestration) — Route between specialized agents
+In this guide, you will build a **GraphQL service** with a mutation that invokes an inline agent. By the end, you will have a working GraphQL endpoint that accepts a natural-language query, routes it through an AI agent, and returns the result — all without exposing a separate REST endpoint.
+
+---
+
+## Step 1: Create a new integration project
+
+Start by scaffolding a new project to hold your GraphQL service and inline agent.
+
+1. Click the **WSO2 Integrator: BI** icon in the sidebar.
+2. Click the **Create New Integration** button.
+3. Enter the project name as `GraphqlService`.
+4. Select the project directory location and click **Create New Integration**.
+
+![Create a new integration project](/img/genai/agents/inline-agents/inline-agent-create-a-new-integration-project.gif)
+
+## Step 2: Create a GraphQL service
+
+With your project ready, add a GraphQL service artifact.
+
+1. In the design view, click **Add Artifact**.
+2. Select **GraphQL Service** under **Integration as API**.
+3. Keep the default base path and port, then click **Create**.
+
+![Create a GraphQL service](/img/genai/agents/inline-agents/inline-agent-create-a-graphql-service.gif)
+
+:::info
+A GraphQL service lets you define strongly-typed queries and mutations. Clients send a single request and receive exactly the data they ask for — making it a natural fit for AI-powered fields where the response shape matters.
+:::
+
+## Step 3: Create a GraphQL resolver
+
+Now define the mutation that will invoke your inline agent.
+
+1. Click **+ Create Operations**.
+2. In the side panel, click **+** in the **Mutation** section.
+3. Set the field name to `task`.
+4. Add an argument with the name `query` and the type `string`.
+5. Set the field type to `string|error`.
+
+![Create a GraphQL resolver](/img/genai/agents/inline-agents/inline-agent-create-a-graphql-resolver.gif)
+
+## Step 4: Implement the resolver with an inline agent
+
+This is where the magic happens. Instead of writing manual business logic, you drop an AI agent directly into the resolver flow.
+
+1. Click the `task` operation to open the resolver editor.
+2. Click **+** in the flow and select **Agent** under **AI**.
+3. Update the **Role** and **Instructions** fields to describe what the agent should do (for example, "You are a task assistant that summarizes and acts on user requests").
+4. Switch the **Query** field to **Expression** mode and provide the `query` parameter so the agent receives the user's input.
+5. Set the **Result** variable to `response` and click **Save**.
+
+![Implement the resolver with an inline agent](/img/genai/agents/inline-agents/inline-agent-implement-resolver.gif)
+
+6. Configure **memory**, **model**, and **tools** as needed. The configuration steps are the same as for a chat agent — refer to the [Create a Chat Agent](chat-agents.md) guide for detailed instructions on setting up model providers, memory strategies, and tool bindings.
+
+:::note
+You must implement at least one **query** operation for a valid GraphQL service. Add a simple `greet` query that returns `"welcome"` to satisfy this requirement.
+:::
+
+## Step 5: Add a return node
+
+After the agent processes the request, you need to return its output to the GraphQL client.
+
+1. Click **+** below the Agent node in the flow.
+2. Add a **Return** node.
+3. Provide the `response` variable as the return value.
+
+![Return the agent response](/img/genai/agents/inline-agents/inline-agent-return-response.gif)
+
+## Step 6: Run and query the service
+
+You are ready to test. Run the service and send a GraphQL mutation to your inline agent.
+
+1. Click **Run** to start the integration.
+2. Open a terminal and send a query with curl:
+
+```bash
+curl -X POST http://localhost:8080/graphql \
+  -H "Content-Type: application/json" \
+  -d '{ "query": "mutation Task { task(query: \"Summarize latest emails\") }" }'
+```
+
+The agent processes the natural-language query, invokes any configured tools, and returns the result through the GraphQL response.
+
+![Run and query the service](/img/genai/agents/inline-agents/inline-agent-execute.gif)
+
+:::tip
+You can test GraphQL services with any GraphQL client — Postman, Insomnia, or GraphQL Playground — not just curl. Point the client at `http://localhost:8080/graphql` and use the mutation schema to explore available operations.
+:::
+
+---
+
+## Key takeaways
+
+- **Chat agents** are REST APIs with built-in session management and a chat interface. They are ideal for multi-turn, user-facing conversations.
+- **Inline agents** are not tied to any endpoint. You invoke them programmatically from inside your integration logic — GraphQL resolvers, HTTP resources, event handlers, or any other service function.
+- Inline agents are **stateless by default**. If you need conversational context across calls, pass the history explicitly or use a chat agent instead.
+- You configure inline agents (model, memory, tools) the same way you configure chat agents. The only difference is *where* and *how* you invoke them.
+
+## What's next
+
+You now have a working GraphQL service powered by an inline agent. Here are some natural next steps:
+
+- [Configure Agent Memory](memory-configuration.md) — Set up memory strategies for chat agents and stateful inline agents
+- [Bind Tools to Agents](tool-binding.md) — Give your agent the ability to call external services, connectors, and APIs
+- [Orchestrate Multiple Agents](multi-agent-orchestration.md) — Route between specialized agents for complex workflows
