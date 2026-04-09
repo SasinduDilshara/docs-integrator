@@ -37,3 +37,6 @@ node_modules
 
 # Generated docs
 en/site
+.venv
+.docusaurus
+
