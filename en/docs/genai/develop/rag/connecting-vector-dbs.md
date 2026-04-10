@@ -1,166 +1,169 @@
 ---
 sidebar_position: 3
 title: Connecting to Vector Databases
-description: Connect to ChromaDB, Pinecone, Weaviate, pgvector, and Qdrant for storing and querying embeddings.
+description: Connect WSO2 Integrator RAG pipelines to Pinecone, Weaviate, Milvus, and pgvector for production-grade embedding storage and retrieval.
 ---
 
 # Connecting to Vector Databases
 
 Vector databases store and index high-dimensional embeddings for fast similarity search. They are the backbone of any RAG pipeline, enabling your application to find relevant document chunks in milliseconds.
 
-## Supported Vector Databases
+In WSO2 Integrator, every vector store implements the `ai:VectorStore` interface. You can start with the built-in in-memory store for development and switch to a production database by changing a single line of code.
 
-| Database | Type | Transport | Best For |
-|----------|------|-----------|----------|
-| **ChromaDB** | Open source | HTTP | Development, prototyping |
-| **Pinecone** | Managed SaaS | HTTP | Production, zero-ops |
-| **Weaviate** | Open source / SaaS | HTTP/gRPC | Flexible schemas, hybrid search |
-| **pgvector** | PostgreSQL extension | SQL | Existing Postgres infrastructure |
-| **Qdrant** | Open source / SaaS | HTTP/gRPC | High-performance workloads |
+## Supported Vector Stores
 
-## ChromaDB
+| Store | Module | Best For |
+|---|---|---|
+| **In-memory** | `ballerina/ai` | Development, prototyping, tests |
+| **Pinecone** | `ballerinax/ai.pinecone` | Managed SaaS, zero-ops production |
+| **Weaviate** | `ballerinax/ai.weaviate` | Hybrid search, flexible schemas |
+| **Milvus** | `ballerinax/ai.milvus` | High-performance, large-scale workloads |
+| **pgvector** | `ballerinax/ai.pgvector` | Existing PostgreSQL infrastructure |
 
-An open-source embedding database ideal for development and small-to-medium production workloads.
+## In-Memory Vector Store
 
-```bash
-docker run -d --name chromadb -p 8000:8000 chromadb/chroma:latest
-```
+The in-memory store ships with the `ballerina/ai` module. It requires no external infrastructure and is ideal for local development and automated tests.
 
 ```ballerina
-import ballerinax/chromadb;
+import ballerina/ai;
 
-final chromadb:Client chromaClient = check new ({
-    url: "http://localhost:8000"
-});
-
-chromadb:Collection collection = check chromaClient.getOrCreateCollection(
-    "product_docs",
-    metadata = {"hnsw:space": "cosine"}
-);
-
-// Add documents with embeddings
-check collection.add(
-    ids = ["doc-1", "doc-2"],
-    documents = ["First document text", "Second document text"],
-    embeddings = [embedding1, embedding2],
-    metadatas = [{"source": "guide"}, {"source": "faq"}]
-);
-
-// Query by embedding vector
-chromadb:QueryResult results = check collection.query(
-    queryEmbeddings = [queryEmbedding],
-    nResults = 5,
-    where = {"source": "guide"}
-);
+final ai:VectorStore vectorStore = check new ai:InMemoryVectorStore();
+final ai:EmbeddingProvider embeddingProvider = check ai:getDefaultEmbeddingProvider();
+final ai:KnowledgeBase knowledgeBase =
+        new ai:VectorKnowledgeBase(vectorStore, embeddingProvider);
 ```
+
+Because the store lives entirely in process memory, all data is lost when the program exits.
 
 ## Pinecone
 
-A fully managed vector database service with built-in scaling.
+Pinecone is a fully managed vector database with built-in scaling. Use the `ballerinax/ai.pinecone` connector to plug it into your knowledge base.
 
 ```ballerina
-import ballerinax/pinecone;
+import ballerina/ai;
+import ballerinax/ai.pinecone;
 
-final pinecone:Client pineconeClient = check new ({
-    apiKey: pineconeApiKey,
-    environment: "us-east-1-aws"
-});
+configurable string pineconeServiceUrl = ?;
+configurable string pineconeApiKey = ?;
 
-final pinecone:Index productIndex = check pineconeClient.index("product-docs");
+final ai:VectorStore vectorStore =
+        check new pinecone:VectorStore(pineconeServiceUrl, pineconeApiKey);
 
-// Upsert vectors
-check productIndex.upsert([
-    {
-        id: "doc-1",
-        values: embedding1,
-        metadata: {"source": "guide", "section": "returns"}
-    }
-]);
+final ai:EmbeddingProvider embeddingProvider = check ai:getDefaultEmbeddingProvider();
 
-// Query with metadata filtering
-pinecone:QueryResult results = check productIndex.query({
-    vector: queryEmbedding,
-    topK: 5,
-    filter: {"source": {"$eq": "guide"}},
-    includeMetadata: true
-});
+final ai:KnowledgeBase knowledgeBase =
+        new ai:VectorKnowledgeBase(vectorStore, embeddingProvider);
 ```
+
+```toml
+# Config.toml
+pineconeServiceUrl = "https://your-index.svc.region.pinecone.io"
+pineconeApiKey = "pcsk-..."
+```
+
+Notice that only the `VectorStore` line changes -- the `KnowledgeBase` construction is identical to the in-memory example. This is the benefit of programming against the `ai:VectorStore` interface.
 
 ## Weaviate
 
-An open-source vector database with built-in hybrid search (vector plus keyword).
+Weaviate is an open-source vector database with built-in support for hybrid (vector + keyword) search.
 
 ```ballerina
-import ballerinax/weaviate;
+import ballerina/ai;
+import ballerinax/ai.weaviate;
 
-final weaviate:Client weaviateClient = check new ({
-    url: "http://localhost:8080",
-    apiKey: weaviateApiKey
-});
+configurable string weaviateUrl = ?;
+configurable string weaviateApiKey = ?;
 
-// Hybrid search (vector + keyword)
-weaviate:SearchResult results = check weaviateClient.hybridSearch(
-    "Document",
-    {
-        query: "return policy",
-        vector: queryEmbedding,
-        alpha: 0.75,  // 0.75 vector weight, 0.25 keyword weight
-        'limit: 5
-    }
-);
+final ai:VectorStore vectorStore =
+        check new weaviate:VectorStore(weaviateUrl, weaviateApiKey);
+
+final ai:EmbeddingProvider embeddingProvider = check ai:getDefaultEmbeddingProvider();
+final ai:KnowledgeBase knowledgeBase =
+        new ai:VectorKnowledgeBase(vectorStore, embeddingProvider);
+```
+
+```toml
+# Config.toml
+weaviateUrl = "https://your-cluster.weaviate.network"
+weaviateApiKey = "..."
+```
+
+## Milvus
+
+Milvus is built for high-performance, large-scale vector search workloads.
+
+```ballerina
+import ballerina/ai;
+import ballerinax/ai.milvus;
+
+configurable string milvusUrl = ?;
+configurable string milvusToken = ?;
+
+final ai:VectorStore vectorStore =
+        check new milvus:VectorStore(milvusUrl, milvusToken);
+
+final ai:EmbeddingProvider embeddingProvider = check ai:getDefaultEmbeddingProvider();
+final ai:KnowledgeBase knowledgeBase =
+        new ai:VectorKnowledgeBase(vectorStore, embeddingProvider);
+```
+
+```toml
+# Config.toml
+milvusUrl = "http://localhost:19530"
+milvusToken = "..."
 ```
 
 ## pgvector (PostgreSQL)
 
-Use your existing PostgreSQL database for vector storage and search.
+If you already run PostgreSQL, the `pgvector` extension lets you store and query embeddings alongside the rest of your relational data.
+
+```ballerina
+import ballerina/ai;
+import ballerinax/ai.pgvector;
+
+configurable string pgHost = ?;
+configurable int pgPort = 5432;
+configurable string pgDatabase = ?;
+configurable string pgUser = ?;
+configurable string pgPassword = ?;
+
+final ai:VectorStore vectorStore = check new pgvector:VectorStore(
+    host = pgHost,
+    port = pgPort,
+    database = pgDatabase,
+    user = pgUser,
+    password = pgPassword
+);
+
+final ai:EmbeddingProvider embeddingProvider = check ai:getDefaultEmbeddingProvider();
+final ai:KnowledgeBase knowledgeBase =
+        new ai:VectorKnowledgeBase(vectorStore, embeddingProvider);
+```
+
+```toml
+# Config.toml
+pgHost = "localhost"
+pgPort = 5432
+pgDatabase = "rag"
+pgUser = "postgres"
+pgPassword = "..."
+```
+
+Make sure the `vector` extension is enabled on your database:
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS vector;
-
-CREATE TABLE document_chunks (
-    id SERIAL PRIMARY KEY,
-    content TEXT NOT NULL,
-    source VARCHAR(255),
-    embedding vector(1536),
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE INDEX ON document_chunks USING ivfflat (embedding vector_cosine_ops)
-    WITH (lists = 100);
 ```
 
-```ballerina
-import ballerinax/postgresql;
-import ballerina/sql;
+## Choosing a Vector Store
 
-final postgresql:Client pgClient = check new (
-    host = dbHost, port = dbPort, database = dbName,
-    user = dbUser, password = dbPassword
-);
-
-function searchSimilar(float[] queryEmbedding, int topK = 5) returns DocumentChunk[]|error {
-    string vectorStr = string `[${string:'join(",", ...from float v in queryEmbedding select v.toString())}]`;
-    stream<DocumentChunk, sql:Error?> resultStream = pgClient->query(
-        `SELECT id, content, source,
-                1 - (embedding <=> ${vectorStr}::vector) AS similarity
-         FROM document_chunks
-         ORDER BY embedding <=> ${vectorStr}::vector
-         LIMIT ${topK}`
-    );
-    return from DocumentChunk chunk in resultStream select chunk;
-}
-```
-
-## Choosing a Vector Database
-
-| Factor | ChromaDB | Pinecone | Weaviate | pgvector | Qdrant |
-|--------|----------|----------|----------|----------|--------|
-| **Setup** | Easy (Docker) | Managed | Medium | SQL extension | Easy (Docker) |
-| **Scaling** | Manual | Automatic | Manual/Managed | Manual | Manual/Managed |
-| **Hybrid search** | No | No | Yes | With tsvector | Yes |
-| **Metadata filtering** | Yes | Yes | Yes | SQL WHERE | Yes |
-| **Cost** | Free | Pay-per-use | Free/Pay | Free | Free/Pay |
-| **Best for** | Dev/small | Production | Flexible | Existing Postgres | Performance |
+| Factor | In-memory | Pinecone | Weaviate | Milvus | pgvector |
+|---|---|---|---|---|---|
+| **Setup** | None | Managed | Docker / Cloud | Docker / Cloud | SQL extension |
+| **Scaling** | N/A | Automatic | Manual / Managed | Manual / Managed | Manual |
+| **Persistence** | No | Yes | Yes | Yes | Yes |
+| **Hybrid search** | No | Yes | Yes | Yes | With tsvector |
+| **Best for** | Dev / tests | Production SaaS | Flexible schemas | Large scale | Existing Postgres |
 
 ## What's Next
 

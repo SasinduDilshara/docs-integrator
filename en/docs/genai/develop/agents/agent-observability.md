@@ -1,100 +1,74 @@
 ---
 sidebar_position: 5
 title: AI Agent Observability
-description: Monitor and trace AI agent behavior with agent tracing, conversation logging, and performance metrics.
+description: Monitor and trace AI agent behavior with OpenTelemetry tracing, structured logging, and metrics.
 ---
 
 # AI Agent Observability
 
-Observability gives you visibility into how your AI agents reason, which tools they call, how long each step takes, and where failures occur. Without observability, debugging agent behavior in production is guesswork.
+Observability gives you visibility into how your AI agents reason, which tools they call, how long each step takes, and where failures occur. Without it, debugging agent behavior in production is guesswork.
 
-WSO2 Integrator provides built-in observability for agents through tracing, conversation logging, and performance metrics that integrate with standard observability backends.
+WSO2 Integrator supports OpenTelemetry-based tracing and metrics for agents through Ballerina's standard observability stack. You do not need any agent-specific observability API -- the runtime wraps `agent.run(...)` calls, tool invocations, and LLM calls in spans automatically once observability is enabled.
 
-## Enabling Agent Tracing
+## Enabling Observability
 
-Agent tracing captures each step of the agent's reasoning loop -- the LLM call, tool selection, tool execution, and response generation -- as spans in a distributed trace.
+Turn on observability in `Ballerina.toml`:
 
-### Basic Tracing Setup
-
-```ballerina
-import ballerinax/ai.agent;
-import ballerina/observe;
-
-final agent:ChatAgent observableAgent = check new (
-    model: llmClient,
-    systemPrompt: "You are a customer support assistant.",
-    tools: [getCustomer, searchOrders, createTicket],
-    observability: {
-        tracing: true,
-        metricsEnabled: true
-    }
-);
+```toml
+[build-options]
+observabilityIncluded = true
 ```
 
-When tracing is enabled, each call to `agent.chat()` produces a trace with the following span hierarchy:
+This bundles the Ballerina observability runtime with your package. Then configure a tracing provider and (optionally) a metrics reporter in `Config.toml`:
+
+```toml
+[ballerina.observe]
+tracingEnabled = true
+tracingProvider = "jaeger"
+metricsEnabled = true
+metricsReporter = "prometheus"
+```
+
+Any OpenTelemetry-compatible backend (Jaeger, Zipkin, Honeycomb, Grafana Tempo, and so on) works. Consult the Ballerina documentation for the provider-specific configuration blocks.
+
+### Trace Structure
+
+Once tracing is enabled, every call to `agent.run(...)` produces a trace with a span hierarchy similar to the one below. Tool invocations and LLM calls appear as child spans.
 
 ```
-agent.chat
+agent.run
   |-- llm.call (system prompt + user message)
-  |-- tool.select (getCustomer)
   |-- tool.execute (getCustomer)
   |     |-- http.get /customers/C-1234
   |-- llm.call (with tool result)
-  |-- tool.select (searchOrders)
   |-- tool.execute (searchOrders)
   |     |-- http.get /orders?customerId=C-1234
   |-- llm.call (final response generation)
 ```
 
-### Configuring the Trace Exporter
+Ballerina's HTTP client instrumentation automatically adds spans for any `http:Client` calls made inside your tools, so you get end-to-end traces from the user request down to your backends.
 
-Export traces to Jaeger, Zipkin, or any OpenTelemetry-compatible backend.
+## Structured Logging
 
-```toml
-# Config.toml
-[ballerina.observe]
-tracingEnabled = true
-tracingProvider = "jaeger"
-
-[ballerinax.jaeger]
-agentHostname = "localhost"
-agentPort = 6831
-```
-
-To use the OpenTelemetry exporter instead:
-
-```toml
-[ballerina.observe]
-tracingEnabled = true
-tracingProvider = "opentelemetry"
-
-[ballerinax.opentelemetry]
-endpoint = "http://localhost:4317"
-protocol = "grpc"
-```
-
-## Conversation Logging
-
-Log the full conversation history for each session, including tool calls and responses, for auditing and debugging.
-
-### Structured Conversation Logs
+Use the standard `ballerina/log` module to emit structured logs around agent calls. The `log` module supports key-value pairs that most log aggregators can index.
 
 ```ballerina
+import ballerina/ai;
 import ballerina/log;
 
-service /agent on new http:Listener(8090) {
-
-    resource function post chat(@http:Payload ChatRequest request) returns ChatResponse|error {
-        log:printInfo("Agent request",
+service /support on new ai:Listener(8090) {
+    resource function post chat(ai:ChatReqMessage request)
+            returns ai:ChatRespMessage|error {
+        log:printInfo("Agent invoked",
             sessionId = request.sessionId,
             userMessage = request.message
         );
 
-        string response = check observableAgent.chat(request.message, request.sessionId);
+        string response = check supportAgent.run(request.message, request.sessionId);
 
-        log:printInfo("Agent response",
+        log:printInfo("Agent responded",
             sessionId = request.sessionId,
-            response = response
+            responseLength = response.length()
         );
 
         return {message: response};
@@ -102,105 +76,55 @@ service /agent on new http:Listener(8090) {
 }
 ```
 
-### Logging Tool Calls
-
-Register a tool call listener to capture detailed information about each tool invocation.
+Tools can log their own events the same way. Because tool functions are `isolated`, prefer `log:printInfo` / `log:printError` over custom loggers that require shared state.
 
 ```ballerina
-final agent:ChatAgent loggedAgent = check new (
-    model: llmClient,
-    systemPrompt: "You are a support assistant.",
-    tools: [getCustomer, searchOrders],
-    onToolCall: isolated function(agent:ToolCallEvent event) {
-        log:printInfo("Tool called",
-            toolName = event.toolName,
-            parameters = event.parameters.toString(),
-            sessionId = event.sessionId,
-            iteration = event.iteration
-        );
-    },
-    onToolResult: isolated function(agent:ToolResultEvent event) {
-        log:printInfo("Tool result",
-            toolName = event.toolName,
-            resultSize = event.result.toString().length(),
-            durationMs = event.durationMs,
-            sessionId = event.sessionId
-        );
-    }
-);
-```
+import ballerina/ai;
+import ballerina/log;
 
-### Persisting Conversation Logs
-
-Store conversation logs in a database for long-term auditing.
-
-```ballerina
-import ballerinax/postgresql;
-
-function logConversationTurn(
-    string sessionId,
-    string userMessage,
-    string agentResponse,
-    agent:ToolCallEvent[] toolCalls
-) returns error? {
-    _ = check pgClient->execute(`
-        INSERT INTO conversation_logs (session_id, user_message, agent_response, tool_calls, created_at)
-        VALUES (${sessionId}, ${userMessage}, ${agentResponse},
-                ${toolCalls.toString()}, NOW())
-    `);
+# Create a new support ticket.
+# + subject - Ticket subject
+# + description - Ticket description
+# + return - The created ticket
+@ai:AgentTool
+isolated function createSupportTicket(string subject, string description)
+        returns json|error {
+    log:printInfo("Creating support ticket", subject = subject);
+    json result = check ticketApi->/tickets.post({subject, description});
+    log:printInfo("Support ticket created", ticketId = result.toString());
+    return result;
 }
 ```
 
-## Performance Metrics
+## Metrics
 
-Track key metrics to understand agent performance and identify bottlenecks.
-
-### Built-In Metrics
-
-When `metricsEnabled` is set to `true`, the agent automatically publishes the following metrics:
-
-| Metric | Type | Description |
-|--------|------|-------------|
-| `agent_requests_total` | Counter | Total number of agent requests |
-| `agent_request_duration_seconds` | Histogram | End-to-end response time |
-| `agent_llm_calls_total` | Counter | Number of LLM calls per request |
-| `agent_tool_calls_total` | Counter | Number of tool calls per request |
-| `agent_tool_call_duration_seconds` | Histogram | Duration of each tool call |
-| `agent_iterations_total` | Histogram | Number of reasoning iterations per request |
-| `agent_errors_total` | Counter | Number of failed requests |
-
-### Custom Metrics
-
-Add custom metrics for domain-specific monitoring.
+With `metricsEnabled = true`, Ballerina publishes standard runtime and HTTP metrics automatically. For domain-specific monitoring -- for example, the number of tickets the agent opens per hour -- use `ballerina/observe` counters and gauges.
 
 ```ballerina
+import ballerina/ai;
 import ballerina/observe;
 
-final observe:Counter ticketCreations = new ("agent_tickets_created_total",
-    description = "Number of support tickets created by the agent"
+final observe:Counter ticketCreations = new (
+    "agent_tickets_created_total",
+    desc = "Number of support tickets created by the agent"
 );
 
-final observe:Gauge activeSessions = new ("agent_active_sessions",
-    description = "Number of currently active agent sessions"
-);
-
-@agent:Tool {
-    name: "createSupportTicket",
-    description: "Create a new support ticket."
-}
-isolated function createSupportTicket(string subject, string description) returns json|error {
-    json result = check ticketApi->post("/tickets", {subject, description});
+# Create a new support ticket.
+# + subject - Ticket subject
+# + description - Ticket description
+# + return - The created ticket
+@ai:AgentTool
+isolated function createSupportTicket(string subject, string description)
+        returns json|error {
+    json result = check ticketApi->/tickets.post({subject, description});
     ticketCreations.increment();
     return result;
 }
 ```
 
-### Configuring the Metrics Exporter
-
-Export metrics to Prometheus.
+### Exporting to Prometheus
 
 ```toml
-# Config.toml
 [ballerina.observe]
 metricsEnabled = true
 metricsReporter = "prometheus"
@@ -210,70 +134,60 @@ port = 9797
 host = "0.0.0.0"
 ```
 
-## Dashboarding
+### Example Grafana Queries
 
-### Grafana Dashboard Queries
+Once metrics land in Prometheus you can build dashboards from them. The exact metric names depend on the Ballerina runtime version, but common queries look like this:
 
-Use the exported metrics to build dashboards that show agent health at a glance.
-
-**Average response time:**
+**95th-percentile HTTP request duration (covers the `ai:Listener` service):**
 
 ```promql
-histogram_quantile(0.95, rate(agent_request_duration_seconds_bucket[5m]))
+histogram_quantile(0.95, rate(response_time_seconds_bucket[5m]))
 ```
 
-**Tool call error rate:**
+**Custom ticket creation rate:**
 
 ```promql
-rate(agent_errors_total[5m]) / rate(agent_requests_total[5m])
+rate(agent_tickets_created_total[5m])
 ```
 
-**Average iterations per request:**
+## WSO2 Integrator Console
 
-```promql
-rate(agent_iterations_total_sum[5m]) / rate(agent_iterations_total_count[5m])
-```
+When you deploy agents to the WSO2 Integrator Console (Choreo), traces and metrics are collected automatically. The console provides built-in views for request rates, latencies, and distributed traces so you can inspect tool calls and LLM interactions without wiring up your own backend. Use the same `log`, `observe`, and tracing APIs described above -- the console consumes the data without additional configuration.
 
 ## Debugging Agent Behavior
 
-### Verbose Mode
+### Verbose Development Logs
 
-Enable verbose logging to see the full prompt and response for each LLM call during development.
+During development, lower the log level to capture everything the agent and its tools emit. Add this to `Config.toml`:
 
-```ballerina
-final agent:ChatAgent debugAgent = check new (
-    model: llmClient,
-    systemPrompt: "You are a support assistant.",
-    tools: [getCustomer, searchOrders],
-    observability: {
-        tracing: true,
-        metricsEnabled: true,
-        verboseLogging: true   // Logs full prompts and responses
-    }
-);
+```toml
+[ballerina.log]
+level = "DEBUG"
 ```
 
-Verbose logging outputs the complete system prompt, user message, tool calls, tool results, and final response at the `DEBUG` log level. Do not enable this in production, as it may log sensitive data.
+Remember to raise the level again before shipping to production, since debug-level logs may include sensitive data.
 
-### Replay and Inspection
+### Inspecting Tool Inputs and Outputs
 
-Retrieve the full reasoning trace for a completed request.
+Because every tool is a regular Ballerina function, the simplest way to inspect what the agent is doing is to log the arguments and return values inside the tool itself:
 
 ```ballerina
-agent:ReasoningTrace trace = check observableAgent.getLastTrace(sessionId);
-
-foreach agent:TraceStep step in trace.steps {
-    log:printInfo("Step",
-        stepType = step.stepType,
-        content = step.content,
-        durationMs = step.durationMs
-    );
+# Look up an order by ID.
+# + orderId - Order identifier
+# + return - Order payload
+@ai:AgentTool
+isolated function getOrder(string orderId) returns json|error {
+    log:printDebug("Tool invoked", 'tool = "getOrder", orderId = orderId);
+    json result = check orderApi->/orders/[orderId];
+    log:printDebug("Tool returning", 'tool = "getOrder", result = result);
+    return result;
 }
 ```
+
+Combined with distributed traces, these logs make it straightforward to follow the agent's reasoning step by step.
 
 ## What's Next
 
 - [AI Agent Evaluations](/docs/genai/develop/agents/agent-evaluations) -- Test and measure agent quality
 - [Creating an AI Agent](/docs/genai/develop/agents/creating-agent) -- Build your first agent
-- [Agent Tracing](/docs/genai/agent-observability/agent-tracing) -- Detailed tracing guide
-- [Performance Metrics](/docs/genai/agent-observability/performance-metrics) -- Metrics reference
+- [Advanced Configuration](/docs/genai/develop/agents/advanced-config) -- Tune agent behavior

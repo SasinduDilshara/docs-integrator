@@ -1,21 +1,23 @@
 ---
 sidebar_position: 3
 title: "Build a Sample Hotel Booking Agent"
-description: Build a hotel booking agent with memory, multiple tools, and multi-turn conversation support.
+description: Build a hotel booking agent with multi-turn conversation memory, multiple tools, and a chat endpoint.
 ---
 
 # Build a Sample Hotel Booking Agent
 
-**Time:** 15 minutes | **What you'll build:** A conversational agent that helps users search for hotels, check availability, and make bookings through natural conversation with multi-turn memory.
+**Time:** 15 minutes | **What you'll build:** A conversational agent that helps users search for hotels, check availability, and make bookings through natural conversation, with session-scoped memory so the user can refer back to earlier messages.
 
-This quick start builds on the calculator example by adding conversation memory, multiple domain-specific tools, and session management -- patterns you will use in production AI integrations.
+This walkthrough builds on the [Smart Calculator](smart-calculator.md) example by adding several domain-specific tools and exposing the agent as a chat service on an `ai:Listener`. The `ai:Listener` handles per-session memory automatically — you just pass the `sessionId` into `agent.run(...)`.
 
 ## Prerequisites
 
 - [WSO2 Integrator set up for AI](setup.md)
-- An API key for an LLM provider
+- Completed [Smart Calculator Assistant](smart-calculator.md) (recommended)
 
 ## Step 1: Define Data Types
+
+Create a file named `types.bal` to hold the booking domain types:
 
 ```ballerina
 type Hotel record {|
@@ -49,22 +51,24 @@ type Booking record {|
 
 ## Step 2: Define Agent Tools
 
-```ballerina
-import ballerinax/ai.agent;
+Create `tools.bal`. Each tool is an `isolated` function annotated with `@ai:AgentTool`. The LLM uses the summary line and `+ param - description` lines from the Ballerina doc comment to decide when and how to call the tool.
 
-@agent:Tool {
-    name: "searchHotels",
-    description: "Search for hotels in a city. Returns a list of available hotels with pricing and ratings. Use this when a user asks about hotels in a specific location."
-}
-isolated function searchHotels(
-    @agent:Param {description: "City name, e.g., 'Paris', 'New York'"} string city,
-    @agent:Param {description: "Maximum price per night in USD"} decimal? maxPrice = ()
-) returns Hotel[]|error {
-    // In production, this would query a hotel booking API
+```ballerina
+import ballerina/ai;
+import ballerina/uuid;
+
+# Searches for hotels in a city, optionally filtered by a maximum nightly price.
+#
+# + city - City name, e.g. "Paris" or "New York"
+# + maxPrice - Optional maximum price per night in USD
+# + return - Hotels matching the criteria
+@ai:AgentTool
+isolated function searchHotels(string city, decimal? maxPrice = ()) returns Hotel[] {
+    // In production, query a hotel booking API here.
     Hotel[] hotels = [
-        {hotelId: "HTL-001", name: "Grand Plaza Hotel", city: city, pricePerNight: 199.99, rating: 4.5, amenities: ["WiFi", "Pool", "Gym"]},
-        {hotelId: "HTL-002", name: "City Center Inn", city: city, pricePerNight: 129.99, rating: 4.0, amenities: ["WiFi", "Breakfast"]},
-        {hotelId: "HTL-003", name: "Luxury Suites", city: city, pricePerNight: 349.99, rating: 4.8, amenities: ["WiFi", "Pool", "Spa", "Restaurant"]}
+        {hotelId: "HTL-001", name: "Grand Plaza Hotel", city, pricePerNight: 199.99, rating: 4.5, amenities: ["WiFi", "Pool", "Gym"]},
+        {hotelId: "HTL-002", name: "City Center Inn",   city, pricePerNight: 129.99, rating: 4.0, amenities: ["WiFi", "Breakfast"]},
+        {hotelId: "HTL-003", name: "Luxury Suites",     city, pricePerNight: 349.99, rating: 4.8, amenities: ["WiFi", "Pool", "Spa", "Restaurant"]}
     ];
 
     if maxPrice is decimal {
@@ -73,18 +77,18 @@ isolated function searchHotels(
     return hotels;
 }
 
-@agent:Tool {
-    name: "checkAvailability",
-    description: "Check if a specific hotel has rooms available for given dates. Returns availability status and total price."
-}
-isolated function checkAvailability(
-    @agent:Param {description: "Hotel ID from search results"} string hotelId,
-    @agent:Param {description: "Check-in date in YYYY-MM-DD format"} string checkIn,
-    @agent:Param {description: "Check-out date in YYYY-MM-DD format"} string checkOut
-) returns Availability|error {
-    // In production, this would check real availability
+# Checks whether a hotel has rooms available between two dates.
+#
+# + hotelId - Hotel identifier returned from `searchHotels`
+# + checkIn - Check-in date in `YYYY-MM-DD` format
+# + checkOut - Check-out date in `YYYY-MM-DD` format
+# + return - Availability result with total price and nights
+@ai:AgentTool
+isolated function checkAvailability(string hotelId, string checkIn, string checkOut)
+        returns Availability {
+    // In production, query the real availability system here.
     return {
-        hotelId: hotelId,
+        hotelId,
         hotelName: "Grand Plaza Hotel",
         available: true,
         totalPrice: 599.97,
@@ -92,137 +96,113 @@ isolated function checkAvailability(
     };
 }
 
-@agent:Tool {
-    name: "makeBooking",
-    description: "Book a hotel room. Requires hotel ID, guest name, and dates. Returns a booking confirmation. Always confirm details with the user before calling this tool."
-}
-isolated function makeBooking(
-    @agent:Param {description: "Hotel ID"} string hotelId,
-    @agent:Param {description: "Full name of the guest"} string guestName,
-    @agent:Param {description: "Check-in date (YYYY-MM-DD)"} string checkIn,
-    @agent:Param {description: "Check-out date (YYYY-MM-DD)"} string checkOut
-) returns Booking|error {
+# Books a hotel room. The caller must confirm details with the user first.
+#
+# + hotelId - Hotel identifier
+# + guestName - Full name of the guest
+# + checkIn - Check-in date (`YYYY-MM-DD`)
+# + checkOut - Check-out date (`YYYY-MM-DD`)
+# + return - A booking confirmation
+@ai:AgentTool
+isolated function makeBooking(string hotelId, string guestName, string checkIn, string checkOut)
+        returns Booking {
     return {
-        bookingId: "BKG-78901",
-        hotelId: hotelId,
+        bookingId: "BKG-" + uuid:createRandomUuid(),
+        hotelId,
         hotelName: "Grand Plaza Hotel",
-        guestName: guestName,
-        checkIn: checkIn,
-        checkOut: checkOut,
+        guestName,
+        checkIn,
+        checkOut,
         totalPrice: 599.97,
         status: "confirmed"
     };
 }
 ```
 
-## Step 3: Create the Agent with Memory
+## Step 3: Create the Agent
 
-Memory allows the agent to maintain conversation context across multiple turns, so the user can refer back to previous search results or refine their request.
+Create `main.bal` with the agent definition and a chat service.
 
 ```ballerina
-import ballerinax/ai.agent;
-import ballerinax/openai.chat;
+import ballerina/ai;
 
-configurable string openAiApiKey = ?;
+final ai:Agent bookingAgent = check new (
+    systemPrompt = {
+        role: "Hotel Booking Assistant",
+        instructions: string `You are a friendly hotel booking assistant.
 
-final agent:ChatAgent bookingAgent = check new (
-    model: check new chat:Client({auth: {token: openAiApiKey}}),
-    systemPrompt: string `You are a friendly hotel booking assistant.
+            Your responsibilities:
+            - Help users find and book hotels through natural conversation.
+            - Ask clarifying questions when information is missing.
 
-Role:
-- Help users find and book hotels through natural conversation.
-- Be conversational and helpful, asking clarifying questions when needed.
+            Tool usage:
+            - Use searchHotels when the user mentions a city or destination.
+            - Use checkAvailability before confirming a booking to verify dates and pricing.
+            - Use makeBooking only after the user explicitly confirms they want to proceed.
 
-Tools:
-- Use searchHotels to find hotels when users mention a city or destination.
-- Use checkAvailability before confirming a booking to verify dates and pricing.
-- Use makeBooking only after the user confirms they want to proceed.
-
-Guidelines:
-- Always present search results in a clear, readable format.
-- Mention the price, rating, and key amenities for each hotel.
-- Before booking, confirm the hotel name, dates, and guest name with the user.
-- If the user hasn't specified dates, ask for check-in and check-out dates.`,
-    tools: [searchHotels, checkAvailability, makeBooking],
-    memory: new agent:MessageWindowChatMemory(maxMessages: 20)
+            Presentation:
+            - Show hotels clearly with price, rating, and key amenities.
+            - Before booking, repeat back the hotel name, dates, and guest name for confirmation.`
+    },
+    tools = [searchHotels, checkAvailability, makeBooking],
+    model = check ai:getDefaultModelProvider()
 );
 ```
 
-## Step 4: Expose as a Chat Service
+## Step 4: Expose the Agent as a Chat Service
+
+Attach a service to an `ai:Listener`. The listener gives you session-scoped chat memory out of the box — you pass the `sessionId` into `agent.run(...)` and the runtime retrieves and updates the conversation history for that session automatically.
 
 ```ballerina
-import ballerina/http;
-import ballerina/uuid;
-
-service /booking on new http:Listener(8090) {
-
-    resource function post chat(@http:Payload ChatRequest request) returns ChatResponse|error {
-        string sessionId = request.sessionId ?: uuid:createType1().toString();
-        string response = check bookingAgent.chat(request.message, sessionId);
-        return {message: response, sessionId};
-    }
-
-    resource function delete session/[string sessionId]() returns http:Ok {
-        bookingAgent.clearMemory(sessionId);
-        return http:OK;
+service /booking on new ai:Listener(8090) {
+    resource function post chat(ai:ChatReqMessage request)
+            returns ai:ChatRespMessage|error {
+        string response = check bookingAgent.run(request.message, request.sessionId);
+        return {message: response};
     }
 }
-
-type ChatRequest record {|
-    string message;
-    string? sessionId;
-|};
-
-type ChatResponse record {|
-    string message;
-    string sessionId;
-|};
 ```
 
 ## Step 5: Run and Test
 
-1. Configure and run:
+1. Run the project:
 
-```toml
-openAiApiKey = "sk-your-api-key-here"
-```
+    ```bash
+    bal run
+    ```
 
-```bash
-bal run
-```
+2. Have a multi-turn conversation. Use the same `sessionId` across requests so the agent remembers context:
 
-2. Have a multi-turn conversation:
+    ```bash
+    # Turn 1 — start the conversation
+    curl -X POST http://localhost:8090/booking/chat \
+      -H "Content-Type: application/json" \
+      -d '{"sessionId": "guest-42", "message": "I am looking for a hotel in Paris under $200 a night"}'
 
-```bash
-# Start a conversation
-curl -X POST http://localhost:8090/booking/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "I am looking for a hotel in Paris for under $200 per night"}'
+    # Turn 2 — refer back to an earlier result
+    curl -X POST http://localhost:8090/booking/chat \
+      -H "Content-Type: application/json" \
+      -d '{"sessionId": "guest-42", "message": "Can you check the City Center Inn from March 20 to March 23?"}'
 
-# Follow up (use the sessionId from the previous response)
-curl -X POST http://localhost:8090/booking/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Can you check if the City Center Inn is available from March 20 to March 23?", "sessionId": "<session-id>"}'
+    # Turn 3 — confirm the booking
+    curl -X POST http://localhost:8090/booking/chat \
+      -H "Content-Type: application/json" \
+      -d '{"sessionId": "guest-42", "message": "Yes, please book it for Jane Smith"}'
+    ```
 
-# Confirm booking
-curl -X POST http://localhost:8090/booking/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Yes, please book it for Jane Smith", "sessionId": "<session-id>"}'
-```
-
-The agent remembers the entire conversation, so it knows which hotel and dates the user is referring to in follow-up messages.
+Because the listener keeps session history, the agent resolves "the City Center Inn" and "it" from the earlier messages without the user having to repeat themselves.
 
 ## How It Works
 
-This agent demonstrates three key patterns:
+This example demonstrates three patterns you will reuse in every production agent:
 
-1. **Multi-turn memory** -- The `MessageWindowChatMemory` keeps the last 20 messages, allowing the agent to maintain context across turns.
-2. **Sequential tool calls** -- The agent calls `searchHotels` first, then `checkAvailability`, then `makeBooking`, using each result to inform the next step.
-3. **Confirmation before action** -- The system prompt instructs the agent to confirm details before calling `makeBooking`, preventing unintended bookings.
+1. **Session-scoped memory** — `ai:Listener` keeps a short history of messages per `sessionId`, so the LLM sees recent turns on every call.
+2. **Sequential tool calls** — The agent calls `searchHotels`, then `checkAvailability`, then `makeBooking`, using each result to inform the next step. The chaining is driven entirely by the LLM's reasoning.
+3. **Confirmation before side effects** — The system prompt instructs the agent to confirm details before calling `makeBooking`, which is how you prevent unintended actions when a tool has real-world consequences.
 
 ## What's Next
 
-- [Creating an AI Agent](/docs/genai/develop/agents/creating-agent) -- Deep dive into agent configuration
-- [Adding Tools to an Agent](/docs/genai/develop/agents/adding-tools) -- Advanced tool patterns
-- [Adding Memory to an Agent](/docs/genai/develop/agents/adding-memory) -- Memory types and strategies
-- [What is AI Agent Memory?](/docs/genai/key-concepts/what-is-agent-memory) -- Understand memory concepts
+- [Creating an AI Agent](/docs/genai/develop/agents/creating-agent) — Full reference for agent configuration
+- [Adding Tools to an Agent](/docs/genai/develop/agents/adding-tools) — Advanced tool patterns
+- [Adding Memory to an Agent](/docs/genai/develop/agents/adding-memory) — Custom memory strategies
+- [What is AI Agent Memory?](/docs/genai/key-concepts/what-is-agent-memory) — Understand memory concepts

@@ -1,312 +1,212 @@
 ---
 sidebar_position: 1
 title: Creating an MCP Server
-description: Create Model Context Protocol servers to expose your integrations as tools, resources, and prompts for AI assistants.
+description: Create Model Context Protocol servers with the ballerina/mcp module to expose your integrations as tools for AI assistants.
 ---
 
 # Creating an MCP Server
 
 The Model Context Protocol (MCP) is an open standard that lets AI assistants discover and call your integration functions through a unified interface. By creating an MCP server in WSO2 Integrator, you expose your APIs, databases, and services as tools that any MCP-compatible client -- Claude Desktop, GitHub Copilot, or custom agents -- can use.
 
-This page covers how to create an MCP server, define tools, expose resources, configure transports, and set up the server for production use.
+In WSO2 Integrator, MCP servers are built with the `ballerina/mcp` module, which ships with the distribution. You do not need any external dependency to create a fully functional MCP server.
 
-## Minimal MCP Server
+## Simple MCP Server
 
-The simplest MCP server declares a service configuration and registers one or more tools.
-
-```ballerina
-import ballerinax/mcp;
-
-@mcp:ServiceConfig {
-    name: "order-service",
-    version: "1.0.0"
-}
-service on new mcp:Listener() {
-}
-
-@mcp:Tool {
-    name: "getOrderStatus",
-    description: "Look up the current status of a customer order by order ID (format: ORD-XXXXX)."
-}
-isolated function getOrderStatus(string orderId) returns json|error {
-    return check orderApi->get(string `/orders/${orderId}/status`);
-}
-```
-
-By default, the server uses `stdio` transport, which is compatible with local MCP clients like Claude Desktop.
-
-### The @mcp:ServiceConfig Annotation
-
-The `@mcp:ServiceConfig` annotation defines server-level metadata that MCP clients use during capability negotiation.
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | Yes | A unique identifier for this MCP server |
-| `version` | Yes | Semantic version string |
-| `description` | No | Human-readable description of the server's purpose |
-| `capabilities` | No | Explicitly declared capabilities (tools, resources, prompts) |
+The simplest MCP server is a `mcp:Service` attached to a `mcp:Listener`. Ballerina automatically derives each tool's name, description, and input schema from the `remote function` signature and its doc comments.
 
 ```ballerina
-@mcp:ServiceConfig {
-    name: "enterprise-data-service",
-    version: "2.1.0",
-    description: "Provides access to customer, order, and inventory data for AI assistants."
-}
-service on new mcp:Listener() {
-}
-```
+import ballerina/log;
+import ballerina/mcp;
 
-## Choosing a Transport
+type Weather record {|
+    string condition;
+    decimal temperatureC;
+|};
 
-### stdio Transport
+listener mcp:Listener mcpListener = new (9090);
 
-The default transport. The MCP client launches the server as a subprocess and communicates over standard I/O. Best for local development and desktop AI clients.
+service mcp:Service /mcp on mcpListener {
 
-```ballerina
-service on new mcp:Listener() {
-}
-```
-
-### SSE Transport
-
-Server-Sent Events transport for remote clients. The server runs as an HTTP service that clients connect to via SSE.
-
-```ballerina
-service on new mcp:Listener(new mcp:SseTransport(8090)) {
-}
-```
-
-### Streamable HTTP Transport
-
-A newer transport that uses standard HTTP with streaming support. Suitable for web-based AI assistants and cloud deployments.
-
-```ballerina
-service on new mcp:Listener(new mcp:StreamableHttpTransport(8090)) {
-}
-```
-
-| Transport | Best For | Client Examples |
-|-----------|----------|-----------------|
-| **stdio** | Local development, desktop clients | Claude Desktop, local agents |
-| **SSE** | Remote clients, web apps | Web-based AI assistants |
-| **Streamable HTTP** | Cloud deployments, modern clients | Cloud-hosted agents |
-
-## Defining Tools
-
-Tools are functions that AI assistants can call with parameters and receive structured results.
-
-### Basic Tool
-
-```ballerina
-@mcp:Tool {
-    name: "getCustomer",
-    description: "Retrieve customer details by ID. Returns name, email, account status, and subscription tier."
-}
-isolated function getCustomer(string customerId) returns json|error {
-    return check crmClient->get(string `/customers/${customerId}`);
-}
-```
-
-### Tool with Annotated Parameters
-
-Add descriptions to each parameter so AI assistants understand what values to provide.
-
-```ballerina
-@mcp:Tool {
-    name: "searchProducts",
-    description: "Search the product catalog by keyword, category, or price range. Returns up to 10 matching products."
-}
-isolated function searchProducts(
-    @mcp:Param {description: "Search keyword or product name"} string query,
-    @mcp:Param {description: "Category filter: 'electronics', 'clothing', 'home', or 'all'"} string category = "all",
-    @mcp:Param {description: "Maximum price in USD"} decimal? maxPrice = (),
-    @mcp:Param {description: "Number of results to return (1-50)"} int 'limit = 10
-) returns json|error {
-    map<string> params = {"q": query, "category": category, "limit": 'limit.toString()};
-    if maxPrice is decimal {
-        params["maxPrice"] = maxPrice.toString();
+    # Get current weather for a city.
+    #
+    # + city - City name (e.g., "New York", "Tokyo")
+    # + return - Current weather data for the specified city
+    remote function getCurrentWeather(string city) returns Weather|error {
+        log:printInfo(string `Weather requested for ${city}`);
+        return {condition: "Sunny", temperatureC: 22.5};
     }
-    return check catalogApi->get("/products/search", params);
+
+    # Get weather forecast for upcoming days.
+    #
+    # + location - City name
+    # + days - Number of days to include in the forecast
+    # + return - Forecast records, one per day
+    remote function getWeatherForecast(string location, int days)
+            returns Weather[]|error {
+        return [{condition: "Cloudy", temperatureC: 18.0}];
+    }
 }
 ```
 
-### Tool with Typed Return Values
+What happens under the hood:
 
-Return Ballerina records for structured, schema-aware output.
+- Each `remote function` becomes an MCP tool.
+- The function name becomes the tool name (`getCurrentWeather`, `getWeatherForecast`).
+- The doc comment becomes the tool description.
+- The `+ paramName - description` lines become parameter descriptions.
+- The parameter types become the JSON input schema.
+- The return type becomes the tool's output schema.
+
+Run the service with `bal run`, and it will accept MCP requests at `http://localhost:9090/mcp`.
+
+## Writing Good Tool Definitions
+
+MCP clients rely on your doc comments to decide when and how to call a tool. Write descriptions that are specific about inputs, outputs, and side effects.
 
 ```ballerina
-type OrderStatus record {|
-    string orderId;
-    string status;
-    string estimatedDelivery;
-    string? trackingNumber;
-    OrderItem[] items;
-|};
+service mcp:Service /mcp on mcpListener {
 
-type OrderItem record {|
-    string productName;
-    int quantity;
+    # Search the product catalog by keyword. Returns up to 10 matching products
+    # with their name, price, and availability.
+    #
+    # + query - Search keyword or product name
+    # + category - Category filter: "electronics", "clothing", "home", or "all"
+    # + maxPrice - Maximum price in USD. Pass () to disable the filter.
+    # + return - Matching products
+    remote function searchProducts(string query, string category = "all",
+            decimal? maxPrice = ()) returns Product[]|error {
+        // call your catalog API
+        return [];
+    }
+
+    # Create a new support ticket in the internal ticketing system.
+    # This action creates a real ticket and notifies the support team.
+    #
+    # + customerId - Customer identifier
+    # + subject - Ticket subject line
+    # + description - Detailed description of the issue
+    # + priority - "low", "medium", "high", or "critical"
+    # + return - The created ticket record
+    remote function createSupportTicket(string customerId, string subject,
+            string description, string priority = "medium")
+            returns Ticket|error {
+        // call your ticketing system
+        return {id: "TKT-001", subject, priority};
+    }
+}
+
+type Product record {|
+    string name;
     decimal price;
+    boolean inStock;
 |};
 
-@mcp:Tool {
-    name: "getOrderDetails",
-    description: "Retrieve full details of an order including items, status, and tracking information."
-}
-isolated function getOrderDetails(string orderId) returns OrderStatus|error {
-    return check orderDb->queryRow(
-        `SELECT * FROM orders WHERE order_id = ${orderId}`
-    );
-}
+type Ticket record {|
+    string id;
+    string subject;
+    string priority;
+|};
 ```
 
-### Write-Action Tools
+## Advanced MCP Server
 
-For tools that modify data, include clear descriptions about side effects so AI assistants can inform users before executing.
+When you need full control over tool discovery and dispatch -- for example, when tool definitions come from configuration or a database -- use `mcp:AdvancedService`. You implement `onListTools` to describe your tools manually and `onCallTool` to dispatch invocations.
 
 ```ballerina
-@mcp:Tool {
-    name: "createSupportTicket",
-    description: "Create a new support ticket. Returns the ticket ID. This action creates a real ticket in the ticketing system."
+import ballerina/mcp;
+
+type Weather record {|
+    string condition;
+    decimal temperatureC;
+|};
+
+function getCurrentWeather(string city) returns Weather|error {
+    return {condition: "Sunny", temperatureC: 22.5};
 }
-isolated function createSupportTicket(
-    @mcp:Param {description: "Customer ID"} string customerId,
-    @mcp:Param {description: "Ticket subject line"} string subject,
-    @mcp:Param {description: "Detailed issue description"} string description,
-    @mcp:Param {description: "Priority: 'low', 'medium', 'high', or 'critical'"} string priority = "medium"
-) returns json|error {
-    return check ticketApi->post("/tickets", {customerId, subject, description, priority});
-}
-```
 
-## Defining Resources
+listener mcp:Listener mcpListener = new (9090);
 
-Resources expose read-only data that AI assistants can access for context without calling a tool.
+service mcp:AdvancedService /mcp on mcpListener {
 
-### Static Resource
+    isolated remote function onListTools()
+            returns mcp:ListToolsResult|mcp:ServerError => {
+        tools: [
+            {
+                name: "getCurrentWeather",
+                description: "Get current weather conditions for a location",
+                inputSchema: {
+                    "type": "object",
+                    "properties": {
+                        "city": {
+                            "type": "string",
+                            "description": "City name"
+                        }
+                    },
+                    "required": ["city"]
+                }
+            }
+        ]
+    };
 
-```ballerina
-@mcp:Resource {
-    uri: "config://product-categories",
-    name: "Product Categories",
-    description: "List of all product categories and their descriptions",
-    mimeType: "application/json"
-}
-isolated function getProductCategories() returns json|error {
-    return check catalogApi->get("/categories");
-}
-```
-
-### Dynamic Resource with URI Template
-
-```ballerina
-@mcp:Resource {
-    uri: "data://customers/{customerId}/profile",
-    name: "Customer Profile",
-    description: "Full profile data for a specific customer",
-    mimeType: "application/json"
-}
-isolated function getCustomerProfile(string customerId) returns json|error {
-    return check crmClient->get(string `/customers/${customerId}/profile`);
-}
-```
-
-## Defining Prompts
-
-Prompts are reusable prompt templates that AI assistants can offer to users for common tasks.
-
-```ballerina
-@mcp:Prompt {
-    name: "analyze-order-issue",
-    description: "Analyze a customer order issue and suggest resolution steps"
-}
-isolated function analyzeOrderIssuePrompt(
-    @mcp:Param {description: "The order ID with the issue"} string orderId,
-    @mcp:Param {description: "Customer's description of the problem"} string issueDescription
-) returns string {
-    return string `Analyze the following customer order issue and provide a structured resolution plan.
-
-Order ID: ${orderId}
-Customer Description: ${issueDescription}
-
-Please:
-1. Identify the likely root cause
-2. List 2-3 resolution options ranked by likelihood of success
-3. Recommend the best course of action
-4. Draft a customer-facing response`;
+    isolated remote function onCallTool(mcp:CallToolParams params, mcp:Session? session)
+            returns mcp:CallToolResult|mcp:ServerError {
+        do {
+            if params.name == "getCurrentWeather" {
+                record {|string city;|} args = check params.arguments.cloneWithType();
+                Weather weather = check getCurrentWeather(args.city);
+                return {
+                    content: [{'type: "text", text: weather.toJsonString()}]
+                };
+            }
+        } on fail {
+            return error("Invalid arguments");
+        }
+        return error("Unknown tool: " + params.name);
+    }
 }
 ```
+
+Note that content items use the field name `'type` (with a leading quote) because `type` is a reserved keyword in Ballerina.
+
+### When to Use Each Style
+
+| Use `mcp:Service` when... | Use `mcp:AdvancedService` when... |
+|---|---|
+| Your tools map cleanly to static `remote function`s | Tools are defined dynamically at runtime |
+| You want Ballerina to derive schemas automatically | You need custom input schemas or validation logic |
+| You want the simplest possible MCP server | You want to route calls to a dispatch table |
 
 ## Error Handling
 
 Return informative error messages so AI assistants can reason about failures and suggest alternatives.
 
 ```ballerina
-@mcp:Tool {
-    name: "getInvoice",
-    description: "Retrieve an invoice by ID. Returns an error with suggestions if the invoice is not found."
-}
-isolated function getInvoice(string invoiceId) returns json|error {
-    json|error result = billingApi->get(string `/invoices/${invoiceId}`);
-    if result is error {
-        return {
-            "found": false,
-            "message": string `Invoice '${invoiceId}' not found.`,
-            "suggestion": "Verify the invoice ID format (INV-XXXXX) or try searching by customer ID using the searchInvoices tool."
-        };
+service mcp:Service /mcp on mcpListener {
+
+    # Retrieve an invoice by ID.
+    #
+    # + invoiceId - Invoice identifier (format INV-XXXXX)
+    # + return - Invoice details, or an error if not found
+    remote function getInvoice(string invoiceId) returns json|error {
+        if !invoiceId.startsWith("INV-") {
+            return error(string `Invalid invoice ID '${invoiceId}'. ` +
+                    "Expected format INV-XXXXX.");
+        }
+        // call your billing API
+        return {id: invoiceId, amount: 100.00};
     }
-    return result;
-}
-```
-
-## Limiting Output Size
-
-Trim large responses to prevent exceeding context window limits on the client side.
-
-```ballerina
-@mcp:Tool {
-    name: "queryAnalytics",
-    description: "Run a read-only analytics query. Returns up to 20 rows to stay within context limits."
-}
-isolated function queryAnalytics(string sqlQuery) returns json|error {
-    if !sqlQuery.toLowerAscii().startsWith("select") {
-        return error("Only SELECT queries are allowed.");
-    }
-    json[] rows = check analyticsDb->queryRows(sqlQuery);
-    json[] trimmed = rows.length() > 20 ? rows.slice(0, 20) : rows;
-    return {
-        "results": trimmed,
-        "totalRows": rows.length(),
-        "showing": trimmed.length(),
-        "truncated": rows.length() > 20
-    };
 }
 ```
 
 ## Configuring for Claude Desktop
 
-### stdio Transport
-
-Add the server to your Claude Desktop configuration file.
+Claude Desktop can connect to your MCP server over HTTP.
 
 ```json
 {
   "mcpServers": {
-    "order-service": {
-      "command": "bal",
-      "args": ["run", "/path/to/your/project"]
-    }
-  }
-}
-```
-
-### SSE Transport
-
-```json
-{
-  "mcpServers": {
-    "order-service": {
-      "url": "http://localhost:8090/sse"
+    "weather-service": {
+      "url": "http://localhost:9090/mcp"
     }
   }
 }

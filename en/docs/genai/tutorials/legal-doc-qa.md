@@ -8,13 +8,14 @@ description: Build a legal document Q&A system that combines RAG for document se
 
 **Time:** 50 minutes | **Level:** Advanced | **What you'll build:** A legal document Q&A system that combines retrieval-augmented generation (RAG) for searching internal legal documents with MCP-based access to external legal databases, exposed as a GraphQL service.
 
-In this tutorial, you build a legal Q&A system that brings together two powerful patterns. RAG provides semantic search over your organization's contracts, policies, and legal opinions, while MCP servers connect the agent to external legal databases and case law repositories. The combination allows the agent to answer questions grounded in both internal documents and external legal references. The system is exposed as a GraphQL service for flexible querying by frontend applications.
+In this tutorial, you build a legal Q&A AI Agent that brings together two powerful patterns from the `ballerina/ai` and `ballerina/mcp` modules. RAG provides semantic search over your organization's contracts, policies, and legal opinions. MCP servers connect the agent to external legal databases and case law repositories. The combination lets the agent answer questions grounded in both internal documents and external legal references. The system is exposed as a GraphQL service for flexible querying by frontend applications.
+
+Both `ballerina/ai` and `ballerina/mcp` ship with the WSO2 Integrator distribution.
 
 ## Prerequisites
 
 - [WSO2 Integrator VS Code extension installed](/docs/get-started/install)
-- An OpenAI API key (for embeddings and chat completion)
-- PostgreSQL with the pgvector extension installed
+- A default model provider configured via **"Configure default WSO2 Model Provider"**, or an OpenAI API key
 - Familiarity with [RAG Architecture](/docs/genai/rag/architecture-overview) and [MCP Overview](/docs/genai/mcp/overview)
 
 ## Architecture
@@ -22,17 +23,17 @@ In this tutorial, you build a legal Q&A system that brings together two powerful
 ```mermaid
 flowchart TD
     Request([GraphQL Query])
-    subgraph Agent["Legal Q&A Agent"]
-        LLM["LLM (GPT-4o)<br/>+ RAG Pipeline<br/>+ MCP Client"]
+    subgraph Agent["Legal Q&A AI Agent"]
+        AIAgent["ai:Agent<br/>+ RAG tool<br/>+ ai:McpToolKit x2"]
     end
-    Internal[(pgvector<br/>Internal Documents)]
+    KB[(ai:VectorKnowledgeBase<br/>Internal Documents)]
     LegalDB[Legal DB<br/>MCP Server]
     CaseLaw[Case Law<br/>MCP Server]
 
-    Request ----> LLM
-    LLM ----> Internal
-    LLM ----> LegalDB
-    LLM ----> CaseLaw
+    Request ----> AIAgent
+    AIAgent ----> KB
+    AIAgent <==> |MCP| LegalDB
+    AIAgent <==> |MCP| CaseLaw
 ```
 
 ## Step 1: Create the Project
@@ -43,60 +44,30 @@ flowchart TD
 org = "myorg"
 name = "legal_doc_qa"
 version = "0.1.0"
-
-[[dependency]]
-org = "ballerinax"
-name = "ai.agent"
-
-[[dependency]]
-org = "ballerinax"
-name = "ai.provider.openai"
-
-[[dependency]]
-org = "ballerinax"
-name = "mcp"
-
-[[dependency]]
-org = "ballerinax"
-name = "postgresql"
-
-[[dependency]]
-org = "ballerina"
-name = "graphql"
+distribution = "2201.13.0"
 ```
+
+`ballerina/ai` and `ballerina/mcp` are bundled. You will also import `ballerina/graphql` and (optionally) `ballerina/http`.
 
 ```toml
 # Config.toml
-openaiKey = "<your-openai-api-key>"
-pgHost = "localhost"
-pgPort = 5432
-pgUser = "postgres"
-pgPassword = "password"
-pgDatabase = "legal_docs"
-legalDbMcpUrl = "http://localhost:3001"
-caseLawMcpUrl = "http://localhost:3002"
+legalDbMcpUrl = "http://localhost:9091/mcp"
+caseLawMcpUrl = "http://localhost:9092/mcp"
+```
+
+If you bring your own OpenAI key, add it as well:
+
+```toml
+openAiApiKey = "<your-openai-api-key>"
 ```
 
 ## Step 2: Define Data Types
 
 ```ballerina
 // types.bal
-type LegalDocumentChunk record {|
-    string id;
-    string content;
-    string source;
-    string documentType;   // "contract", "policy", "opinion", "regulation", "memo"
-    string? jurisdiction;
-    string? effectiveDate;
-    int chunkIndex;
-    int totalChunks;
-|};
-
 type LegalSearchResult record {|
     string content;
     string source;
-    string documentType;
-    string? jurisdiction;
     float score;
 |};
 
@@ -120,234 +91,157 @@ type LegalDbRecord record {|
     string effectiveDate;
 |};
 
-type QaResponse record {|
+type ComplianceStatus record {|
+    string title;
+    string jurisdiction;
+    string status;
+    string lastAuditDate;
+    string notes;
+|};
+
+type IngestInput record {|
+    string filePath;
+|};
+
+type IngestResult record {|
+    string message;
+    int documentsIngested;
+|};
+
+type ChatInput record {|
+    string question;
+    string sessionId;
+|};
+
+type ChatResult record {|
     string answer;
-    string[] internalSources;
-    CaseLawReference[] externalReferences;
-    string confidence;     // "high", "medium", "low"
+    string sessionId;
     string disclaimer;
 |};
 ```
 
-## Step 3: Set Up the Vector Database
+## Step 3: Build the Internal Legal Knowledge Base with RAG
 
-```sql
--- Run in PostgreSQL
-CREATE EXTENSION IF NOT EXISTS vector;
-
-CREATE TABLE IF NOT EXISTS legal_documents (
-    id TEXT PRIMARY KEY,
-    content TEXT NOT NULL,
-    source TEXT NOT NULL,
-    document_type TEXT NOT NULL,
-    jurisdiction TEXT,
-    effective_date TEXT,
-    chunk_index INT NOT NULL,
-    total_chunks INT NOT NULL,
-    embedding vector(1536)
-);
-
-CREATE INDEX ON legal_documents USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
-```
-
-## Step 4: Build the RAG Pipeline
+The `ballerina/ai` module gives you everything needed for RAG. For this tutorial we use the in-memory vector store for simplicity — in production you would swap in an external store such as Pinecone or pgvector by changing a single line (see the sidebar below).
 
 ```ballerina
-// embeddings.bal
-import ballerinax/ai.provider.openai;
+// knowledge_base.bal
+import ballerina/ai;
 
-configurable string openaiKey = ?;
+final ai:VectorStore vectorStore = check new ai:InMemoryVectorStore();
+final ai:EmbeddingProvider embeddingProvider = check ai:getDefaultEmbeddingProvider();
+final ai:KnowledgeBase legalKb =
+        new ai:VectorKnowledgeBase(vectorStore, embeddingProvider);
+final ai:ModelProvider modelProvider = check ai:getDefaultModelProvider();
 
-final openai:Client embeddingClient = check new ({
-    auth: {token: openaiKey},
-    model: "text-embedding-3-small"
-});
-
-function generateEmbedding(string text) returns float[]|error {
-    openai:EmbeddingResponse response = check embeddingClient.createEmbedding(text);
-    return response.embedding;
+# Ingest a legal document from disk into the legal knowledge base.
+#
+# + filePath - Path to the legal document (PDF or text)
+# + return - The number of `ai:Document` entries ingested
+public function ingestLegalDocument(string filePath) returns int|error {
+    ai:DataLoader loader = check new ai:TextDataLoader(filePath);
+    ai:Document|ai:Document[] docs = check loader.load();
+    check legalKb.ingest(docs);
+    return docs is ai:Document[] ? docs.length() : 1;
 }
 ```
+
+:::tip External vector store
+To use Pinecone instead of `ai:InMemoryVectorStore`, import `ballerinax/ai.pinecone` and replace the store:
 
 ```ballerina
-// chunking.bal
-import ballerina/io;
+import ballerinax/ai.pinecone;
 
-function chunkLegalDocument(string content, int maxChunkSize = 800, int overlap = 150) returns string[] {
-    // Legal documents benefit from larger chunks with more overlap
-    // to preserve clause context
-    string[] sections = re `\n\n+`.split(content);
-    string[] chunks = [];
-    string currentChunk = "";
+configurable string pineconeServiceUrl = ?;
+configurable string pineconeApiKey = ?;
 
-    foreach string section in sections {
-        if (currentChunk.length() + section.length()) > maxChunkSize && currentChunk.length() > 0 {
-            chunks.push(currentChunk.trim());
-            int overlapStart = currentChunk.length() > overlap
-                ? currentChunk.length() - overlap : 0;
-            currentChunk = currentChunk.substring(overlapStart) + "\n\n" + section;
-        } else {
-            currentChunk = currentChunk.length() > 0
-                ? currentChunk + "\n\n" + section
-                : section;
-        }
-    }
-    if currentChunk.trim().length() > 0 {
-        chunks.push(currentChunk.trim());
-    }
-    return chunks;
-}
-
-function ingestLegalDocument(
-    string filePath,
-    string documentType,
-    string? jurisdiction = (),
-    string? effectiveDate = ()
-) returns LegalDocumentChunk[]|error {
-    string content = check io:fileReadString(filePath);
-    string[] chunks = chunkLegalDocument(content);
-
-    LegalDocumentChunk[] docChunks = [];
-    foreach int i in 0 ..< chunks.length() {
-        docChunks.push({
-            id: string `${filePath}-chunk-${i}`,
-            content: chunks[i],
-            source: filePath,
-            documentType: documentType,
-            jurisdiction: jurisdiction,
-            effectiveDate: effectiveDate,
-            chunkIndex: i,
-            totalChunks: chunks.length()
-        });
-    }
-    return docChunks;
-}
+final ai:VectorStore vectorStore =
+        check new pinecone:VectorStore(pineconeServiceUrl, pineconeApiKey);
 ```
 
-```ballerina
-// vectorstore.bal
-import ballerinax/postgresql;
+`ai:KnowledgeBase` and every downstream call remain unchanged. The same pattern works with `ai.weaviate`, `ai.milvus`, and `ai.pgvector`.
+:::
 
-configurable string pgHost = ?;
-configurable int pgPort = ?;
-configurable string pgUser = ?;
-configurable string pgPassword = ?;
-configurable string pgDatabase = ?;
+## Step 4: Create the Legal Database MCP Server
 
-final postgresql:Client pgClient = check new ({
-    host: pgHost, port: pgPort,
-    username: pgUser, password: pgPassword,
-    database: pgDatabase
-});
-
-function storeChunks(LegalDocumentChunk[] chunks) returns error? {
-    foreach LegalDocumentChunk chunk in chunks {
-        float[] embedding = check generateEmbedding(chunk.content);
-        string embeddingStr = embedding.toString();
-
-        _ = check pgClient->execute(`
-            INSERT INTO legal_documents
-                (id, content, source, document_type, jurisdiction, effective_date,
-                 chunk_index, total_chunks, embedding)
-            VALUES (${chunk.id}, ${chunk.content}, ${chunk.source}, ${chunk.documentType},
-                    ${chunk.jurisdiction}, ${chunk.effectiveDate},
-                    ${chunk.chunkIndex}, ${chunk.totalChunks}, ${embeddingStr}::vector)
-            ON CONFLICT (id) DO UPDATE SET content = EXCLUDED.content, embedding = EXCLUDED.embedding
-        `);
-    }
-}
-
-function searchInternalDocuments(
-    string query,
-    int topK = 5,
-    string? documentType = (),
-    string? jurisdiction = ()
-) returns LegalSearchResult[]|error {
-    float[] queryEmbedding = check generateEmbedding(query);
-    string embeddingStr = queryEmbedding.toString();
-
-    string whereClause = "WHERE 1=1";
-    if documentType is string {
-        whereClause += string ` AND document_type = '${documentType}'`;
-    }
-    if jurisdiction is string {
-        whereClause += string ` AND jurisdiction = '${jurisdiction}'`;
-    }
-
-    return check from record {string content; string source; string document_type;
-                               string? jurisdiction; float score} row in
-        pgClient->query(`
-            SELECT content, source, document_type, jurisdiction,
-                   1 - (embedding <=> ${embeddingStr}::vector) AS score
-            FROM legal_documents
-            ${whereClause}
-            ORDER BY embedding <=> ${embeddingStr}::vector
-            LIMIT ${topK}
-        `)
-        select {
-            content: row.content,
-            source: row.source,
-            documentType: row.document_type,
-            jurisdiction: row.jurisdiction,
-            score: row.score
-        };
-}
-```
-
-## Step 5: Create the Legal Database MCP Server
-
-The legal database MCP server exposes regulatory and compliance data as tools the agent can call.
+The legal database MCP server exposes regulations and compliance data using the built-in `ballerina/mcp` module. Every remote function on the service becomes an MCP tool. The doc comment is the tool description, and parameter doc comments describe the parameters.
 
 ```ballerina
 // legal_db_mcp.bal
-import ballerinax/mcp;
+import ballerina/mcp;
 import ballerinax/postgresql;
+import ballerinax/postgresql.driver as _;
 
-@mcp:Server {
-    name: "legal-database",
-    version: "1.0.0"
-}
-service on new mcp:Listener(3001) {
+configurable string legalDbHost = "localhost";
+configurable int legalDbPort = 5432;
+configurable string legalDbUser = "postgres";
+configurable string legalDbPassword = "password";
+configurable string legalDbName = "legal_db";
 
-    @mcp:Tool {
-        description: "Search the legal database for regulations, statutes, and compliance requirements by keyword, jurisdiction, or category."
-    }
-    remote function searchRegulations(
-        string query,
-        string? jurisdiction = (),
-        string? category = ()
-    ) returns LegalDbRecord[]|error {
-        string whereClause = string `WHERE (title ILIKE ${"%" + query + "%"} OR content ILIKE ${"%" + query + "%"})`;
+final postgresql:Client legalDb = check new (
+    host = legalDbHost,
+    username = legalDbUser,
+    password = legalDbPassword,
+    database = legalDbName,
+    port = legalDbPort
+);
+
+listener mcp:Listener legalDbMcpListener = new (9091);
+
+service mcp:Service /mcp on legalDbMcpListener {
+
+    # Search the legal database for regulations, statutes, or compliance requirements.
+    #
+    # + query - Keyword to search against title and content
+    # + jurisdiction - Optional jurisdiction filter (for example, `US-CA`, `EU`)
+    # + category - Optional category filter
+    # + return - Up to ten matching regulations
+    remote function searchRegulations(string query, string? jurisdiction = (),
+            string? category = ()) returns LegalDbRecord[]|error {
+        string like = string `%${query}%`;
+        if jurisdiction is string && category is string {
+            return from LegalDbRecord rec in legalDb->query(
+                `SELECT * FROM regulations
+                 WHERE (title ILIKE ${like} OR content ILIKE ${like})
+                   AND jurisdiction = ${jurisdiction}
+                   AND category = ${category}
+                 ORDER BY effective_date DESC LIMIT 10`
+            ) select rec;
+        }
         if jurisdiction is string {
-            whereClause += string ` AND jurisdiction = '${jurisdiction}'`;
+            return from LegalDbRecord rec in legalDb->query(
+                `SELECT * FROM regulations
+                 WHERE (title ILIKE ${like} OR content ILIKE ${like})
+                   AND jurisdiction = ${jurisdiction}
+                 ORDER BY effective_date DESC LIMIT 10`
+            ) select rec;
         }
-        if category is string {
-            whereClause += string ` AND category = '${category}'`;
-        }
-        return check from LegalDbRecord rec in pgClient->query(
-            `SELECT * FROM regulations ${whereClause} ORDER BY effective_date DESC LIMIT 10`
+        return from LegalDbRecord rec in legalDb->query(
+            `SELECT * FROM regulations
+             WHERE (title ILIKE ${like} OR content ILIKE ${like})
+             ORDER BY effective_date DESC LIMIT 10`
         ) select rec;
     }
 
-    @mcp:Tool {
-        description: "Look up a specific regulation or statute by its record ID."
-    }
+    # Look up a specific regulation by its record ID.
+    #
+    # + recordId - Regulation record identifier
+    # + return - The matching regulation
     remote function getRegulation(string recordId) returns LegalDbRecord|error {
-        LegalDbRecord? record = check pgClient->queryRow(
+        return legalDb->queryRow(
             `SELECT * FROM regulations WHERE record_id = ${recordId}`
         );
-        if record is () {
-            return error(string `Regulation '${recordId}' not found`);
-        }
-        return record;
     }
 
-    @mcp:Tool {
-        description: "Check the compliance status of a specific regulation for the organization."
-    }
-    remote function checkCompliance(string regulationId) returns json|error {
-        return check pgClient->queryRow(
-            `SELECT r.title, r.jurisdiction, c.status, c.last_audit_date, c.notes
+    # Check the compliance status for a specific regulation.
+    #
+    # + regulationId - Regulation record identifier
+    # + return - Compliance status for the organization
+    remote function checkCompliance(string regulationId)
+            returns ComplianceStatus|error {
+        return legalDb->queryRow(
+            `SELECT r.title, r.jurisdiction, c.status,
+                    c.last_audit_date AS "lastAuditDate", c.notes
              FROM regulations r
              JOIN compliance_status c ON r.record_id = c.regulation_id
              WHERE r.record_id = ${regulationId}`
@@ -356,282 +250,258 @@ service on new mcp:Listener(3001) {
 }
 ```
 
-## Step 6: Create the Case Law MCP Server
-
-The case law MCP server connects to an external case law API and exposes search and citation tools.
+## Step 5: Create the Case Law MCP Server
 
 ```ballerina
 // case_law_mcp.bal
-import ballerinax/mcp;
+import ballerina/mcp;
 import ballerina/http;
 
 final http:Client caseLawApi = check new ("https://api.case-law-provider.com/v1");
 
-@mcp:Server {
-    name: "case-law",
-    version: "1.0.0"
-}
-service on new mcp:Listener(3002) {
+listener mcp:Listener caseLawMcpListener = new (9092);
 
-    @mcp:Tool {
-        description: "Search for case law by keywords, court, jurisdiction, or date range. Returns case summaries with citations."
-    }
-    remote function searchCaseLaw(
-        string query,
-        string? court = (),
-        string? jurisdiction = (),
-        string? dateFrom = (),
-        string? dateTo = ()
-    ) returns CaseLawReference[]|error {
+service mcp:Service /mcp on caseLawMcpListener {
+
+    # Search for case law by keyword, court, jurisdiction, or date range.
+    #
+    # + query - Free-text search query
+    # + court - Optional court filter
+    # + jurisdiction - Optional jurisdiction filter
+    # + dateFrom - Optional earliest date (YYYY-MM-DD)
+    # + dateTo - Optional latest date (YYYY-MM-DD)
+    # + return - Matching case law references
+    remote function searchCaseLaw(string query, string? court = (),
+            string? jurisdiction = (), string? dateFrom = (),
+            string? dateTo = ()) returns CaseLawReference[]|error {
         map<string> params = {"q": query, "limit": "10"};
-        if court is string { params["court"] = court; }
-        if jurisdiction is string { params["jurisdiction"] = jurisdiction; }
-        if dateFrom is string { params["date_from"] = dateFrom; }
-        if dateTo is string { params["date_to"] = dateTo; }
-
+        if court is string {
+            params["court"] = court;
+        }
+        if jurisdiction is string {
+            params["jurisdiction"] = jurisdiction;
+        }
+        if dateFrom is string {
+            params["date_from"] = dateFrom;
+        }
+        if dateTo is string {
+            params["date_to"] = dateTo;
+        }
         string queryStr = "";
         foreach [string, string] [key, value] in params.entries() {
-            queryStr += queryStr.length() > 0 ? string `&${key}=${value}` : string `${key}=${value}`;
+            queryStr += queryStr.length() > 0
+                ? string `&${key}=${value}`
+                : string `${key}=${value}`;
         }
-
-        return check caseLawApi->get(string `/cases?${queryStr}`);
+        return caseLawApi->get(string `/cases?${queryStr}`);
     }
 
-    @mcp:Tool {
-        description: "Get the full details and summary of a specific case by its case ID."
-    }
-    remote function getCaseDetails(string caseId) returns json|error {
-        return check caseLawApi->get(string `/cases/${caseId}`);
+    # Retrieve full details for a single case.
+    #
+    # + caseId - Case identifier
+    # + return - The full case record
+    remote function getCaseDetails(string caseId) returns CaseLawReference|error {
+        return caseLawApi->get(string `/cases/${caseId}`);
     }
 
-    @mcp:Tool {
-        description: "Find cases that cite a specific case, useful for checking if a precedent is still valid."
-    }
-    remote function getCitingCases(string caseId) returns CaseLawReference[]|error {
-        return check caseLawApi->get(string `/cases/${caseId}/citing`);
+    # Find cases that cite a given case — useful for checking whether a precedent is still valid.
+    #
+    # + caseId - Case identifier
+    # + return - Cases that cite the supplied case
+    remote function getCitingCases(string caseId)
+            returns CaseLawReference[]|error {
+        return caseLawApi->get(string `/cases/${caseId}/citing`);
     }
 }
 ```
 
-## Step 7: Build the Agent
+## Step 6: Build the AI Agent
 
-The agent combines the RAG tool for internal document search with MCP tools for external legal databases.
+The agent has three sources of knowledge:
+
+1. A RAG tool that queries the internal legal knowledge base.
+2. The legal database MCP server exposed via `ai:McpToolKit`.
+3. The case law MCP server exposed via `ai:McpToolKit`.
 
 ```ballerina
 // agent.bal
-import ballerinax/ai.agent;
-import ballerinax/ai.provider.openai;
-import ballerinax/mcp;
+import ballerina/ai;
 
 configurable string legalDbMcpUrl = ?;
 configurable string caseLawMcpUrl = ?;
 
-final openai:Client llmClient = check new ({
-    auth: {token: openaiKey},
-    model: "gpt-4o"
-});
+final ai:McpToolKit legalDbMcp = check new (legalDbMcpUrl);
+final ai:McpToolKit caseLawMcp = check new (caseLawMcpUrl);
 
-// Connect to MCP servers
-final mcp:Client legalDbMcp = check new ({serverUrl: legalDbMcpUrl});
-final mcp:Client caseLawMcp = check new ({serverUrl: caseLawMcpUrl});
-
-final agent:McpTools legalDbTools = check new (legalDbMcp);
-final agent:McpTools caseLawTools = check new (caseLawMcp);
-
-// RAG tool for internal document search
-@agent:Tool {
-    name: "searchInternalLegalDocs",
-    description: "Search internal legal documents (contracts, policies, legal opinions, memos) using semantic search. Returns the most relevant document excerpts. Use this for questions about internal company policies, existing contracts, or internal legal opinions."
-}
-isolated function searchInternalLegalDocs(
-    @agent:Param {description: "The legal question or topic to search for"} string query,
-    @agent:Param {description: "Document type filter: 'contract', 'policy', 'opinion', 'regulation', 'memo', or leave empty for all"} string? documentType = (),
-    @agent:Param {description: "Jurisdiction filter, e.g., 'US-CA', 'US-NY', 'EU', or leave empty for all"} string? jurisdiction = ()
-) returns json|error {
-    LegalSearchResult[] results = check searchInternalDocuments(query, topK = 5,
-        documentType = documentType, jurisdiction = jurisdiction);
-    return results.toJson();
+# Search the internal legal knowledge base for contracts, policies, and opinions.
+# Use this for questions about company-internal documents — not external regulations
+# (use searchRegulations) or case law (use searchCaseLaw) for those.
+#
+# + question - The legal question to research against internal documents
+# + return - An answer grounded in retrieved internal document chunks
+@ai:AgentTool
+isolated function searchInternalLegalDocs(string question) returns string|error {
+    ai:QueryMatch[] matches = check legalKb.retrieve(question, 5);
+    ai:Chunk[] context = from ai:QueryMatch m in matches select m.chunk;
+    ai:ChatUserMessage augmented = ai:augmentUserQuery(context, question);
+    ai:ChatAssistantMessage answer = check modelProvider->chat(augmented);
+    return answer.content ?: "No relevant internal documents found.";
 }
 
-final agent:ChatAgent legalQaAgent = check new (
-    model: llmClient,
-    systemPrompt: string `You are a Legal Research Assistant for the company's legal department.
+final ai:Agent legalQaAgent = check new (
+    systemPrompt = {
+        role: "Legal Research Assistant",
+        instructions: string `You are a Legal Research Assistant for the company's legal department.
 
 Role:
 - Answer legal questions by searching internal documents and external legal databases.
 - Provide well-sourced, accurate legal information grounded in actual documents and case law.
 
-Available Capabilities:
-- Internal Document Search (RAG): Search contracts, policies, legal opinions, and memos.
-- Legal Database (MCP): Search regulations, statutes, and check compliance status.
-- Case Law (MCP): Search case law, retrieve case details, and find citing cases.
+Available capabilities:
+- searchInternalLegalDocs (RAG): Search internal contracts, policies, opinions, and memos.
+- Legal Database MCP toolkit: searchRegulations, getRegulation, checkCompliance.
+- Case Law MCP toolkit: searchCaseLaw, getCaseDetails, getCitingCases.
 
 Guidelines:
-- ALWAYS cite your sources. Include document names, regulation IDs, and case citations.
+- ALWAYS cite your sources: document names, regulation IDs, and case citations.
 - Search internal documents first for company-specific questions.
 - Use the legal database for regulatory and compliance questions.
 - Use case law search for precedent and judicial interpretation questions.
-- When citing case law, include the full citation.
 - Clearly distinguish between internal company policies and external legal requirements.
-- ALWAYS include a disclaimer that your responses are for informational purposes only and do not constitute legal advice.
-- Rate your confidence as 'high', 'medium', or 'low' based on the quality and relevance of sources found.
-- If you cannot find relevant sources, clearly state the limitation rather than speculating.
-- For questions requiring legal judgment, recommend consulting with a qualified attorney.`,
-    tools: [
-        searchInternalLegalDocs,
-        ...check legalDbTools.getTools(),
-        ...check caseLawTools.getTools()
-    ],
-    memory: new agent:MessageWindowChatMemory(maxMessages: 30)
+- ALWAYS include a disclaimer that your responses are for informational purposes only
+  and do not constitute legal advice.
+- Rate your confidence as high, medium, or low based on source quality.
+- For questions that require legal judgment, recommend consulting a qualified attorney.`
+    },
+    tools = [searchInternalLegalDocs, legalDbMcp, caseLawMcp],
+    model = modelProvider
 );
 ```
 
-## Step 8: Expose as a GraphQL Service
+:::info Mixing RAG and MCP
+The `tools` array can hold a mix of `@ai:AgentTool` functions and `ai:McpToolKit` instances. The agent will look at every tool's doc comment (and each MCP tool's description) to decide which to call for a given user question.
+:::
+
+## Step 7: Expose the Agent as a GraphQL Service
+
+GraphQL is a good fit here because the frontend may want to ingest documents, run search queries, or ask natural-language questions through a single endpoint.
 
 ```ballerina
 // service.bal
 import ballerina/graphql;
-import ballerina/uuid;
-
-type IngestInput record {|
-    string filePath;
-    string documentType;
-    string? jurisdiction;
-    string? effectiveDate;
-|};
-
-type IngestResult record {|
-    string message;
-    int chunksCreated;
-|};
-
-type ChatInput record {|
-    string question;
-    string? sessionId;
-|};
-
-type ChatResult record {|
-    string answer;
-    string sessionId;
-    string disclaimer;
-|};
 
 service /legal on new graphql:Listener(8090) {
 
-    // Ask a legal question
+    # Ask the legal Q&A AI Agent a question.
+    #
+    # + input - Chat input containing the question and session ID
+    # + return - The agent's answer with a disclaimer
     remote function askQuestion(ChatInput input) returns ChatResult|error {
-        string sessionId = input.sessionId ?: uuid:createType1().toString();
-
-        string response = check legalQaAgent.chat(input.question, sessionId);
-
+        string response = check legalQaAgent.run(input.question, input.sessionId);
         return {
             answer: response,
-            sessionId: sessionId,
-            disclaimer: "This response is for informational purposes only and does not constitute legal advice. Please consult with a qualified attorney for legal guidance."
+            sessionId: input.sessionId,
+            disclaimer: "This response is for informational purposes only and does not " +
+                "constitute legal advice. Please consult with a qualified attorney " +
+                "for legal guidance."
         };
     }
 
-    // Ingest a legal document
+    # Ingest a legal document into the internal knowledge base.
+    #
+    # + input - Ingestion input
+    # + return - A summary of the ingestion
     remote function ingestDocument(IngestInput input) returns IngestResult|error {
-        LegalDocumentChunk[] chunks = check ingestLegalDocument(
-            input.filePath,
-            input.documentType,
-            jurisdiction = input.jurisdiction,
-            effectiveDate = input.effectiveDate
-        );
-        check storeChunks(chunks);
+        int count = check ingestLegalDocument(input.filePath);
         return {
-            message: string `Successfully ingested '${input.filePath}'`,
-            chunksCreated: chunks.length()
+            message: string `Successfully ingested '${input.filePath}'.`,
+            documentsIngested: count
         };
     }
 
-    // Search internal documents directly (without agent)
-    resource function get searchDocuments(
-        string query,
-        string? documentType = (),
-        string? jurisdiction = (),
-        int topK = 5
-    ) returns LegalSearchResult[]|error {
-        return searchInternalDocuments(query, topK, documentType, jurisdiction);
+    # Retrieve the top matching document excerpts for a raw query, without the agent.
+    #
+    # + query - The search query
+    # + topK - Maximum number of results
+    # + return - The top-k query matches
+    resource function get searchDocuments(string query, int topK = 5)
+            returns LegalSearchResult[]|error {
+        ai:QueryMatch[] matches = check legalKb.retrieve(query, topK);
+        return from ai:QueryMatch m in matches
+            select {
+                content: m.chunk.content,
+                source: m.chunk.metadata?.source ?: "unknown",
+                score: m.score
+            };
     }
 }
 ```
 
-## Step 9: Run and Test
+## Step 8: Run and Test
 
-1. Start the MCP servers and the GraphQL service:
+1. Start the MCP servers and the GraphQL service. All three listeners live in the same package, so a single `bal run` brings up everything:
    ```bash
-   # Terminal 1: Start the legal database MCP server
-   bal run legal_db_mcp.bal
-
-   # Terminal 2: Start the case law MCP server
-   bal run case_law_mcp.bal
-
-   # Terminal 3: Start the GraphQL service
-   bal run service.bal
+   bal run
    ```
 
-2. Ingest legal documents:
+2. Ingest a legal document:
    ```bash
    curl -X POST http://localhost:8090/legal \
      -H "Content-Type: application/json" \
      -d '{
-       "query": "mutation { ingestDocument(input: { filePath: \"/docs/legal/nda-template.txt\", documentType: \"contract\", jurisdiction: \"US-CA\" }) { message chunksCreated } }"
-     }'
-
-   curl -X POST http://localhost:8090/legal \
-     -H "Content-Type: application/json" \
-     -d '{
-       "query": "mutation { ingestDocument(input: { filePath: \"/docs/legal/data-privacy-policy.txt\", documentType: \"policy\", jurisdiction: \"EU\" }) { message chunksCreated } }"
+       "query": "mutation { ingestDocument(input: { filePath: \"./docs/legal/nda-template.pdf\" }) { message documentsIngested } }"
      }'
    ```
 
-3. Ask legal questions:
+3. Ask a question about internal documents (the agent routes it to the RAG tool):
    ```bash
-   # Ask about an internal policy
    curl -X POST http://localhost:8090/legal \
      -H "Content-Type: application/json" \
      -d '{
-       "query": "mutation { askQuestion(input: { question: \"What are the termination clauses in our standard NDA?\" }) { answer sessionId disclaimer } }"
+       "query": "mutation { askQuestion(input: { sessionId: \"legal-001\", question: \"What are the termination clauses in our standard NDA?\" }) { answer disclaimer } }"
      }'
+   ```
 
-   # Ask about regulations (uses legal DB MCP)
+4. Ask a regulatory question (the agent routes it to the legal DB MCP toolkit):
+   ```bash
    curl -X POST http://localhost:8090/legal \
      -H "Content-Type: application/json" \
      -d '{
-       "query": "mutation { askQuestion(input: { question: \"What GDPR requirements apply to our data processing activities?\", sessionId: \"<session-id>\" }) { answer sessionId disclaimer } }"
+       "query": "mutation { askQuestion(input: { sessionId: \"legal-001\", question: \"What GDPR requirements apply to our data processing activities?\" }) { answer disclaimer } }"
      }'
+   ```
 
-   # Ask about case law (uses case law MCP)
+5. Ask about case law (the agent routes to the case law MCP toolkit):
+   ```bash
    curl -X POST http://localhost:8090/legal \
      -H "Content-Type: application/json" \
      -d '{
-       "query": "mutation { askQuestion(input: { question: \"Are there recent cases about NDA enforceability in California?\", sessionId: \"<session-id>\" }) { answer sessionId disclaimer } }"
+       "query": "mutation { askQuestion(input: { sessionId: \"legal-001\", question: \"Are there recent cases about NDA enforceability in California?\" }) { answer disclaimer } }"
      }'
+   ```
 
-   # Search documents directly via GraphQL query
+6. Search internal documents directly without going through the agent:
+   ```bash
    curl -X POST http://localhost:8090/legal \
      -H "Content-Type: application/json" \
      -d '{
-       "query": "{ searchDocuments(query: \"intellectual property\", documentType: \"contract\") { content source documentType score } }"
+       "query": "{ searchDocuments(query: \"intellectual property\", topK: 5) { content source score } }"
      }'
    ```
 
 ## What You Built
 
 You now have a legal document Q&A system that:
-- Ingests legal documents into a pgvector database with semantic embeddings
-- Searches internal documents (contracts, policies, memos) using RAG
-- Accesses external regulations and compliance data through an MCP server
-- Searches case law and judicial precedents through another MCP server
-- Combines internal and external sources to provide comprehensive answers
-- Includes confidence ratings and mandatory legal disclaimers
-- Exposes a flexible GraphQL API for frontend consumption
+- Ingests internal legal documents into an `ai:VectorKnowledgeBase`
+- Searches internal documents using a RAG-in-a-tool pattern
+- Queries regulatory data through an MCP server built with `ballerina/mcp`
+- Searches case law through a second MCP server
+- Combines all three sources inside a single `ai:Agent`
+- Exposes everything through a flexible GraphQL API
 
 ## What's Next
 
-- [RAG Architecture Overview](/docs/genai/rag/architecture-overview) -- Deep dive into RAG design patterns
-- [MCP Security](/docs/genai/mcp/mcp-security) -- Secure your MCP connections for sensitive legal data
-- [AI Governance and Security](/docs/genai/reference/ai-governance) -- Implement governance for legal AI
-- [Content Filtering](/docs/genai/guardrails/content-filtering) -- Add output guardrails for legal accuracy
+- [RAG Architecture Overview](/docs/genai/rag/architecture-overview) — Deep dive into RAG design patterns
+- [MCP Security](/docs/genai/mcp/mcp-security) — Secure your MCP connections for sensitive legal data
+- [AI Governance and Security](/docs/genai/reference/ai-governance) — Implement governance for legal AI
+- [Content Filtering](/docs/genai/guardrails/content-filtering) — Add output guardrails for legal accuracy

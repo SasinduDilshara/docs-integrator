@@ -6,7 +6,7 @@ description: Understand large language models and how they power AI integrations
 
 # What is an LLM?
 
-A Large Language Model (LLM) is a neural network trained on vast amounts of text data that can understand and generate human language. LLMs are the reasoning engine behind AI agents, natural functions, and RAG pipelines in WSO2 Integrator.
+A Large Language Model (LLM) is a neural network trained on vast amounts of text data that can understand and generate human language. LLMs are the reasoning engine behind AI Agents, natural expressions, and RAG pipelines in WSO2 Integrator.
 
 ## How LLMs Work
 
@@ -23,29 +23,36 @@ LLMs process text as **tokens** (roughly words or word fragments). Given input t
 
 ## LLM Providers in WSO2 Integrator
 
-WSO2 Integrator supports multiple LLM providers through dedicated connector modules.
+WSO2 Integrator supports multiple LLM providers through dedicated provider modules.
 
-| Provider | Models | Best For |
+| Provider | Module | Best For |
 |----------|--------|----------|
-| **OpenAI** | GPT-4o, GPT-4o-mini, o1, o3-mini | General purpose, strong tool calling |
-| **Anthropic** | Claude Sonnet, Claude Haiku | Long context, careful reasoning |
-| **Google** | Gemini 2.0 Flash, Gemini 2.5 Pro | Multimodal, very large context windows |
-| **Azure OpenAI** | GPT-4o (Azure-hosted) | Enterprise compliance, data residency |
-| **AWS Bedrock** | Claude, Titan, Llama | AWS ecosystem, VPC deployment |
-| **Ollama** | Llama 3, Mistral, Phi-3 | Local deployment, no data leaves your network |
+| **OpenAI** | `ballerinax/ai.openai` | General purpose, strong tool calling |
+| **Anthropic** | `ballerinax/ai.anthropic` | Long context, careful reasoning |
+| **Azure OpenAI** | `ballerinax/ai.azure` | Enterprise compliance, data residency |
+| **Mistral** | `ballerinax/ai.mistral` | Open-weight, European hosting |
+| **DeepSeek** | `ballerinax/ai.deepseek` | Cost-effective reasoning models |
+| **Ollama** | `ballerinax/ai.ollama` | Local deployment, no data leaves your network |
 
 ## Connecting to an LLM in Ballerina
 
+The simplest way to obtain a model is to use the default model provider configured for the project.
+
 ```ballerina
-import ballerinax/ai.provider.openai;
+import ballerina/ai;
 
-configurable string apiKey = ?;
+final ai:ModelProvider model = check ai:getDefaultModelProvider();
+```
 
-final openai:Client llmClient = check new ({
-    auth: {token: apiKey},
-    model: "gpt-4o",
-    temperature: 0.2
-});
+Once you have a model, you can call it directly to get a string response or a typed structured response.
+
+```ballerina
+// String response.
+string joke = check model->generate(`Tell me a joke about ${subject}!`);
+
+// Typed/structured response -- the schema is inferred from the target type.
+type JokeResponse record {| string setup; string punchline; |};
+JokeResponse jokeResponse = check model->generate(`Tell me a joke about ${subject}!`);
 ```
 
 ## LLMs in Integration Scenarios
@@ -53,7 +60,7 @@ final openai:Client llmClient = check new ({
 LLMs serve different roles depending on the integration pattern:
 
 - **AI Agents** -- The LLM acts as the reasoning engine, deciding which tools to call and how to respond
-- **Natural Functions** -- The LLM acts as a function body, transforming inputs to typed outputs
+- **Natural expressions** -- The LLM acts as an expression body, transforming inputs to typed outputs
 - **RAG Pipelines** -- The LLM generates answers grounded in retrieved document context
 - **MCP Servers** -- External AI clients use their own LLMs to reason about your exposed tools
 
@@ -70,4 +77,4 @@ These limitations are why WSO2 Integrator pairs LLMs with tools, RAG, and guardr
 
 - [What is a Natural Function?](what-is-natural-function.md) -- The simplest way to use an LLM in code
 - [What is an AI Agent?](what-is-ai-agent.md) -- LLMs combined with tools and memory
-- [Configuring LLM Providers](/docs/genai/develop/direct-llm/configuring-providers) -- Detailed provider setup
+- [Direct LLM Calls](/docs/genai/develop/direct-llm) -- Detailed provider setup, prompts, and response handling

@@ -1,230 +1,161 @@
 ---
 sidebar_position: 3
 title: Adding Memory to an Agent
-description: Configure agent memory for conversation persistence using in-memory, Redis-backed, and database-backed stores.
+description: Configure agent memory for conversation persistence using built-in and custom memory implementations.
 ---
 
 # Adding Memory to an Agent
 
-Agent memory controls how your AI agent retains and manages conversation history across turns. Without memory, each call to the agent is independent and the agent has no awareness of previous interactions. With memory, the agent can maintain context, refer back to earlier messages, and build on prior reasoning.
+Agent memory controls how your AI agent retains conversation history across turns. Without memory, every call is independent and the agent has no awareness of previous interactions. With memory, the agent can refer back to earlier messages and build on prior reasoning.
 
-Choosing the right memory strategy depends on conversation length, cost constraints, and whether sessions need to survive service restarts.
+The WSO2 Integrator `ai` module gives you two primary options:
 
-## Message Window Memory
+1. **Session memory via `ai:Listener`** -- the recommended default. Host the agent on `ai:Listener` and pass the `sessionId` from each request into `agent.run(...)`. The listener manages per-session history for you.
+2. **Explicit memory on the agent** -- pass a `memory` value to the agent constructor. Use this for standalone agents or when you need a custom persistence strategy.
 
-Keeps the most recent N messages in the conversation. This is the simplest and most commonly used strategy.
+## Session Memory via `ai:Listener`
 
-```ballerina
-import ballerinax/ai.agent;
-
-final agent:ChatAgent helpDeskAgent = check new (
-    model: llmClient,
-    systemPrompt: "You are a helpful IT support assistant.",
-    memory: new agent:MessageWindowChatMemory(maxMessages: 20)
-);
-```
-
-When the conversation exceeds the configured limit, the oldest messages are dropped. The system prompt is always retained regardless of the window size.
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `maxMessages` | 20 | Maximum number of messages to retain |
-| `includeSystemPrompt` | true | Whether to always include the system prompt |
-
-**Best for:** General-purpose chat agents, help desk bots, and interactive data exploration where conversations are relatively short.
-
-## Token Window Memory
-
-Keeps messages that fit within a token budget rather than a message count. This gives you precise control over costs and ensures you stay within the model's context window.
+This is the simplest and most common setup. The listener provides a built-in short-term memory per session.
 
 ```ballerina
-final agent:ChatAgent costAwareAgent = check new (
-    model: llmClient,
-    systemPrompt: "You are a financial analyst assistant.",
-    memory: new agent:TokenWindowChatMemory(
-        maxTokens: 4000,
-        tokenizer: new agent:Cl100kTokenizer()
-    )
-);
-```
+import ballerina/ai;
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `maxTokens` | 4096 | Maximum token budget for conversation history |
-| `tokenizer` | Cl100k | Tokenizer matching the target model |
-| `reserveForResponse` | 1024 | Tokens reserved for the model's response |
-
-**Best for:** Cost-sensitive production deployments and long conversations where you need to stay within a fixed token budget.
-
-## Summary Memory
-
-Compresses older messages into a running summary while keeping recent messages verbatim. This gives the agent a sense of the full conversation history without consuming excessive tokens.
-
-```ballerina
-final agent:ChatAgent longSessionAgent = check new (
-    model: llmClient,
-    systemPrompt: "You are a project planning assistant.",
-    memory: new agent:SummaryChatMemory(
-        summarizeAfter: 10,
-        keepRecent: 5,
-        summaryModel: llmClient
-    )
-);
-```
-
-After the conversation exceeds 10 messages, the memory structure looks like this:
-
-```
-[System Prompt]
-[Summary: "The user discussed project timelines, agreed on a March deadline,
-  and asked about resource allocation for the frontend team..."]
-[Recent Message 1]
-[Recent Message 2]
-...
-[Recent Message 5]
-```
-
-The summary is regenerated each time older messages are compressed, so it always reflects the full prior conversation.
-
-**Best for:** Long-running advisory sessions, project planning, and multi-hour conversations where losing early context would degrade quality.
-
-## Redis-Backed Persistent Memory
-
-Store conversation history in Redis for sessions that need to survive service restarts and deployments.
-
-```ballerina
-import ballerinax/redis;
-
-configurable string redisHost = "localhost";
-configurable int redisPort = 6379;
-
-final redis:Client redisClient = check new ({
-    connection: {host: redisHost, port: redisPort}
-});
-
-final agent:ChatAgent persistentAgent = check new (
-    model: llmClient,
-    systemPrompt: "You are a patient onboarding assistant.",
-    memory: new agent:PersistentChatMemory(
-        store: redisClient,
-        maxMessages: 50,
-        ttl: 86400   // Expire sessions after 24 hours
-    )
-);
-```
-
-Redis-backed memory serializes each message to a Redis list keyed by session ID. The `ttl` parameter automatically expires idle sessions to free resources.
-
-**Best for:** Multi-day workflows, agents that must survive restarts, and environments with compliance requirements for conversation retention.
-
-## Database-Backed Persistent Memory
-
-For teams that prefer a relational database, store conversation history in PostgreSQL or MySQL.
-
-```ballerina
-import ballerinax/postgresql;
-
-final postgresql:Client pgClient = check new (
-    host = dbHost, database = dbName,
-    username = dbUser, password = dbPassword
-);
-
-final agent:ChatAgent dbBackedAgent = check new (
-    model: llmClient,
-    systemPrompt: "You are a healthcare scheduling assistant.",
-    memory: new agent:PersistentChatMemory(
-        store: pgClient,
-        tableName: "conversation_history",
-        maxMessages: 100,
-        ttl: 604800   // 7-day TTL
-    )
-);
-```
-
-The agent creates and manages the required table schema automatically on first use.
-
-**Best for:** Organizations that want conversation logs in a queryable relational store for auditing, analytics, or compliance.
-
-## Combining Memory with Context Injection
-
-Add external context to individual turns without it counting toward the conversation history.
-
-```ballerina
-import ballerina/http;
-
-service /agent on new http:Listener(8090) {
-
-    resource function post chat(@http:Payload ChatRequest request) returns ChatResponse|error {
-        // Fetch user-specific context
-        json userContext = check getUserProfile(request.userId);
-
-        // Inject context as a prefix to this turn only
-        string contextualMessage = string `[User Context: ${userContext.toString()}]
-
-            User question: ${request.message}`;
-
-        string response = check helpDeskAgent.chat(contextualMessage, request.sessionId);
+service /tasks on new ai:Listener(8080) {
+    resource function post chat(ai:ChatReqMessage request)
+            returns ai:ChatRespMessage|error {
+        string response = check taskAssistantAgent.run(request.message, request.sessionId);
         return {message: response};
     }
 }
 ```
 
-The injected context appears in this turn's message but is not stored separately in memory. On future turns, it will be part of the message history like any other message.
+- `ai:ChatReqMessage` is `{ string sessionId; string message; }`
+- `ai:ChatRespMessage` is `{ string message; }`
 
-## Conversation Handoff Between Agents
+Each unique `sessionId` creates an independent conversation. You do not need to configure memory on the agent itself in this mode -- the listener handles it.
 
-Transfer conversation history from one agent to another when escalating or routing.
+## Explicit Short-Term Memory
+
+For a standalone agent (for example, one driven from `main()` or a non-chat service), pass an `ai:ShortTermMemory` instance as the `memory` field.
 
 ```ballerina
-function escalateToSpecialist(string sessionId) returns string|error {
-    // Extract history from the general agent
-    agent:ChatMessage[] history = check generalAgent.getHistory(sessionId);
+import ballerina/ai;
 
-    // Summarize for the specialist
-    string summary = check summarizeConversation(history);
+final ai:Agent helpDeskAgent = check new (
+    systemPrompt = {
+        role: "IT Support",
+        instructions: "You are a helpful IT support assistant."
+    },
+    tools = [resetPassword, checkVpnStatus],
+    model = check ai:getDefaultModelProvider(),
+    memory = new ai:ShortTermMemory()
+);
+```
 
-    // Seed the specialist agent with the summary
-    check specialistAgent.addSystemMessage(
-        sessionId,
-        string `Previous conversation summary: ${summary}`
-    );
+`ai:ShortTermMemory` keeps a sliding window of recent messages. It is the right choice for interactive agents where only the most recent exchanges matter and older context can be discarded.
 
-    return check specialistAgent.chat(
-        "The customer has been transferred to you. Please continue assisting them.",
-        sessionId
-    );
+**Best for:** General-purpose chat agents, help desk bots, and interactive exploration where conversations are relatively short.
+
+## Custom Persistent Memory
+
+For conversations that must survive restarts -- or that you need to persist in a database for audit or analytics -- implement the `ai:Memory` interface in your own class and pass an instance to the agent.
+
+The interface looks like this:
+
+```ballerina
+public type Memory distinct isolated object {
+    function get(string key) returns ChatMessage[]|MemoryError;
+    function update(string key, ChatMessage|ChatMessage[] message) returns MemoryError?;
+    function delete(string key) returns MemoryError?;
+};
+```
+
+A minimal PostgreSQL-backed implementation might look like:
+
+```ballerina
+import ballerina/ai;
+import ballerinax/postgresql;
+
+public isolated class PostgresMemory {
+    *ai:Memory;
+
+    private final postgresql:Client db;
+
+    public isolated function init(postgresql:Client db) {
+        self.db = db;
+    }
+
+    public isolated function get(string key) returns ai:ChatMessage[]|ai:MemoryError {
+        // Load messages for the session from the database and return them.
+        // Convert rows to ai:ChatMessage values before returning.
+        return [];
+    }
+
+    public isolated function update(string key, ai:ChatMessage|ai:ChatMessage[] message)
+            returns ai:MemoryError? {
+        // Append the new message(s) to the session's row(s).
+    }
+
+    public isolated function delete(string key) returns ai:MemoryError? {
+        // Remove all messages for the session.
+    }
 }
 ```
 
-## Session Cleanup
-
-Clear session memory when a conversation ends to free resources.
+Wire it into the agent:
 
 ```ballerina
-service /helpdesk on new http:Listener(8090) {
+final postgresql:Client pgClient = check new (
+    host = dbHost, database = dbName,
+    username = dbUser, password = dbPassword
+);
 
-    resource function post chat(@http:Payload ChatMessage request) returns ChatResponse|error {
-        string response = check helpDeskAgent.chat(request.message, request.sessionId);
-        return {response};
-    }
+final ai:Agent auditableAgent = check new (
+    systemPrompt = {
+        role: "Healthcare Scheduler",
+        instructions: "You help patients book appointments."
+    },
+    tools = [searchSlots, bookAppointment],
+    model = check ai:getDefaultModelProvider(),
+    memory = new PostgresMemory(pgClient)
+);
+```
 
-    resource function delete session/[string sessionId]() returns http:Ok {
-        helpDeskAgent.clearMemory(sessionId);
-        return http:OK;
+**Best for:** Multi-day workflows, compliance and audit use cases, and environments where conversation history must survive restarts.
+
+## Combining Memory with Context Injection
+
+You can add external context to a single turn by prefixing it onto the user message. It will become part of that turn's message and will be stored in memory like any other message.
+
+```ballerina
+import ballerina/ai;
+
+service /agent on new ai:Listener(8090) {
+    resource function post chat(ai:ChatReqMessage request)
+            returns ai:ChatRespMessage|error {
+        json userContext = check getUserProfile(request.sessionId);
+
+        string contextualMessage = string `[User Context: ${userContext.toString()}]
+
+            User question: ${request.message}`;
+
+        string response = check helpDeskAgent.run(contextualMessage, request.sessionId);
+        return {message: response};
     }
 }
 ```
+
+If you want context that does NOT persist across turns, inject it on every request rather than storing it in memory.
 
 ## Choosing the Right Memory Strategy
 
-| Scenario | Recommended Memory | Why |
-|----------|-------------------|-----|
-| Quick support interactions (< 10 turns) | `MessageWindowChatMemory(20)` | Simple and sufficient |
-| Cost-sensitive production deployment | `TokenWindowChatMemory(4000)` | Precise token control |
-| Long advisory sessions (50+ turns) | `SummaryChatMemory` | Retains context without token explosion |
-| Multi-day onboarding workflows | `PersistentChatMemory` (Redis) | Survives restarts, auto-expires |
-| Compliance and audit requirements | `PersistentChatMemory` (Database) | Queryable, persistent logs |
-| Single-turn task processing | No memory | Stateless by design |
+| Scenario | Recommended Approach |
+|----------|---------------------|
+| Typical chat service | Host the agent on `ai:Listener` (built-in session memory) |
+| Standalone agent driven from `main()` | `memory = new ai:ShortTermMemory()` |
+| Conversations that must survive restarts | Custom class implementing `ai:Memory`, backed by a database |
+| Single-turn task processing | Omit memory entirely -- each call is independent |
+| Audit or compliance requirements | Custom `ai:Memory` backed by your system of record |
 
 ## What's Next
 

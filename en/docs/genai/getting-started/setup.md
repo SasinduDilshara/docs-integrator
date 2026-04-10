@@ -1,199 +1,150 @@
 ---
 sidebar_position: 1
 title: Setting Up WSO2 Integrator for AI
-description: Install and configure WSO2 Integrator with AI dependencies for building GenAI integrations.
+description: Install and configure WSO2 Integrator to build AI-powered integrations with the Ballerina AI module.
 ---
 
 # Setting Up WSO2 Integrator for AI
 
-Before building AI integrations, you need the WSO2 Integrator development environment set up with the correct AI dependencies. This page walks you through the installation, project setup, and configuration required to start building agents, RAG pipelines, and MCP servers.
+Before building AI integrations, you need the WSO2 Integrator development environment set up with access to an LLM. This page walks you through installation, project creation, and configuring a model provider so you can start building agents, RAG pipelines, and MCP servers.
 
 ## Prerequisites
 
 - [WSO2 Integrator VS Code extension installed](/docs/get-started/install)
-- An LLM provider API key (OpenAI, Anthropic, Google, or Azure)
-- Ballerina Swan Lake installed (bundled with WSO2 Integrator)
+- Ballerina Swan Lake Update 13 (`2201.13.x`) or newer — bundled with WSO2 Integrator
+- One of:
+  - A **WSO2 Copilot** account (recommended — gives you a ready-to-use default model provider, no third-party API key required), or
+  - An API key for OpenAI, Anthropic, Azure OpenAI, Mistral, DeepSeek, or a local Ollama installation
+
+The Ballerina `ai` module and MCP module ship with the distribution — you do not need to add them to `Ballerina.toml` manually.
 
 ## Step 1: Create a New Integration Project
 
-Open VS Code with the WSO2 Integrator extension and create a new project.
+Open VS Code with the WSO2 Integrator extension and create a new project, or use the CLI:
 
 ```bash
 bal new my_ai_project
 cd my_ai_project
 ```
 
-## Step 2: Add AI Dependencies
+This creates a standard Ballerina package with a `Ballerina.toml` and a `main.bal`.
 
-Add the required AI packages to your `Ballerina.toml` file depending on your use case.
+## Step 2: Choose a Model Provider
 
-### For AI Agents
+The `ballerina/ai` module provides a single abstraction — `ai:ModelProvider` — that you use to talk to any LLM. You pick **one** of the two approaches below.
 
-```toml
-# Ballerina.toml
-[package]
-org = "myorg"
-name = "my_ai_project"
-version = "0.1.0"
+### Option A: WSO2 default model provider (recommended)
 
-[build-options]
-observabilityIncluded = true
+WSO2 Integrator ships with a default model provider that uses your WSO2 Copilot credentials. No separate API key is required.
 
-[[dependency]]
-org = "ballerinax"
-name = "ai.agent"
-version = "0.8.0"
+1. In VS Code, open the command palette (`Cmd/Ctrl + Shift + P`).
+2. Run **"Configure default WSO2 Model Provider"**.
+3. Sign in when prompted. VS Code writes the configuration into your project's `Config.toml` automatically.
+
+You can then get a model provider anywhere in your code with:
+
+```ballerina
+import ballerina/ai;
+
+final ai:ModelProvider model = check ai:getDefaultModelProvider();
 ```
 
-### For RAG Applications
+This is the pattern used throughout the WSO2 Integrator AI documentation.
 
-```toml
-[[dependency]]
-org = "ballerinax"
-name = "ai.rag"
-version = "1.0.0"
+### Option B: Bring your own LLM provider
 
-[[dependency]]
-org = "ballerinax"
-name = "openai.embeddings"
-version = "1.0.0"
+If you want to call OpenAI, Anthropic, Azure OpenAI, or another provider directly, add the corresponding connector module and initialize a provider explicitly.
 
-[[dependency]]
-org = "ballerinax"
-name = "chromadb"
-version = "0.5.0"
+#### OpenAI
+
+```ballerina
+import ballerina/ai;
+import ballerinax/ai.openai;
+
+configurable string openAiApiKey = ?;
+
+final ai:ModelProvider model = check new openai:ModelProvider(
+    openAiApiKey,
+    modelType = openai:GPT_4O
+);
 ```
-
-### For MCP Servers
-
-```toml
-[[dependency]]
-org = "ballerinax"
-name = "mcp"
-version = "1.0.0"
-```
-
-## Step 3: Configure Your LLM Provider
-
-Create a `Config.toml` file in your project root with your LLM provider credentials.
-
-### OpenAI
 
 ```toml
 # Config.toml
 openAiApiKey = "sk-your-api-key-here"
 ```
 
+#### Anthropic
+
 ```ballerina
-import ballerinax/ai.provider.openai;
+import ballerina/ai;
+import ballerinax/ai.anthropic;
 
-configurable string openAiApiKey = ?;
+configurable string anthropicApiKey = ?;
 
-final openai:Client llmClient = check new ({
-    auth: {token: openAiApiKey},
-    model: "gpt-4o"
-});
+final ai:ModelProvider model = check new anthropic:ModelProvider(
+    anthropicApiKey,
+    anthropic:CLAUDE_SONNET_4_20250514,
+    "2023-06-01"
+);
 ```
-
-### Anthropic
 
 ```toml
 # Config.toml
 anthropicApiKey = "sk-ant-your-key-here"
 ```
 
+#### Azure OpenAI
+
 ```ballerina
-import ballerinax/ai.provider.anthropic;
+import ballerina/ai;
+import ballerinax/ai.azure;
 
-configurable string anthropicApiKey = ?;
+configurable string azureServiceUrl = ?;
+configurable string azureApiKey = ?;
+configurable string azureDeploymentId = ?;
 
-final anthropic:Client llmClient = check new ({
-    auth: {token: anthropicApiKey},
-    model: "claude-sonnet-4-20250514"
-});
+final ai:ModelProvider model = check new azure:OpenAiModelProvider(
+    azureServiceUrl,
+    azureApiKey,
+    azureDeploymentId,
+    "2023-07-01-preview"
+);
 ```
-
-### Google Gemini
 
 ```toml
 # Config.toml
-googleApiKey = "your-google-key-here"
+azureServiceUrl   = "https://your-resource.openai.azure.com"
+azureApiKey       = "your-azure-key"
+azureDeploymentId = "your-deployment-id"
 ```
+
+#### Other providers
+
+The following connector modules follow the same pattern — import, declare a `configurable` for the API key, and construct the provider:
+
+| Provider  | Module                    |
+| --------- | ------------------------- |
+| Mistral   | `ballerinax/ai.mistral`   |
+| DeepSeek  | `ballerinax/ai.deepseek`  |
+| Ollama    | `ballerinax/ai.ollama`    |
+
+:::tip
+Because every provider returns an `ai:ModelProvider`, the rest of your code — agents, natural expressions, RAG — never needs to change if you swap providers.
+:::
+
+## Step 3: Verify the Setup
+
+Create a minimal test that asks the model to generate a response. Replace `main.bal` with the following:
 
 ```ballerina
-import ballerinax/ai.provider.google;
-
-configurable string googleApiKey = ?;
-
-final google:Client llmClient = check new ({
-    auth: {token: googleApiKey},
-    model: "gemini-2.0-flash"
-});
-```
-
-### Azure OpenAI
-
-```toml
-# Config.toml
-azureKey = "your-azure-key"
-azureEndpoint = "https://your-deployment.openai.azure.com"
-deploymentId = "gpt-4o"
-```
-
-```ballerina
-import ballerinax/ai.provider.azure;
-
-configurable string azureKey = ?;
-configurable string azureEndpoint = ?;
-configurable string deploymentId = ?;
-
-final azure:Client llmClient = check new ({
-    auth: {token: azureKey},
-    endpoint: azureEndpoint,
-    deploymentId: deploymentId,
-    apiVersion: "2024-06-01"
-});
-```
-
-### Ollama (Local / On-Premises)
-
-No API key required. Start Ollama locally and configure the endpoint.
-
-```toml
-# Config.toml
-ollamaEndpoint = "http://localhost:11434"
-ollamaModel = "llama3"
-```
-
-```ballerina
-import ballerinax/ai.provider.ollama;
-
-configurable string ollamaEndpoint = ?;
-configurable string ollamaModel = ?;
-
-final ollama:Client llmClient = check new ({
-    endpoint: ollamaEndpoint,
-    model: ollamaModel
-});
-```
-
-## Step 4: Verify the Setup
-
-Create a simple test to confirm your setup works.
-
-```ballerina
+import ballerina/ai;
 import ballerina/io;
-import ballerinax/ai.agent;
 
-configurable string openAiApiKey = ?;
+final ai:ModelProvider model = check ai:getDefaultModelProvider();
 
 public function main() returns error? {
-    agent:ChatAgent testAgent = check new (
-        model: check new openai:Client({auth: {token: openAiApiKey}}),
-        systemPrompt: "You are a helpful assistant. Respond with 'Setup complete!' to any message."
-    );
-
-    string response = check testAgent.chat("Hello", "test-session");
+    string response = check model->generate(`Say "Setup complete!" in one sentence.`);
     io:println(response);
 }
 ```
@@ -206,48 +157,12 @@ bal run
 
 If you see a response from the LLM, your setup is complete.
 
-## Environment-Based Configuration
-
-Use separate `Config.toml` files for development and production environments.
-
-```toml
-# Config.toml (Development)
-llmProvider = "ollama"
-llmModel = "llama3"
-```
-
-```toml
-# Config.toml (Production)
-llmProvider = "openai"
-llmModel = "gpt-4o"
-llmApiKey = "sk-..."
-```
-
-```ballerina
-configurable string llmProvider = "openai";
-configurable string llmModel = "gpt-4o";
-configurable string llmApiKey = ?;
-
-function createLlmClient() returns agent:LlmModel|error {
-    match llmProvider {
-        "openai" => {
-            return check new openai:Client({auth: {token: llmApiKey}, model: llmModel});
-        }
-        "anthropic" => {
-            return check new anthropic:Client({auth: {token: llmApiKey}, model: llmModel});
-        }
-        "ollama" => {
-            return check new ollama:Client({endpoint: "http://localhost:11434", model: llmModel});
-        }
-        _ => {
-            return error(string `Unsupported LLM provider: ${llmProvider}`);
-        }
-    }
-}
-```
+:::info
+If you are using a natural expression (`natural { ... }`) later, it is still an experimental feature. Run with `bal run --experimental` to enable it.
+:::
 
 ## What's Next
 
-- [Build a Smart Calculator Assistant](smart-calculator.md) -- Your first AI integration with tool calling
-- [Build a Sample Hotel Booking Agent](hotel-booking-agent.md) -- A more complete agent with memory and multiple tools
-- [Key Concepts: What is an LLM?](/docs/genai/key-concepts/what-is-llm) -- Understand the foundational technology
+- [Build a Smart Calculator Assistant](smart-calculator.md) — Your first AI integration using tool calling
+- [Build a Sample Hotel Booking Agent](hotel-booking-agent.md) — An agent with memory and multiple tools
+- [Key Concepts: What is an LLM?](/docs/genai/key-concepts/what-is-llm) — Understand the foundational technology

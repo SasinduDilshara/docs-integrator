@@ -1672,12 +1672,12 @@ const sidebars: SidebarsConfig = {
     },
 
     // ─────────────────────────────────────────────
-    // GENAI
+    // AI INTEGRATIONS
     // "How do I build AI agents, RAG, or MCP?"
     // ─────────────────────────────────────────────
     {
       type: 'category',
-      label: 'GenAI',
+      label: 'AI Integrations',
       collapsed: true,
       link: { type: 'doc', id: 'genai/overview' },
       items: [
@@ -1720,10 +1720,40 @@ const sidebars: SidebarsConfig = {
             {
               type: 'category',
               label: 'Direct LLM Calls',
+              link: { type: 'doc', id: 'genai/develop/direct-llm' },
+              collapsed: true,
               items: [
-                'genai/develop/direct-llm/configuring-providers',
-                'genai/develop/direct-llm/constructing-prompts',
-                'genai/develop/direct-llm/handling-responses',
+                {
+                  type: 'category',
+                  label: '1. Configuring LLM Providers',
+                  collapsed: true,
+                  items: [
+                    { type: 'link', label: 'Step 1.1: Create an HTTP Service', href: '/docs/genai/develop/direct-llm#step-11-create-an-http-service' },
+                    { type: 'link', label: 'Step 1.2: Define the Request Payload', href: '/docs/genai/develop/direct-llm#step-12-define-the-request-payload' },
+                    { type: 'link', label: 'Step 1.3: Define the Response Type', href: '/docs/genai/develop/direct-llm#step-13-define-the-response-type' },
+                    { type: 'link', label: 'Step 1.4: Add a Model Provider', href: '/docs/genai/develop/direct-llm#step-14-add-a-model-provider' },
+                  ],
+                },
+                {
+                  type: 'category',
+                  label: '2. Constructing Prompts',
+                  collapsed: true,
+                  items: [
+                    { type: 'link', label: 'Step 2.1: Add a generate Node', href: '/docs/genai/develop/direct-llm#step-21-add-a-generate-node' },
+                    { type: 'link', label: 'Step 2.2: Write the Prompt', href: '/docs/genai/develop/direct-llm#step-22-write-the-prompt' },
+                  ],
+                },
+                {
+                  type: 'category',
+                  label: '3. Handling Responses',
+                  collapsed: true,
+                  items: [
+                    { type: 'link', label: 'Step 3.1: Bind the Result and Save', href: '/docs/genai/develop/direct-llm#step-31-bind-the-result-and-save' },
+                    { type: 'link', label: 'Step 3.2: Add a Return Step', href: '/docs/genai/develop/direct-llm#step-32-add-a-return-step' },
+                    { type: 'link', label: 'Step 3.3: Run and Test the Service', href: '/docs/genai/develop/direct-llm#step-33-run-and-test-the-service' },
+                    { type: 'link', label: 'Step 3.4: Read the Output', href: '/docs/genai/develop/direct-llm#step-34-read-the-output' },
+                  ],
+                },
               ],
             },
             // Natural Functions
@@ -1777,88 +1807,6 @@ const sidebars: SidebarsConfig = {
             },
           ],
         },
-        // Deep Dives — Agents
-        {
-          type: 'category',
-          label: 'Agents',
-          items: [
-            'genai/agents/architecture-concepts',
-            'genai/agents/chat-agents',
-            'genai/agents/api-exposed-agents',
-            'genai/agents/natural-functions',
-            'genai/agents/tool-binding',
-            'genai/agents/memory-configuration',
-            'genai/agents/multi-agent-orchestration',
-          ],
-        },
-        // Deep Dives — RAG
-        {
-          type: 'category',
-          label: 'RAG',
-          items: [
-            'genai/rag/architecture-overview',
-            'genai/rag/document-ingestion',
-            'genai/rag/chunking-embedding',
-            'genai/rag/vector-databases',
-            'genai/rag/building-rag-service',
-          ],
-        },
-        // Deep Dives — MCP
-        {
-          type: 'category',
-          label: 'MCP',
-          items: [
-            'genai/mcp/overview',
-            'genai/mcp/consuming-mcp-tools',
-            'genai/mcp/exposing-mcp-servers',
-            'genai/mcp/mcp-security',
-          ],
-        },
-        // LLM Connectivity
-        {
-          type: 'category',
-          label: 'LLM Connectivity',
-          items: [
-            'genai/llm-connectivity/model-selection',
-            'genai/llm-connectivity/prompt-engineering',
-            'genai/llm-connectivity/managing-context-windows',
-            'genai/llm-connectivity/natural-expressions',
-            'genai/llm-connectivity/streaming-responses',
-          ],
-        },
-        // Guardrails
-        {
-          type: 'category',
-          label: 'Guardrails',
-          items: [
-            'genai/guardrails/responsible-ai',
-            'genai/guardrails/content-filtering',
-            'genai/guardrails/input-output-guardrails',
-            'genai/guardrails/token-cost-management',
-            'genai/guardrails/ai-usage-guidelines',
-          ],
-        },
-        // Agent Observability
-        {
-          type: 'category',
-          label: 'Agent Observability',
-          items: [
-            'genai/agent-observability/agent-tracing',
-            'genai/agent-observability/conversation-logging',
-            'genai/agent-observability/performance-metrics',
-            'genai/agent-observability/debugging-agent-behavior',
-          ],
-        },
-        // Quick Starts
-        {
-          type: 'category',
-          label: 'Quick Starts',
-          items: [
-            'genai/quick-starts/build-conversational-agent',
-            'genai/quick-starts/build-rag-application',
-            'genai/quick-starts/expose-mcp-server',
-          ],
-        },
         // Tutorials
         {
           type: 'category',
@@ -1868,11 +1816,6 @@ const sidebars: SidebarsConfig = {
             'genai/tutorials/customer-care-mcp',
             'genai/tutorials/it-helpdesk-chatbot',
             'genai/tutorials/legal-doc-qa',
-            'genai/tutorials/ai-customer-support',
-            'genai/tutorials/conversational-data-pipeline',
-            'genai/tutorials/mcp-enterprise-data',
-            'genai/tutorials/multi-agent-workflow',
-            'genai/tutorials/rag-knowledge-base',
           ],
         },
         // Reference

@@ -6,43 +6,45 @@ description: Build an HR agent that answers employee questions about company pol
 
 # Building an HR Knowledge Base Agent with RAG
 
-**Time:** 45 minutes | **Level:** Intermediate | **What you'll build:** An HR knowledge base agent that answers employee questions about company policies, benefits, and procedures by retrieving relevant context from ingested HR documents using RAG.
+**Time:** 45 minutes | **Level:** Intermediate | **What you'll build:** An HR knowledge base AI Agent that answers employee questions about company policies, benefits, and procedures by retrieving relevant context from ingested HR documents using RAG.
 
-In this tutorial, you build an end-to-end HR knowledge base agent powered by retrieval-augmented generation. The agent ingests HR policy documents into a vector database, retrieves relevant sections when employees ask questions, and generates accurate answers grounded in your actual policies. This ensures employees get consistent, up-to-date answers rather than responses based on generic LLM training data.
+In this tutorial, you build an end-to-end HR knowledge base AI Agent powered by retrieval-augmented generation. The agent ingests HR policy documents into a vector knowledge base, retrieves relevant sections when employees ask questions, and generates accurate answers grounded in your actual policies. This ensures employees get consistent, up-to-date answers rather than responses based on generic LLM training data.
+
+You will use the canonical `ballerina/ai` module — which ships with the WSO2 Integrator distribution — for the model provider, embeddings, vector store, and AI Agent.
 
 ## Prerequisites
 
 - [WSO2 Integrator VS Code extension installed](/docs/get-started/install)
-- An OpenAI API key (for embeddings and chat completion)
-- PostgreSQL with the pgvector extension installed (or ChromaDB as an alternative)
+- A default model provider configured via the VS Code command **"Configure default WSO2 Model Provider"**, OR an OpenAI API key if you prefer to bring your own
+- A sample set of HR policy documents (PDF or text) to ingest
 
 ## Architecture
 
 ```mermaid
 flowchart TD
     subgraph Ingestion["Ingestion Pipeline"]
-        Docs[HR Documents] --> Chunking[Chunking] --> Embedding[Embedding] --> VectorDB[(pgvector Database)]
+        Docs[HR Documents] --> Loader[ai:TextDataLoader] --> KB[(ai:VectorKnowledgeBase)]
     end
 
     subgraph Query["Query Pipeline"]
-        Question([Employee Question]) --> QEmbed[Embed] --> Search[Vector Search] --> TopK[Top-K Chunks] --> Agent
+        Question([Employee Question]) --> Agent
     end
 
-    subgraph HRAgent["HR Agent"]
-        Agent[System Prompt<br/>+ LLM (GPT-4o)<br/>+ Tools]
+    subgraph HRAgent["HR AI Agent"]
+        Agent[ai:Agent<br/>+ ai:ModelProvider<br/>+ Tools]
     end
 
     LeaveAPI[Leave Balance API]
     DirAPI[Employee Directory API]
 
-    Agent ----> VectorDB
+    Agent ----> KB
     Agent ----> LeaveAPI
     Agent ----> DirAPI
 ```
 
 ## Step 1: Create the Project
 
-Create a new WSO2 Integrator project and add the required dependencies.
+Create a new WSO2 Integrator project. The `ballerina/ai` module is bundled with the distribution, so you do not need a separate dependency block for it.
 
 ```toml
 # Ballerina.toml
@@ -50,94 +52,31 @@ Create a new WSO2 Integrator project and add the required dependencies.
 org = "myorg"
 name = "hr_knowledge_base_agent"
 version = "0.1.0"
-
-[[dependency]]
-org = "ballerinax"
-name = "ai.agent"
-
-[[dependency]]
-org = "ballerinax"
-name = "ai.provider.openai"
-
-[[dependency]]
-org = "ballerinax"
-name = "postgresql"
-
-[[dependency]]
-org = "ballerinax"
-name = "postgresql.driver"
+distribution = "2201.13.0"
 ```
+
+The only explicit dependency you might add is for an external connector such as `ballerinax/ai.openai` (if you want to use OpenAI directly) or `ballerina/http` (for the HR API client). Those are pulled automatically when imported.
 
 ## Step 2: Set Up Configuration
 
+If you are using the WSO2 default model provider, run the VS Code command **"Configure default WSO2 Model Provider"** and it will add a `[ballerina.ai]` block to `Config.toml` for you. Otherwise, add an OpenAI key:
+
 ```toml
 # Config.toml
-openaiKey = "<your-openai-api-key>"
-dbHost = "localhost"
-dbPort = 5432
-dbUser = "postgres"
-dbPassword = "password"
-dbName = "hr_knowledge_base"
+openAiApiKey = "<your-openai-api-key>"
+hrApiUrl = "http://localhost:8080/api/hr"
 ```
 
 ```ballerina
 // config.bal
-configurable string openaiKey = ?;
-configurable string dbHost = ?;
-configurable int dbPort = ?;
-configurable string dbUser = ?;
-configurable string dbPassword = ?;
-configurable string dbName = ?;
+configurable string openAiApiKey = ?;
+configurable string hrApiUrl = ?;
 ```
 
-## Step 3: Set Up the Vector Database
-
-Before running the application, create the pgvector extension and documents table in PostgreSQL.
-
-```sql
--- Run this in your PostgreSQL database
-CREATE EXTENSION IF NOT EXISTS vector;
-
-CREATE TABLE IF NOT EXISTS hr_documents (
-    id TEXT PRIMARY KEY,
-    content TEXT NOT NULL,
-    source TEXT NOT NULL,
-    category TEXT NOT NULL,
-    chunk_index INT NOT NULL,
-    total_chunks INT NOT NULL,
-    embedding vector(1536)
-);
-
-CREATE INDEX ON hr_documents USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
-```
-
-## Step 4: Define Data Types
+## Step 3: Define Data Types
 
 ```ballerina
 // types.bal
-type HrDocumentChunk record {|
-    string id;
-    string content;
-    string source;
-    string category;    // "leave-policy", "benefits", "code-of-conduct", "onboarding", etc.
-    int chunkIndex;
-    int totalChunks;
-|};
-
-type SearchResult record {|
-    string content;
-    string source;
-    string category;
-    float score;
-|};
-
-type HrQueryResponse record {|
-    string answer;
-    string[] sources;
-    string[] relatedTopics;
-    int chunksUsed;
-|};
-
 type LeaveBalance record {|
     string employeeId;
     string employeeName;
@@ -155,343 +94,229 @@ type EmployeeInfo record {|
     string email;
     string startDate;
 |};
+
+type LeaveRequestInput record {|
+    string employeeId;
+    string leaveType;
+    string startDate;
+    string endDate;
+    string reason;
+|};
 ```
 
-## Step 5: Build the Embedding and Chunking Pipeline
+## Step 4: Build the Knowledge Base
+
+The `ballerina/ai` module provides everything you need for RAG: an in-memory vector store, a text data loader, and a vector knowledge base. For production, you can swap in an external vector store such as Pinecone, Weaviate, Milvus, or pgvector by importing the corresponding `ballerinax/ai.*` connector.
 
 ```ballerina
-// embeddings.bal
-import ballerinax/ai.provider.openai;
+// knowledge_base.bal
+import ballerina/ai;
 
-final openai:Client embeddingClient = check new ({
-    auth: {token: openaiKey},
-    model: "text-embedding-3-small"
-});
+final ai:VectorStore vectorStore = check new ai:InMemoryVectorStore();
+final ai:EmbeddingProvider embeddingProvider = check ai:getDefaultEmbeddingProvider();
+final ai:KnowledgeBase knowledgeBase =
+        new ai:VectorKnowledgeBase(vectorStore, embeddingProvider);
+final ai:ModelProvider modelProvider = check ai:getDefaultModelProvider();
 
-function generateEmbedding(string text) returns float[]|error {
-    openai:EmbeddingResponse response = check embeddingClient.createEmbedding(text);
-    return response.embedding;
+# Load an HR policy document from disk and ingest it into the knowledge base.
+#
+# + filePath - Absolute or workspace-relative path to the document
+# + return - `()` on success, or an error if the file cannot be loaded or ingested
+public function ingestPolicyDocument(string filePath) returns error? {
+    ai:DataLoader loader = check new ai:TextDataLoader(filePath);
+    ai:Document|ai:Document[] docs = check loader.load();
+    check knowledgeBase.ingest(docs);
 }
 ```
+
+:::tip Swap in a production vector store
+To use Pinecone instead of the in-memory store, change two lines:
 
 ```ballerina
-// chunking.bal
-import ballerina/io;
-import ballerina/regex;
+import ballerinax/ai.pinecone;
 
-function chunkDocument(string content, int maxChunkSize = 500, int overlap = 100) returns string[] {
-    string[] paragraphs = re `\n\n+`.split(content);
-    string[] chunks = [];
-    string currentChunk = "";
+configurable string pineconeServiceUrl = ?;
+configurable string pineconeApiKey = ?;
 
-    foreach string paragraph in paragraphs {
-        if (currentChunk.length() + paragraph.length()) > maxChunkSize && currentChunk.length() > 0 {
-            chunks.push(currentChunk.trim());
-            int overlapStart = currentChunk.length() > overlap
-                ? currentChunk.length() - overlap : 0;
-            currentChunk = currentChunk.substring(overlapStart) + "\n\n" + paragraph;
-        } else {
-            currentChunk = currentChunk.length() > 0
-                ? currentChunk + "\n\n" + paragraph
-                : paragraph;
-        }
-    }
-
-    if currentChunk.trim().length() > 0 {
-        chunks.push(currentChunk.trim());
-    }
-    return chunks;
-}
-
-function ingestHrDocument(string filePath, string category) returns HrDocumentChunk[]|error {
-    string content = check io:fileReadString(filePath);
-    string[] chunks = chunkDocument(content);
-
-    HrDocumentChunk[] docChunks = [];
-    foreach int i in 0 ..< chunks.length() {
-        docChunks.push({
-            id: string `${filePath}-chunk-${i}`,
-            content: chunks[i],
-            source: filePath,
-            category: category,
-            chunkIndex: i,
-            totalChunks: chunks.length()
-        });
-    }
-    return docChunks;
-}
+final ai:VectorStore vectorStore =
+        check new pinecone:VectorStore(pineconeServiceUrl, pineconeApiKey);
 ```
+The rest of the code does not change — `ai:VectorKnowledgeBase` works with any `ai:VectorStore`.
+:::
 
-## Step 6: Build the Vector Store Client
+## Step 5: Define Agent Tools
 
-```ballerina
-// vectorstore.bal
-import ballerinax/postgresql;
-
-final postgresql:Client pgClient = check new ({
-    host: dbHost, port: dbPort,
-    username: dbUser, password: dbPassword,
-    database: dbName
-});
-
-function storeChunks(HrDocumentChunk[] chunks) returns error? {
-    foreach HrDocumentChunk chunk in chunks {
-        float[] embedding = check generateEmbedding(chunk.content);
-        string embeddingStr = embedding.toString();
-
-        _ = check pgClient->execute(`
-            INSERT INTO hr_documents (id, content, source, category, chunk_index, total_chunks, embedding)
-            VALUES (${chunk.id}, ${chunk.content}, ${chunk.source}, ${chunk.category},
-                    ${chunk.chunkIndex}, ${chunk.totalChunks}, ${embeddingStr}::vector)
-            ON CONFLICT (id) DO UPDATE SET
-                content = EXCLUDED.content,
-                embedding = EXCLUDED.embedding
-        `);
-    }
-}
-
-function searchSimilar(string query, int topK = 5, string? category = ()) returns SearchResult[]|error {
-    float[] queryEmbedding = check generateEmbedding(query);
-    string embeddingStr = queryEmbedding.toString();
-
-    if category is string {
-        return check from record {string content; string source; string category; float score} row in
-            pgClient->query(`
-                SELECT content, source, category,
-                       1 - (embedding <=> ${embeddingStr}::vector) AS score
-                FROM hr_documents
-                WHERE category = ${category}
-                ORDER BY embedding <=> ${embeddingStr}::vector
-                LIMIT ${topK}
-            `)
-            select {content: row.content, source: row.source, category: row.category, score: row.score};
-    }
-
-    return check from record {string content; string source; string category; float score} row in
-        pgClient->query(`
-            SELECT content, source, category,
-                   1 - (embedding <=> ${embeddingStr}::vector) AS score
-            FROM hr_documents
-            ORDER BY embedding <=> ${embeddingStr}::vector
-            LIMIT ${topK}
-        `)
-        select {content: row.content, source: row.source, category: row.category, score: row.score};
-}
-```
-
-## Step 7: Define Agent Tools
-
-Each tool provides the agent with a capability to access HR systems and the knowledge base.
+The agent needs four tools: one that searches the knowledge base (this is the RAG-in-a-tool pattern), and three that talk to the HR backend. Each tool is an `isolated` function annotated with `@ai:AgentTool`. Descriptions come from doc comments — there is no `@ai:Param` annotation.
 
 ```ballerina
 // tools.bal
-import ballerinax/ai.agent;
+import ballerina/ai;
 import ballerina/http;
 
-final http:Client hrApi = check new ("http://localhost:8080/api/hr");
+final http:Client hrApi = check new (hrApiUrl);
 
-@agent:Tool {
-    name: "searchHrPolicies",
-    description: "Search the HR knowledge base for information about company policies, benefits, procedures, and guidelines. Use this when employees ask about leave policies, benefits, code of conduct, onboarding, or any HR-related question."
-}
-isolated function searchHrPolicies(
-    @agent:Param {description: "The question or topic to search for in the HR knowledge base"} string query,
-    @agent:Param {description: "Optional category filter: 'leave-policy', 'benefits', 'code-of-conduct', 'onboarding', or leave empty for all"} string? category = ()
-) returns json|error {
-    SearchResult[] results = check searchSimilar(query, topK = 5, category = category);
-    return results.toJson();
-}
-
-@agent:Tool {
-    name: "getLeaveBalance",
-    description: "Retrieve the current leave balance for an employee by their employee ID. Shows annual, sick, and personal leave remaining. Use this when an employee asks how many leave days they have."
-}
-isolated function getLeaveBalance(
-    @agent:Param {description: "Employee ID in the format EMP-XXXXX"} string employeeId
-) returns json|error {
-    json|error result = hrApi->get(string `/leave-balance/${employeeId}`);
-    if result is error {
-        return {
-            "found": false,
-            "message": string `Could not find leave balance for employee '${employeeId}'.`,
-            "suggestion": "Please verify the employee ID. It should be in the format EMP-XXXXX."
-        };
-    }
-    return result;
+# Search the HR knowledge base for policies, benefits, and procedures.
+# Use this for any question about leave policies, benefits, code of conduct,
+# or onboarding. Returns an answer grounded in the company's HR documents.
+#
+# + question - The employee's HR question
+# + return - A natural-language answer grounded in retrieved policy chunks
+@ai:AgentTool
+isolated function searchHrKnowledgeBase(string question) returns string|error {
+    ai:QueryMatch[] matches = check knowledgeBase.retrieve(question, 5);
+    ai:Chunk[] context = from ai:QueryMatch m in matches select m.chunk;
+    ai:ChatUserMessage augmented = ai:augmentUserQuery(context, question);
+    ai:ChatAssistantMessage answer = check modelProvider->chat(augmented);
+    return answer.content ?: "No answer could be generated from the knowledge base.";
 }
 
-@agent:Tool {
-    name: "lookupEmployee",
-    description: "Look up employee information by name or employee ID. Returns department, manager, and contact details. Use this when needing to find who someone reports to or how to contact a colleague."
-}
-isolated function lookupEmployee(
-    @agent:Param {description: "Employee name or employee ID"} string query
-) returns json|error {
-    return check hrApi->get(string `/employees?search=${query}`);
+# Retrieve the current leave balance for an employee.
+# Use this when an employee asks how many leave days they have remaining.
+#
+# + employeeId - Employee ID in the format `EMP-XXXXX`
+# + return - The employee's leave balance, or an error if not found
+@ai:AgentTool
+isolated function getLeaveBalance(string employeeId) returns LeaveBalance|error {
+    return hrApi->get(string `/leave-balance/${employeeId}`);
 }
 
-@agent:Tool {
-    name: "submitLeaveRequest",
-    description: "Submit a leave request for an employee. Use this only when an employee explicitly asks to submit a leave request and provides all required details."
+# Look up an employee by name or ID.
+# Returns department, manager, and contact details.
+#
+# + query - Employee name or employee ID
+# + return - Employee information
+@ai:AgentTool
+isolated function lookupEmployee(string query) returns EmployeeInfo|error {
+    return hrApi->get(string `/employees?search=${query}`);
 }
-isolated function submitLeaveRequest(
-    @agent:Param {description: "Employee ID"} string employeeId,
-    @agent:Param {description: "Leave type: 'annual', 'sick', or 'personal'"} string leaveType,
-    @agent:Param {description: "Start date in YYYY-MM-DD format"} string startDate,
-    @agent:Param {description: "End date in YYYY-MM-DD format"} string endDate,
-    @agent:Param {description: "Reason for leave"} string reason
-) returns json|error {
-    return check hrApi->post("/leave-requests", {
-        employeeId, leaveType, startDate, endDate, reason
-    });
+
+# Submit a leave request on behalf of an employee.
+# Use this only when the employee has explicitly confirmed all leave details.
+#
+# + request - The leave request payload
+# + return - The created leave request response
+@ai:AgentTool
+isolated function submitLeaveRequest(LeaveRequestInput request) returns json|error {
+    return hrApi->post("/leave-requests", request);
 }
 ```
 
-## Step 8: Create the Agent
+:::info The RAG-in-a-tool pattern
+The `searchHrKnowledgeBase` tool is the canonical way to combine RAG with an AI Agent. Inside the tool, you `retrieve` relevant chunks, call `ai:augmentUserQuery` to build a grounded user message, and then ask the model to answer. The agent decides *when* to call this tool based on its doc comment.
+:::
+
+## Step 6: Create the AI Agent
 
 ```ballerina
 // agent.bal
-import ballerinax/ai.agent;
-import ballerinax/ai.provider.openai;
+import ballerina/ai;
 
-final openai:Client llmClient = check new ({
-    auth: {token: openaiKey},
-    model: "gpt-4o"
-});
-
-final agent:ChatAgent hrAgent = check new (
-    model: llmClient,
-    systemPrompt: string `You are an HR Knowledge Base Assistant for the company.
+final ai:Agent hrAgent = check new (
+    systemPrompt = {
+        role: "HR Knowledge Base Assistant",
+        instructions: string `You are an HR Knowledge Base Assistant for the company.
 
 Role:
 - Help employees find answers to HR-related questions about policies, benefits, leave, and procedures.
 - Provide accurate information grounded in the company's actual HR documents.
 
-Tools:
-- Use searchHrPolicies to answer questions about company policies, benefits, and procedures.
-- Use getLeaveBalance to check an employee's remaining leave days.
-- Use lookupEmployee to find employee details, managers, or contact information.
-- Use submitLeaveRequest only when an employee explicitly requests to submit a leave request.
+Tool usage:
+- ALWAYS call searchHrKnowledgeBase for questions about policies, benefits, or procedures. Never guess.
+- Call getLeaveBalance to check remaining leave days.
+- Call lookupEmployee to find employee details, managers, or contact information.
+- Call submitLeaveRequest only when the employee has confirmed all leave details.
 
 Guidelines:
-- Always search the knowledge base before answering policy questions -- never guess.
-- Cite the source document when referencing specific policies.
+- Cite the source when referencing a specific policy.
 - If the answer is not in the knowledge base, clearly state that and suggest contacting HR directly.
 - Be professional, empathetic, and concise.
-- For sensitive topics (termination, disciplinary actions, salary), advise the employee to speak with their HR representative directly.
-- Never disclose another employee's personal information, leave balance, or salary details.`,
-    tools: [searchHrPolicies, getLeaveBalance, lookupEmployee, submitLeaveRequest],
-    memory: new agent:MessageWindowChatMemory(maxMessages: 20)
+- For sensitive topics (termination, disciplinary actions, salary), advise the employee to speak with their HR representative.
+- Never disclose another employee's personal information, leave balance, or salary.`
+    },
+    tools = [searchHrKnowledgeBase, getLeaveBalance, lookupEmployee, submitLeaveRequest],
+    model = modelProvider
 );
 ```
 
-## Step 9: Expose as an HTTP Service
+## Step 7: Expose as a Chat Service
+
+Use `ai:Listener` to get built-in session memory and the standard `ai:ChatReqMessage` / `ai:ChatRespMessage` payloads. The `sessionId` from each request is what drives per-user conversation history.
 
 ```ballerina
 // service.bal
-import ballerina/http;
-import ballerina/uuid;
+import ballerina/ai;
 
-type ChatRequest record {|
-    string message;
-    string? sessionId;
-    string? employeeId;
-|};
+service /hr on new ai:Listener(8090) {
 
-type ChatResponse record {|
-    string message;
-    string sessionId;
-|};
-
-type IngestRequest record {|
-    string filePath;
-    string category;
-|};
-
-service /hr on new http:Listener(8090) {
-
-    // Chat endpoint for employee questions
-    resource function post chat(@http:Payload ChatRequest request) returns ChatResponse|error {
-        string sessionId = request.sessionId ?: uuid:createType1().toString();
-
-        string message = request.message;
-        if request.employeeId is string {
-            message = string `[Employee ID: ${<string>request.employeeId}] ${message}`;
-        }
-
-        string response = check hrAgent.chat(message, sessionId);
-        return {message: response, sessionId};
-    }
-
-    // Document ingestion endpoint
-    resource function post ingest(@http:Payload IngestRequest request)
-            returns record {|string message; int chunks;|}|error {
-        HrDocumentChunk[] chunks = check ingestHrDocument(request.filePath, request.category);
-        check storeChunks(chunks);
-        return {
-            message: string `Successfully ingested '${request.filePath}' under category '${request.category}'`,
-            chunks: chunks.length()
-        };
+    # Chat endpoint for employee HR questions.
+    #
+    # + request - The incoming chat request with a session ID and user message
+    # + return - The agent's response, or an error
+    resource function post chat(ai:ChatReqMessage request)
+            returns ai:ChatRespMessage|error {
+        string response = check hrAgent.run(request.message, request.sessionId);
+        return {message: response};
     }
 }
 ```
 
-## Step 10: Run and Test
+You can add a separate plain HTTP service for document ingestion if you want to trigger it over the network; for this tutorial we expose a simple function and call it from `main`.
+
+```ballerina
+// main.bal
+import ballerina/io;
+
+public function main() returns error? {
+    // Ingest a few HR documents on startup.
+    check ingestPolicyDocument("./docs/leave-policy.pdf");
+    check ingestPolicyDocument("./docs/benefits-guide.pdf");
+    check ingestPolicyDocument("./docs/code-of-conduct.pdf");
+
+    io:println("HR knowledge base ingestion complete. Chat service ready on :8090.");
+}
+```
+
+## Step 8: Run and Test
 
 1. Start the service:
    ```bash
    bal run
    ```
 
-2. Ingest HR documents:
+2. Ask HR questions. The request body matches `ai:ChatReqMessage`:
    ```bash
-   # Ingest the leave policy
-   curl -X POST http://localhost:8090/hr/ingest \
+   curl -X POST http://localhost:8090/hr/chat \
      -H "Content-Type: application/json" \
-     -d '{"filePath": "/docs/hr/leave-policy.txt", "category": "leave-policy"}'
-
-   # Ingest the benefits guide
-   curl -X POST http://localhost:8090/hr/ingest \
-     -H "Content-Type: application/json" \
-     -d '{"filePath": "/docs/hr/benefits-guide.txt", "category": "benefits"}'
-
-   # Ingest the code of conduct
-   curl -X POST http://localhost:8090/hr/ingest \
-     -H "Content-Type: application/json" \
-     -d '{"filePath": "/docs/hr/code-of-conduct.txt", "category": "code-of-conduct"}'
+     -d '{"sessionId": "emp-10042", "message": "How many annual leave days do I get per year?"}'
    ```
 
-3. Ask HR questions:
+3. Continue the conversation using the same `sessionId` — the `ai:Listener` keeps conversation state in process:
    ```bash
-   # Ask about leave policy
    curl -X POST http://localhost:8090/hr/chat \
      -H "Content-Type: application/json" \
-     -d '{"message": "How many annual leave days do I get per year?", "employeeId": "EMP-10042"}'
+     -d '{"sessionId": "emp-10042", "message": "And what about sick leave?"}'
+   ```
 
-   # Check leave balance (use sessionId from previous response)
+4. Ask a question that triggers a backend tool call:
+   ```bash
    curl -X POST http://localhost:8090/hr/chat \
      -H "Content-Type: application/json" \
-     -d '{"message": "How many sick days do I have left?", "sessionId": "<session-id>", "employeeId": "EMP-10042"}'
-
-   # Ask about benefits
-   curl -X POST http://localhost:8090/hr/chat \
-     -H "Content-Type: application/json" \
-     -d '{"message": "What dental coverage does the company health plan include?", "sessionId": "<session-id>"}'
+     -d '{"sessionId": "emp-10042", "message": "How many sick days does EMP-10042 have left?"}'
    ```
 
 ## What You Built
 
-You now have an HR knowledge base agent that:
-- Ingests HR policy documents into a pgvector database using OpenAI embeddings
-- Retrieves relevant policy sections using semantic search when employees ask questions
-- Generates accurate answers grounded in your actual HR documents with source citations
-- Checks employee leave balances and submits leave requests
-- Maintains conversation context across multiple turns
-- Protects sensitive employee information
+You now have an HR knowledge base AI Agent that:
+- Ingests HR policy documents into an `ai:VectorKnowledgeBase` using the default embedding provider
+- Retrieves relevant policy sections using semantic search wrapped as an agent tool
+- Generates accurate, grounded answers using `ai:augmentUserQuery`
+- Checks employee leave balances and submits leave requests through a plain HTTP client
+- Maintains conversation context across turns via `ai:Listener`
+- Protects sensitive employee information through its system prompt
 
 ## What's Next
 
-- [RAG Knowledge Base](rag-knowledge-base.md) -- Explore advanced RAG techniques
-- [Chunking & Embedding](/docs/genai/rag/chunking-embedding) -- Optimize chunking strategies for policy documents
-- [Memory Configuration](/docs/genai/agents/memory-configuration) -- Configure persistent memory for long conversations
-- [AI Governance and Security](/docs/genai/reference/ai-governance) -- Add governance and audit logging
+- [RAG Knowledge Base](rag-knowledge-base.md) — Explore advanced RAG techniques
+- [Chunking & Embedding](/docs/genai/rag/chunking-embedding) — Tune chunking strategies for policy documents
+- [Memory Configuration](/docs/genai/agents/memory-configuration) — Configure persistent memory for long conversations
+- [AI Governance and Security](/docs/genai/reference/ai-governance) — Add governance and audit logging

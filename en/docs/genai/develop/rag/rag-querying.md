@@ -1,185 +1,158 @@
 ---
 sidebar_position: 4
 title: RAG Querying
-description: Build the complete RAG query pipeline -- embed queries, retrieve context, and generate grounded answers.
+description: Build the complete RAG query pipeline with the WSO2 Integrator ai module -- retrieve relevant chunks and generate grounded answers.
 ---
 
 # RAG Querying
 
-The query pipeline is the runtime half of your RAG system. When a user asks a question, the pipeline embeds the query, searches for relevant chunks, assembles context, and generates a grounded answer. This page covers how to build a production-ready query pipeline end-to-end.
+The query pipeline is the runtime half of your RAG system. When a user asks a question, the pipeline embeds the query, searches for relevant chunks, assembles context, and generates a grounded answer.
+
+In WSO2 Integrator, the `ai:KnowledgeBase` handles retrieval for you, and the `ai:ModelProvider` handles generation. This page covers two idiomatic query styles and a complete end-to-end example.
 
 ## Query Pipeline Overview
 
 ```
-User Question --> Embed Query --> Vector Search --> Top-K Chunks --> LLM + Context --> Answer
+User Question --> knowledgeBase.retrieve --> Top-K Chunks --> modelProvider->chat --> Answer
 ```
 
-## Complete RAG Service
+## Complete RAG Example
 
-### Configuration
-
-```ballerina
-configurable string openAiApiKey = ?;
-configurable string chromaDbUrl = "http://localhost:8000";
-configurable string collectionName = "knowledge_base";
-configurable string embeddingModel = "text-embedding-3-small";
-configurable string generationModel = "gpt-4o";
-configurable int retrievalTopK = 5;
-configurable float similarityThreshold = 0.7;
-```
-
-### Retrieval
+The following program ingests a document, retrieves the most relevant chunks for a user question, and asks the LLM to answer using those chunks as context.
 
 ```ballerina
-import ballerinax/chromadb;
+import ballerina/ai;
+import ballerina/io;
 
-final chromadb:Client chromaClient = check new ({url: chromaDbUrl});
-final chromadb:Collection collection = check chromaClient.getOrCreateCollection(
-    collectionName,
-    metadata = {"hnsw:space": "cosine"}
-);
+final ai:VectorStore vectorStore = check new ai:InMemoryVectorStore();
+final ai:EmbeddingProvider embeddingProvider = check ai:getDefaultEmbeddingProvider();
+final ai:KnowledgeBase knowledgeBase =
+        new ai:VectorKnowledgeBase(vectorStore, embeddingProvider);
+final ai:ModelProvider modelProvider = check ai:getDefaultModelProvider();
 
-function searchSimilar(string query, int topK) returns RetrievedChunk[]|error {
-    float[] queryVector = check generateEmbedding(query);
+public function main() returns error? {
+    // 1. Load and ingest documents
+    ai:DataLoader loader = check new ai:TextDataLoader("./leave_policy.md");
+    ai:Document|ai:Document[] documents = check loader.load();
+    check knowledgeBase.ingest(documents);
+    io:println("Ingestion successful");
 
-    chromadb:QueryResult results = check collection.query(
-        queryEmbeddings = [queryVector],
-        nResults = topK
-    );
+    // 2. Retrieve the most relevant chunks for the query
+    string query = "How many annual leave days can a full-time employee carry forward?";
+    ai:QueryMatch[] matches = check knowledgeBase.retrieve(query, 10);
+    ai:Chunk[] context = from ai:QueryMatch m in matches select m.chunk;
 
-    RetrievedChunk[] chunks = [];
-    if results.documents is string[][] && results.distances is float[][] {
-        string[][] docs = <string[][]>results.documents;
-        float[][] distances = <float[][]>results.distances;
-
-        foreach int i in 0 ..< docs[0].length() {
-            float similarity = 1.0 - distances[0][i];
-            if similarity >= similarityThreshold {
-                chunks.push({
-                    text: docs[0][i],
-                    similarity: similarity,
-                    metadata: {}
-                });
-            }
-        }
-    }
-    return chunks;
+    // 3. Build an augmented user message and call the model
+    ai:ChatUserMessage augmented = ai:augmentUserQuery(context, query);
+    ai:ChatAssistantMessage answer = check modelProvider->chat(augmented);
+    io:println("Answer: ", answer.content);
 }
-
-type RetrievedChunk record {|
-    string text;
-    float similarity;
-    json metadata;
-|};
 ```
 
-### Generation
+The `ai:augmentUserQuery` helper wraps the retrieved context and the user question into a single `ai:ChatUserMessage` that instructs the model to answer based only on the provided context. Passing that message to `modelProvider->chat` returns a grounded `ai:ChatAssistantMessage`.
+
+## Two Query Styles
+
+### Style A -- Augmented Chat Message
+
+Use `ai:augmentUserQuery` when you want the framework to produce a standard retrieval-augmented prompt for you. This is the recommended style for most applications.
 
 ```ballerina
-import ballerinax/openai.chat;
+ai:QueryMatch[] matches = check knowledgeBase.retrieve(query, 10);
+ai:Chunk[] context = from ai:QueryMatch m in matches select m.chunk;
 
-final chat:Client chatClient = check new ({auth: {token: openAiApiKey}});
+ai:ChatUserMessage augmented = ai:augmentUserQuery(context, query);
+ai:ChatAssistantMessage response = check modelProvider->chat(augmented);
 
-function generateAnswer(string question, RetrievedChunk[] context) returns GeneratedAnswer|error {
-    string contextBlock = "";
-    string[] sources = [];
-    foreach int i in 0 ..< context.length() {
-        contextBlock += string `[Source ${i + 1}]: ${context[i].text}` + "\n\n";
-    }
-
-    chat:ChatCompletionResponse completion = check chatClient->createChatCompletion({
-        model: generationModel,
-        messages: [
-            {
-                role: "system",
-                content: string `You are a knowledgeable assistant that answers questions based on provided context.
-
-Rules:
-- Base your answer ONLY on the provided context.
-- If the context doesn't contain enough information, say so clearly.
-- Reference specific sources when possible.
-- Be concise and accurate.
-
-Context:
-${contextBlock}`
-            },
-            {role: "user", content: question}
-        ],
-        temperature: 0.2
-    });
-
-    string answer = completion.choices[0].message.content ?: "Unable to generate a response.";
-    return {answer, sources, chunksUsed: context.length(), tokensUsed: completion.usage?.total_tokens ?: 0};
-}
-
-type GeneratedAnswer record {|
-    string answer;
-    string[] sources;
-    int chunksUsed;
-    int tokensUsed;
-|};
+io:println(response.content);
 ```
 
-### HTTP Service
+### Style B -- Inline Context with `generate`
+
+When you want full control over the prompt, retrieve the context and inline it into a `modelProvider->generate` call. This is handy for custom instruction formats or specialized output structures.
 
 ```ballerina
+ai:QueryMatch[] matches = check knowledgeBase.retrieve(query, 10);
+ai:Chunk[] context = from ai:QueryMatch m in matches select m.chunk;
+
+string answer = check modelProvider->generate(`Answer the query based on the
+    following context:
+
+    Context: ${context}
+
+    Query: ${query}
+
+    Base the answer only on the above context. If the answer is not contained
+    within the context, respond with "I don't know".`);
+
+io:println(answer);
+```
+
+Both styles use the same `ai:ModelProvider` and the same retrieved chunks, so you can mix and match them within a single application.
+
+## Exposing RAG as an HTTP Service
+
+Wrap the query pipeline in an HTTP service to make it available to other applications.
+
+```ballerina
+import ballerina/ai;
 import ballerina/http;
+
+final ai:VectorStore vectorStore = check new ai:InMemoryVectorStore();
+final ai:EmbeddingProvider embeddingProvider = check ai:getDefaultEmbeddingProvider();
+final ai:KnowledgeBase knowledgeBase =
+        new ai:VectorKnowledgeBase(vectorStore, embeddingProvider);
+final ai:ModelProvider modelProvider = check ai:getDefaultModelProvider();
+
+type QueryRequest record {|
+    string question;
+|};
+
+type QueryResponse record {|
+    string answer;
+    int chunksUsed;
+|};
 
 service /rag on new http:Listener(8090) {
 
-    resource function post ingest(@http:Payload IngestRequest request)
-            returns IngestResponse|error {
-        DocumentChunk[] chunks = check chunkDocument(request.content, request.sourceId);
-        check storeChunks(chunks);
-        return {sourceId: request.sourceId, chunksCreated: chunks.length(), status: "ingested"};
-    }
-
     resource function post query(@http:Payload QueryRequest request)
             returns QueryResponse|error {
-        RetrievedChunk[] context = check searchSimilar(request.question, retrievalTopK);
+        ai:QueryMatch[] matches = check knowledgeBase.retrieve(request.question, 5);
+        ai:Chunk[] context = from ai:QueryMatch m in matches select m.chunk;
 
         if context.length() == 0 {
             return {
                 answer: "I couldn't find any relevant information to answer your question.",
-                sources: [],
-                chunksUsed: 0,
-                tokensUsed: 0,
-                confidence: 0.0
+                chunksUsed: 0
             };
         }
 
-        GeneratedAnswer generated = check generateAnswer(request.question, context);
-
-        float avgSimilarity = 0.0;
-        foreach RetrievedChunk chunk in context {
-            avgSimilarity += chunk.similarity;
-        }
-        avgSimilarity = avgSimilarity / <float>context.length();
+        ai:ChatUserMessage augmented = ai:augmentUserQuery(context, request.question);
+        ai:ChatAssistantMessage response = check modelProvider->chat(augmented);
 
         return {
-            answer: generated.answer,
-            sources: generated.sources,
-            chunksUsed: generated.chunksUsed,
-            tokensUsed: generated.tokensUsed,
-            confidence: avgSimilarity
+            answer: response.content ?: "",
+            chunksUsed: context.length()
         };
     }
 }
 ```
 
-## Testing the Pipeline
+## Testing the Service
 
 ```bash
-# Ingest a document
-curl -X POST http://localhost:8090/rag/ingest \
-  -H "Content-Type: application/json" \
-  -d '{"sourceId": "return-policy", "content": "Items may be returned within 30 days..."}'
-
-# Query the knowledge base
 curl -X POST http://localhost:8090/rag/query \
   -H "Content-Type: application/json" \
-  -d '{"question": "What is the return policy?"}'
+  -d '{"question": "What is the annual leave carry-forward policy?"}'
 ```
+
+## Tuning Retrieval
+
+The `topK` parameter on `retrieve` controls how many nearest chunks are returned. Start with `5`-`10` and adjust based on your corpus:
+
+- **Small `topK` (1-3)** - tight, focused answers; faster calls; risk of missing context.
+- **Medium `topK` (5-10)** - a good default for most use cases.
+- **Large `topK` (20+)** - more context but higher token cost and more noise in the prompt.
 
 ## What's Next
 

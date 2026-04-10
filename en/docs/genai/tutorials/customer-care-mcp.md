@@ -6,14 +6,16 @@ description: Build a customer care agent that uses MCP servers to access CRM and
 
 # Building a Customer Care Agent with MCP
 
-**Time:** 45 minutes | **Level:** Intermediate | **What you'll build:** A customer care agent that connects to CRM and order management systems through MCP (Model Context Protocol) servers, enabling natural language access to customer and order data.
+**Time:** 45 minutes | **Level:** Intermediate | **What you'll build:** A customer care AI Agent that connects to CRM and order management systems through MCP (Model Context Protocol) servers, enabling natural language access to customer and order data.
 
-In this tutorial, you build a customer care agent that uses MCP to bridge the gap between an LLM and your enterprise systems. Instead of writing custom tool functions for each data source, you create MCP servers that expose your CRM and order management APIs as standardized tools. The agent then connects to these MCP servers and uses them to answer customer inquiries, check order statuses, and manage support cases.
+In this tutorial, you build a customer care AI Agent that uses MCP to bridge the gap between an LLM and your enterprise systems. Instead of writing tool functions directly inside the agent, you expose your CRM and order management APIs as MCP servers using the built-in `ballerina/mcp` module. The agent then connects to those servers with a single `ai:McpToolKit` and uses their remote functions as tools.
+
+Both `ballerina/ai` and `ballerina/mcp` ship with the WSO2 Integrator distribution, so there is no separate dependency to pull.
 
 ## Prerequisites
 
 - [WSO2 Integrator VS Code extension installed](/docs/get-started/install)
-- An OpenAI API key (or another supported LLM provider)
+- A default model provider configured via **"Configure default WSO2 Model Provider"** in VS Code, or an OpenAI API key
 - Familiarity with the [MCP overview](/docs/genai/mcp/overview)
 
 ## Architecture
@@ -21,25 +23,25 @@ In this tutorial, you build a customer care agent that uses MCP to bridge the ga
 ```mermaid
 flowchart TD
     Customer([Customer])
-    
-    subgraph Agent["Customer Care Agent"]
-        LLM["LLM (GPT-4o)<br/>+ MCP Client"]
+
+    subgraph Agent["Customer Care AI Agent"]
+        AIAgent["ai:Agent<br/>+ ai:McpToolKit x2"]
     end
 
-    subgraph OrderServer["Order MCP Server"]
-        OrderTools["- getOrder<br/>- listOrders<br/>- trackShip"]
+    subgraph OrderServer["Order MCP Server<br/>(ballerina/mcp)"]
+        OrderTools["getOrder<br/>listOrders<br/>trackShipment<br/>cancelOrder"]
     end
 
-    subgraph CRMServer["CRM MCP Server"]
-        CRMTools["- getCustomer<br/>- updateCase<br/>- createCase"]
+    subgraph CRMServer["CRM MCP Server<br/>(ballerina/mcp)"]
+        CRMTools["getCustomer<br/>listCases<br/>createCase<br/>updateCase"]
     end
 
     OrderDB[("Order Database")]
     CRMDB[("CRM Database")]
 
-    Customer ----> LLM
-    LLM <==> |MCP Protocol| OrderServer
-    LLM <==> |MCP Protocol| CRMServer
+    Customer ----> AIAgent
+    AIAgent <==> |MCP| OrderServer
+    AIAgent <==> |MCP| CRMServer
     OrderServer ----> OrderDB
     CRMServer ----> CRMDB
 ```
@@ -52,27 +54,13 @@ flowchart TD
 org = "myorg"
 name = "customer_care_mcp"
 version = "0.1.0"
-
-[[dependency]]
-org = "ballerinax"
-name = "ai.agent"
-
-[[dependency]]
-org = "ballerinax"
-name = "ai.provider.openai"
-
-[[dependency]]
-org = "ballerinax"
-name = "mcp"
-
-[[dependency]]
-org = "ballerinax"
-name = "mysql"
+distribution = "2201.13.0"
 ```
+
+Both `ballerina/ai` and `ballerina/mcp` are bundled, so no extra dependency blocks are needed. You will still import `ballerinax/mysql` for the databases when you add it to your source files.
 
 ```toml
 # Config.toml
-openaiKey = "<your-openai-api-key>"
 orderDbHost = "localhost"
 orderDbPort = 3306
 orderDbUser = "root"
@@ -83,6 +71,8 @@ crmDbPort = 3306
 crmDbUser = "root"
 crmDbPassword = "password"
 crmDbName = "crm_db"
+orderMcpUrl = "http://localhost:9091/mcp"
+crmMcpUrl = "http://localhost:9092/mcp"
 ```
 
 ## Step 2: Define Data Types
@@ -141,15 +131,20 @@ type TrackingEvent record {|
     string location;
     string description;
 |};
+
+type CancelResult record {|
+    boolean success;
+    string message;
+|};
 ```
 
 ## Step 3: Create the Order MCP Server
 
-The order MCP server exposes order management capabilities as MCP tools.
+The order MCP server exposes order management capabilities as MCP remote functions. Each remote function is automatically turned into an MCP tool; the doc comment becomes the tool description and parameter doc comments become the parameter descriptions.
 
 ```ballerina
 // order_mcp_server.bal
-import ballerinax/mcp;
+import ballerina/mcp;
 import ballerinax/mysql;
 import ballerina/http;
 
@@ -159,86 +154,93 @@ configurable string orderDbUser = ?;
 configurable string orderDbPassword = ?;
 configurable string orderDbName = ?;
 
-final mysql:Client orderDb = check new ({
-    host: orderDbHost, port: orderDbPort,
-    user: orderDbUser, password: orderDbPassword,
-    database: orderDbName
-});
+final mysql:Client orderDb = check new (
+    host = orderDbHost,
+    port = orderDbPort,
+    user = orderDbUser,
+    password = orderDbPassword,
+    database = orderDbName
+);
 
 final http:Client shippingApi = check new ("https://api.shipping-provider.com");
 
-@mcp:Server {
-    name: "order-management",
-    version: "1.0.0"
-}
-service on new mcp:Listener(3001) {
+listener mcp:Listener orderMcpListener = new (9091);
 
-    @mcp:Tool {
-        description: "Retrieve order details by order ID. Returns order status, items, total, and tracking information."
-    }
+service mcp:Service /mcp on orderMcpListener {
+
+    # Retrieve order details by order ID.
+    # Returns status, items, total, and tracking information.
+    #
+    # + orderId - The order identifier
+    # + return - The matching order
     remote function getOrder(string orderId) returns Order|error {
-        Order? order = check orderDb->queryRow(
+        Order orderRecord = check orderDb->queryRow(
             `SELECT * FROM orders WHERE order_id = ${orderId}`
         );
-        if order is () {
-            return error(string `Order '${orderId}' not found`);
-        }
         OrderItem[] items = check from OrderItem item in orderDb->query(
             `SELECT * FROM order_items WHERE order_id = ${orderId}`
         ) select item;
-        order.items = items;
-        return order;
+        orderRecord.items = items;
+        return orderRecord;
     }
 
-    @mcp:Tool {
-        description: "List all orders for a customer, sorted by most recent first. Optionally filter by status."
-    }
-    remote function listOrders(string customerId, string? status = ()) returns Order[]|error {
+    # List recent orders for a customer, newest first.
+    #
+    # + customerId - The customer identifier
+    # + status - Optional status filter (for example, "shipped")
+    # + return - Up to ten matching orders
+    remote function listOrders(string customerId, string? status = ())
+            returns Order[]|error {
         if status is string {
-            return check from Order order in orderDb->query(
-                `SELECT * FROM orders WHERE customer_id = ${customerId} AND status = ${status}
+            return from Order orderRecord in orderDb->query(
+                `SELECT * FROM orders WHERE customer_id = ${customerId}
+                   AND status = ${status}
                  ORDER BY order_date DESC LIMIT 10`
-            ) select order;
+            ) select orderRecord;
         }
-        return check from Order order in orderDb->query(
+        return from Order orderRecord in orderDb->query(
             `SELECT * FROM orders WHERE customer_id = ${customerId}
              ORDER BY order_date DESC LIMIT 10`
-        ) select order;
+        ) select orderRecord;
     }
 
-    @mcp:Tool {
-        description: "Track a shipment using the tracking number. Returns carrier, current status, location history, and estimated delivery."
-    }
-    remote function trackShipment(string trackingNumber) returns ShipmentTracking|error {
-        return check shippingApi->get(string `/track/${trackingNumber}`);
+    # Track a shipment using the carrier tracking number.
+    #
+    # + trackingNumber - The carrier tracking number
+    # + return - Shipment tracking details
+    remote function trackShipment(string trackingNumber)
+            returns ShipmentTracking|error {
+        return shippingApi->get(string `/track/${trackingNumber}`);
     }
 
-    @mcp:Tool {
-        description: "Cancel an order if it has not yet been shipped. Returns success or failure with reason."
-    }
-    remote function cancelOrder(string orderId, string reason) returns json|error {
-        Order order = check self.getOrder(orderId);
-        if order.status == "shipped" || order.status == "delivered" {
+    # Cancel an order if it has not already been shipped or delivered.
+    #
+    # + orderId - The order to cancel
+    # + reason - The cancellation reason
+    # + return - Whether the cancellation succeeded
+    remote function cancelOrder(string orderId, string reason)
+            returns CancelResult|error {
+        Order existing = check self.getOrder(orderId);
+        if existing.status == "shipped" || existing.status == "delivered" {
             return {
-                "success": false,
-                "message": string `Cannot cancel order '${orderId}' because it has already been ${order.status}.`
+                success: false,
+                message: string `Cannot cancel order '${orderId}' because it has already been ${existing.status}.`
             };
         }
         _ = check orderDb->execute(
-            `UPDATE orders SET status = 'cancelled', cancel_reason = ${reason} WHERE order_id = ${orderId}`
+            `UPDATE orders SET status = 'cancelled', cancel_reason = ${reason}
+             WHERE order_id = ${orderId}`
         );
-        return {"success": true, "message": string `Order '${orderId}' has been cancelled.`};
+        return {success: true, message: string `Order '${orderId}' has been cancelled.`};
     }
 }
 ```
 
 ## Step 4: Create the CRM MCP Server
 
-The CRM MCP server exposes customer relationship management capabilities.
-
 ```ballerina
 // crm_mcp_server.bal
-import ballerinax/mcp;
+import ballerina/mcp;
 import ballerinax/mysql;
 import ballerina/uuid;
 import ballerina/time;
@@ -249,237 +251,222 @@ configurable string crmDbUser = ?;
 configurable string crmDbPassword = ?;
 configurable string crmDbName = ?;
 
-final mysql:Client crmDb = check new ({
-    host: crmDbHost, port: crmDbPort,
-    user: crmDbUser, password: crmDbPassword,
-    database: crmDbName
-});
+final mysql:Client crmDb = check new (
+    host = crmDbHost,
+    port = crmDbPort,
+    user = crmDbUser,
+    password = crmDbPassword,
+    database = crmDbName
+);
 
-@mcp:Server {
-    name: "crm",
-    version: "1.0.0"
-}
-service on new mcp:Listener(3002) {
+listener mcp:Listener crmMcpListener = new (9092);
 
-    @mcp:Tool {
-        description: "Look up customer details by customer ID, email, or phone number. Returns profile, account tier, and status."
-    }
+service mcp:Service /mcp on crmMcpListener {
+
+    # Look up a customer by customer ID, email, or phone number.
+    #
+    # + query - Customer ID, email, or phone
+    # + return - The matching customer record
     remote function getCustomer(string query) returns Customer|error {
-        Customer? customer = check crmDb->queryRow(
+        return crmDb->queryRow(
             `SELECT * FROM customers
              WHERE customer_id = ${query} OR email = ${query} OR phone = ${query}`
         );
-        if customer is () {
-            return error(string `No customer found for '${query}'`);
-        }
-        return customer;
     }
 
-    @mcp:Tool {
-        description: "Retrieve all support cases for a customer, optionally filtered by status. Returns case history sorted by most recent."
-    }
-    remote function listCases(string customerId, string? status = ()) returns SupportCase[]|error {
+    # List support cases for a customer, newest first.
+    #
+    # + customerId - Customer identifier
+    # + status - Optional status filter
+    # + return - Up to ten matching cases
+    remote function listCases(string customerId, string? status = ())
+            returns SupportCase[]|error {
         if status is string {
-            return check from SupportCase c in crmDb->query(
+            return from SupportCase c in crmDb->query(
                 `SELECT * FROM support_cases
                  WHERE customer_id = ${customerId} AND status = ${status}
                  ORDER BY created_at DESC LIMIT 10`
             ) select c;
         }
-        return check from SupportCase c in crmDb->query(
+        return from SupportCase c in crmDb->query(
             `SELECT * FROM support_cases
              WHERE customer_id = ${customerId}
              ORDER BY created_at DESC LIMIT 10`
         ) select c;
     }
 
-    @mcp:Tool {
-        description: "Create a new support case for a customer. Returns the new case ID. Use this when an issue needs to be tracked or escalated."
-    }
-    remote function createCase(
-        string customerId,
-        string subject,
-        string description,
-        string priority = "medium"
-    ) returns json|error {
-        string caseId = string `CASE-${uuid:createType1().toString().substring(0, 8)}`;
+    # Create a new support case for a customer.
+    # Use when an issue needs to be tracked or escalated.
+    #
+    # + customerId - Customer identifier
+    # + subject - Short subject line
+    # + description - Detailed description of the issue
+    # + priority - One of `low`, `medium`, `high`, `critical`
+    # + return - The newly created support case
+    remote function createCase(string customerId, string subject,
+            string description, string priority = "medium")
+            returns SupportCase|error {
+        string caseId = string `CASE-${uuid:createType1AsString().substring(0, 8)}`;
         string now = time:utcToString(time:utcNow());
 
         _ = check crmDb->execute(
-            `INSERT INTO support_cases (case_id, customer_id, subject, description, priority, status, created_at)
-             VALUES (${caseId}, ${customerId}, ${subject}, ${description}, ${priority}, 'open', ${now})`
+            `INSERT INTO support_cases
+                (case_id, customer_id, subject, description, priority, status, created_at)
+             VALUES (${caseId}, ${customerId}, ${subject}, ${description},
+                     ${priority}, 'open', ${now})`
         );
-        return {"caseId": caseId, "status": "open", "message": "Support case created successfully."};
+        return {
+            caseId,
+            customerId,
+            subject,
+            description,
+            priority,
+            status: "open",
+            assignedTo: (),
+            createdAt: now
+        };
     }
 
-    @mcp:Tool {
-        description: "Update the status or details of an existing support case."
-    }
-    remote function updateCase(
-        string caseId,
-        string? status = (),
-        string? note = (),
-        string? assignedTo = ()
-    ) returns json|error {
+    # Update the status or assignee of an existing support case.
+    #
+    # + caseId - Case identifier to update
+    # + status - Optional new status
+    # + assignedTo - Optional assignee
+    # + return - `()` on success
+    remote function updateCase(string caseId, string? status = (),
+            string? assignedTo = ()) returns error? {
         if status is string {
             _ = check crmDb->execute(
-                `UPDATE support_cases SET status = ${status} WHERE case_id = ${caseId}`
+                `UPDATE support_cases SET status = ${status}
+                 WHERE case_id = ${caseId}`
             );
         }
         if assignedTo is string {
             _ = check crmDb->execute(
-                `UPDATE support_cases SET assigned_to = ${assignedTo} WHERE case_id = ${caseId}`
+                `UPDATE support_cases SET assigned_to = ${assignedTo}
+                 WHERE case_id = ${caseId}`
             );
         }
-        if note is string {
-            _ = check crmDb->execute(
-                `INSERT INTO case_notes (case_id, note, created_at)
-                 VALUES (${caseId}, ${note}, ${time:utcToString(time:utcNow())})`
-            );
-        }
-        return {"caseId": caseId, "message": "Case updated successfully."};
     }
 }
 ```
 
-## Step 5: Build the Agent with MCP Clients
+## Step 5: Build the AI Agent with MCP Tool Kits
 
-Now build the agent that connects to both MCP servers and uses their tools to serve customers.
+On the agent side, `ai:McpToolKit` discovers the tools exposed by each MCP server and turns them into agent tools automatically. You can pass one or more tool kits to the agent in the `tools` array.
 
 ```ballerina
 // agent.bal
-import ballerinax/ai.agent;
-import ballerinax/ai.provider.openai;
-import ballerinax/mcp;
+import ballerina/ai;
 
-configurable string openaiKey = ?;
+configurable string orderMcpUrl = ?;
+configurable string crmMcpUrl = ?;
 
-final openai:Client llmClient = check new ({
-    auth: {token: openaiKey},
-    model: "gpt-4o"
-});
+final ai:McpToolKit orderMcp = check new (orderMcpUrl);
+final ai:McpToolKit crmMcp = check new (crmMcpUrl);
 
-// Connect to the MCP servers
-final mcp:Client orderMcpClient = check new ({
-    serverUrl: "http://localhost:3001"
-});
-
-final mcp:Client crmMcpClient = check new ({
-    serverUrl: "http://localhost:3002"
-});
-
-// Retrieve tools from both MCP servers
-final agent:McpTools orderTools = check new (orderMcpClient);
-final agent:McpTools crmTools = check new (crmMcpClient);
-
-final agent:ChatAgent customerCareAgent = check new (
-    model: llmClient,
-    systemPrompt: string `You are a Customer Care Agent for Acme Commerce.
+final ai:Agent customerCareAgent = check new (
+    systemPrompt = {
+        role: "Customer Care Agent",
+        instructions: string `You are a Customer Care Agent for Acme Commerce.
 
 Role:
 - Help customers with order inquiries, shipment tracking, account questions, and issue resolution.
 - Provide professional, empathetic, and efficient support.
 
-Available Capabilities (via MCP):
+Available capabilities (via MCP tool kits):
 - Order Management: Look up orders, track shipments, list order history, cancel orders.
 - CRM: Look up customer profiles, view and create support cases, update case statuses.
 
 Guidelines:
 - Always verify the customer's identity before sharing account details.
-- Use order tools to check order status — never guess or assume.
+- Use the order tools to check order status — never guess or assume.
 - Create a support case for any issue that cannot be resolved immediately.
 - For premium and enterprise customers, acknowledge their tier and provide priority service.
 - Escalate critical issues (data breach, fraud) by creating a high-priority case.
 - Keep responses concise but thorough. Always include relevant IDs (order, case, tracking).
-- If you cannot resolve an issue, clearly explain the next steps and expected timeline.`,
-    tools: [...check orderTools.getTools(), ...check crmTools.getTools()],
-    memory: new agent:MessageWindowChatMemory(maxMessages: 30)
+- If you cannot resolve an issue, clearly explain the next steps and expected timeline.`
+    },
+    tools = [orderMcp, crmMcp],
+    model = check ai:getDefaultModelProvider()
 );
 ```
 
-## Step 6: Expose as an HTTP Chat Service
+:::info One toolkit, many tools
+`ai:McpToolKit` is passed directly in the `tools` array — you do not need to enumerate individual tools. Every remote function on the MCP service becomes a tool the agent can invoke.
+:::
+
+## Step 6: Expose the Agent as a Chat Service
 
 ```ballerina
 // service.bal
-import ballerina/http;
-import ballerina/uuid;
+import ballerina/ai;
 
-type ChatRequest record {|
-    string message;
-    string? sessionId;
-    string? customerId;
-|};
+service /care on new ai:Listener(8090) {
 
-type ChatResponse record {|
-    string message;
-    string sessionId;
-|};
-
-service /care on new http:Listener(8090) {
-
-    resource function post chat(@http:Payload ChatRequest request) returns ChatResponse|error {
-        string sessionId = request.sessionId ?: uuid:createType1().toString();
-
-        string message = request.message;
-        if request.customerId is string {
-            message = string `[Customer ID: ${<string>request.customerId}] ${message}`;
-        }
-
-        string response = check customerCareAgent.chat(message, sessionId);
-        return {message: response, sessionId};
+    # Chat endpoint for customer inquiries.
+    #
+    # + request - Chat request containing the session ID and user message
+    # + return - The agent's response
+    resource function post chat(ai:ChatReqMessage request)
+            returns ai:ChatRespMessage|error {
+        string response = check customerCareAgent.run(request.message, request.sessionId);
+        return {message: response};
     }
 }
 ```
 
 ## Step 7: Run and Test
 
-1. Start the MCP servers and the agent service:
+1. Start the MCP servers and the agent service. Because each file contains a listener, you can run them all from the same package:
+
    ```bash
-   # Terminal 1: Start the order MCP server
-   bal run order_mcp_server.bal
-
-   # Terminal 2: Start the CRM MCP server
-   bal run crm_mcp_server.bal
-
-   # Terminal 3: Start the agent service
-   bal run service.bal
+   bal run
    ```
 
-2. Test with curl:
+   Ballerina will start all three listeners: the order MCP server on 9091, the CRM MCP server on 9092, and the agent chat service on 8090.
+
+2. Look up an order:
    ```bash
-   # Look up an order
    curl -X POST http://localhost:8090/care/chat \
      -H "Content-Type: application/json" \
-     -d '{"message": "What is the status of order ORD-98765?", "customerId": "CUST-001"}'
+     -d '{"sessionId": "cust-001", "message": "What is the status of order ORD-98765?"}'
+   ```
 
-   # Track a shipment (use sessionId from previous response)
+3. Track a shipment in the same session:
+   ```bash
    curl -X POST http://localhost:8090/care/chat \
      -H "Content-Type: application/json" \
-     -d '{"message": "Can you track my shipment? The tracking number is TRK-123456.", "sessionId": "<session-id>"}'
+     -d '{"sessionId": "cust-001", "message": "Can you track my shipment? The tracking number is TRK-123456."}'
+   ```
 
-   # Report an issue and create a support case
+4. Report an issue and let the agent create a case:
+   ```bash
    curl -X POST http://localhost:8090/care/chat \
      -H "Content-Type: application/json" \
-     -d '{"message": "I received the wrong item in my order ORD-98765. I ordered a blue jacket but received a red one.", "sessionId": "<session-id>", "customerId": "CUST-001"}'
+     -d '{"sessionId": "cust-001", "message": "I received the wrong item in order ORD-98765 — red jacket instead of blue."}'
+   ```
 
-   # Cancel an order
+5. Cancel an order:
+   ```bash
    curl -X POST http://localhost:8090/care/chat \
      -H "Content-Type: application/json" \
-     -d '{"message": "I want to cancel order ORD-11111 because I found a better price elsewhere.", "sessionId": "<session-id>", "customerId": "CUST-001"}'
+     -d '{"sessionId": "cust-001", "message": "Please cancel order ORD-11111. I found a better price."}'
    ```
 
 ## What You Built
 
-You now have a customer care agent that:
-- Connects to order management and CRM systems through MCP servers
-- Looks up orders, tracks shipments, and manages order cancellations
-- Retrieves customer profiles and manages support cases
-- Maintains conversation context across multiple interactions
-- Uses standardized MCP protocol for clean separation between the agent and backend systems
+You now have a customer care AI Agent that:
+- Exposes order and CRM data through two MCP servers built with `ballerina/mcp`
+- Consumes both servers from an `ai:Agent` using `ai:McpToolKit`
+- Looks up orders, tracks shipments, and cancels orders
+- Retrieves customer profiles and creates and updates support cases
+- Maintains conversation context across turns via `ai:Listener`
+- Uses the standardized MCP protocol for clean separation between the agent and the backend systems
 
 ## What's Next
 
-- [MCP Overview](/docs/genai/mcp/overview) -- Learn more about the Model Context Protocol
-- [Exposing MCP Servers](/docs/genai/mcp/exposing-mcp-servers) -- Build more MCP servers for other systems
-- [MCP Security](/docs/genai/mcp/mcp-security) -- Secure your MCP server connections
-- [Agent Tracing](/docs/genai/agent-observability/agent-tracing) -- Add observability to your agent
+- [MCP Overview](/docs/genai/mcp/overview) — Learn more about the Model Context Protocol
+- [Exposing MCP Servers](/docs/genai/mcp/exposing-mcp-servers) — Build more MCP servers for other systems
+- [MCP Security](/docs/genai/mcp/mcp-security) — Secure your MCP server connections
+- [Agent Tracing](/docs/genai/agent-observability/agent-tracing) — Add observability to your agent

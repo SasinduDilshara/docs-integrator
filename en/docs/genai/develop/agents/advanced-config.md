@@ -1,210 +1,181 @@
 ---
 sidebar_position: 4
 title: Advanced AI Agent Configurations
-description: Configure advanced agent settings including temperature, tool choice, parallel tool calling, and multi-agent orchestration.
+description: Tune agent iterations, compose toolkits, orchestrate multiple agents, and expose them over ai:Listener.
 ---
 
 # Advanced AI Agent Configurations
 
-Once you have a working agent with tools and memory, you can tune its behavior with advanced settings. This page covers model parameters, tool execution control, multi-agent orchestration, and agent handoff patterns.
+Once you have a working agent with tools and memory, you can tune its behavior with a few advanced options on `ai:AgentConfiguration`, combine toolkits, and orchestrate multiple agents. This page covers iteration limits, toolkit composition, multi-agent patterns, and how to expose an agent as an API using `ai:Listener`.
 
-These configurations let you optimize agents for specific use cases, from deterministic data processing to creative content generation.
-
-## Model Parameters
-
-### Temperature and Sampling
-
-Control how deterministic or creative the agent's responses are.
-
-```ballerina
-import ballerinax/ai.agent;
-
-// Deterministic agent for data analysis
-final agent:ChatAgent preciseAgent = check new (
-    model: llmClient,
-    systemPrompt: "You are a data analyst. Be precise and factual.",
-    modelParams: {
-        temperature: 0.1,
-        topP: 0.5
-    }
-);
-
-// Creative agent for marketing copy
-final agent:ChatAgent creativeAgent = check new (
-    model: llmClient,
-    systemPrompt: "You are a creative marketing copywriter.",
-    modelParams: {
-        temperature: 0.8,
-        topP: 0.95
-    }
-);
-```
-
-| Parameter | Range | Effect |
-|-----------|-------|--------|
-| `temperature` | 0.0--1.0 | Lower values produce more focused, deterministic output |
-| `topP` | 0.0--1.0 | Limits token selection to the most probable tokens |
-
-For most integration use cases, a temperature between 0.1 and 0.3 produces reliable, consistent results.
+## Core Agent Options
 
 ### Maximum Iterations
 
-Limit the number of reason-act-observe loops the agent can perform per request. This prevents runaway chains where the agent keeps calling tools without converging on an answer.
+`maxIter` caps how many reason-act-observe loops the agent can run for a single request. The default is `5`. Increase it for complex tasks that require many tool calls; decrease it to fail fast for interactive agents where users expect a quick answer.
 
 ```ballerina
-final agent:ChatAgent boundedAgent = check new (
-    model: llmClient,
-    systemPrompt: "You are a research assistant.",
-    tools: [searchDatabase, fetchDocument, analyzeData],
-    maxIterations: 5
+import ballerina/ai;
+
+final ai:Agent boundedAgent = check new (
+    systemPrompt = {
+        role: "Research Assistant",
+        instructions: "You are a research assistant."
+    },
+    tools = [searchDatabase, fetchDocument, analyzeData],
+    model = check ai:getDefaultModelProvider(),
+    maxIter = 10
 );
 ```
 
-If the agent reaches the iteration limit, it returns the best answer it has assembled so far along with a note that it could not complete all steps.
+If the agent hits `maxIter` without converging, it returns the best answer it has assembled so far.
 
-### Timeout Configuration
+### Agent Type
 
-Set a maximum time for agent responses to prevent long-running requests from blocking your service.
+`agentType` defaults to `ai:REACT_AGENT`. The field is reserved so that future agent strategies can be plugged in without breaking existing code. For now, leave it at the default unless documentation for a specific strategy tells you otherwise.
+
+### Model Parameter Tuning
+
+Parameters like `temperature`, `topP`, and other sampling controls live on the **model provider**, not on the agent. To tune them, construct the provider directly and pass it into the agent.
 
 ```ballerina
-final agent:ChatAgent timedAgent = check new (
-    model: llmClient,
-    systemPrompt: "You are a quick-response assistant.",
-    tools: [quickLookup],
-    timeout: 30   // Maximum 30 seconds per request
+import ballerina/ai;
+import ballerinax/ai.openai;
+
+configurable string openAiApiKey = ?;
+
+final ai:ModelProvider preciseModel = check new openai:ModelProvider(
+    openAiApiKey,
+    openai:GPT_4O,
+    temperature = 0.1
+);
+
+final ai:Agent preciseAgent = check new (
+    systemPrompt = {
+        role: "Data Analyst",
+        instructions: "You are a data analyst. Be precise and factual."
+    },
+    tools = [queryDatabase],
+    model = preciseModel
 );
 ```
 
-## Tool Choice
+Check the provider's own documentation for the exact parameter names it accepts.
 
-Control which tools the agent can use for a given request.
+## Composing Tools and Toolkits
 
-### Auto Tool Choice
-
-The default behavior. The agent decides whether to call a tool or respond directly based on the user's message.
+The `tools` field accepts any mixture of function tools, `ai:McpToolKit` instances, and your own `ai:BaseToolKit` classes. This lets you assemble an agent from reusable capability bundles.
 
 ```ballerina
-final agent:ChatAgent autoAgent = check new (
-    model: llmClient,
-    systemPrompt: "You are a support assistant.",
-    tools: [getCustomer, searchOrders],
-    toolChoice: agent:AUTO
+import ballerina/ai;
+
+final ai:McpToolKit weatherMcp = check new ("http://localhost:9090/mcp");
+
+final ai:Agent travelAgent = check new (
+    systemPrompt = {
+        role: "Travel Assistant",
+        instructions: "You help users plan trips end-to-end."
+    },
+    tools = [searchHotels, weatherMcp, new TaskManagerToolkit()],
+    model = check ai:getDefaultModelProvider()
 );
 ```
 
-### Forced Tool Use
+### Custom Toolkits
 
-Force the agent to call a specific tool before responding. This is useful when you know the agent should always look up data before answering.
-
-```ballerina
-// Force the agent to always look up the customer first
-string response = check myAgent.chat(
-    "What's the status of my order?",
-    sessionId,
-    toolChoice = {name: "getCustomer"}
-);
-```
-
-### No Tool Use
-
-Prevent the agent from calling any tools for a specific request. The agent responds using only its knowledge and conversation history.
+A toolkit is an `isolated` class that includes `ai:BaseToolKit` and returns its tool configurations from `getTools()`. See [Adding Tools](/docs/genai/develop/agents/adding-tools) for the full pattern; the short version is:
 
 ```ballerina
-string response = check myAgent.chat(
-    "Summarize our conversation so far",
-    sessionId,
-    toolChoice = agent:NONE
-);
+public isolated class BillingToolkit {
+    *ai:BaseToolKit;
+
+    public isolated function getTools() returns ai:ToolConfig[] =>
+        ai:getToolConfigs([self.getInvoice, self.processRefund]);
+
+    @ai:AgentTool
+    isolated function getInvoice(string invoiceId) returns json|error {
+        return check billingApi->/invoices/[invoiceId];
+    }
+
+    @ai:AgentTool
+    isolated function processRefund(string invoiceId, decimal amount) returns json|error {
+        return check billingApi->/invoices/[invoiceId]/refund.post({amount});
+    }
+}
 ```
 
-## Parallel Tool Calling
+## Custom Model Providers
 
-Allow the agent to call multiple tools simultaneously when they are independent. This reduces latency when the agent needs data from several sources.
+If you need to integrate an LLM that does not have an off-the-shelf connector, implement the `ai:ModelProvider` interface and pass an instance of your class to the agent. This lets you wrap any HTTP-accessible model while keeping the rest of your agent code unchanged.
 
 ```ballerina
-final agent:ChatAgent parallelAgent = check new (
-    model: llmClient,
-    systemPrompt: "You are a support assistant with access to multiple systems.",
-    tools: [getCustomer, getOrderHistory, getTicketHistory],
-    parallelToolCalls: true
+public isolated class MyCustomProvider {
+    *ai:ModelProvider;
+    // Implement the required methods from ai:ModelProvider here.
+}
+
+final ai:Agent agent = check new (
+    systemPrompt = {role: "Assistant", instructions: "..."},
+    tools = [],
+    model = new MyCustomProvider()
 );
 ```
-
-When the user asks a question that requires data from multiple tools, the agent issues all tool calls at once rather than sequentially. For example, if the user asks about a customer's recent orders and open tickets, the agent calls `getOrderHistory` and `getTicketHistory` in parallel.
 
 ## Multi-Agent Orchestration
 
+The `ai` module does not require any special orchestration primitives -- each agent is just a `final ai:Agent`, and you can call one agent from inside a tool that belongs to another. This covers router, pipeline, and handoff patterns with the same building blocks.
+
 ### Router Agent Pattern
 
-Use a top-level agent to route requests to specialized sub-agents based on the user's intent.
+Use a top-level agent to route requests to specialised sub-agents based on intent.
 
 ```ballerina
-final agent:ChatAgent billingAgent = check new (
-    model: llmClient,
-    systemPrompt: "You handle billing, invoices, and payment questions.",
-    tools: [getInvoice, processRefund, getPaymentHistory]
+import ballerina/ai;
+
+final ai:Agent billingAgent = check new (
+    systemPrompt = {
+        role: "Billing Specialist",
+        instructions: "You handle billing, invoices, and payment questions."
+    },
+    tools = [getInvoice, processRefund, getPaymentHistory],
+    model = check ai:getDefaultModelProvider()
 );
 
-final agent:ChatAgent technicalAgent = check new (
-    model: llmClient,
-    systemPrompt: "You handle API issues, integration errors, and configuration.",
-    tools: [checkApiStatus, getErrorLogs, getConfiguration]
+final ai:Agent technicalAgent = check new (
+    systemPrompt = {
+        role: "Technical Specialist",
+        instructions: "You handle API issues, integration errors, and configuration."
+    },
+    tools = [checkApiStatus, getErrorLogs, getConfiguration],
+    model = check ai:getDefaultModelProvider()
 );
 
-@agent:Tool {
-    name: "routeToBilling",
-    description: "Route the conversation to the billing specialist for payment, invoice, or refund questions."
-}
-isolated function routeToBilling(string message, string sessionId) returns string|error {
-    return billingAgent.chat(message, sessionId);
-}
-
-@agent:Tool {
-    name: "routeToTechnical",
-    description: "Route the conversation to the technical specialist for API, integration, or configuration issues."
-}
-isolated function routeToTechnical(string message, string sessionId) returns string|error {
-    return technicalAgent.chat(message, sessionId);
+# Route a conversation to the billing specialist.
+# + message - The user's question
+# + return - The specialist's response
+@ai:AgentTool
+isolated function routeToBilling(string message) returns string|error {
+    return billingAgent.run(message);
 }
 
-final agent:ChatAgent routerAgent = check new (
-    model: llmClient,
-    systemPrompt: string `You are a customer support router. Determine the nature of the
-        customer's question and route it to the appropriate specialist.
-        Use routeToBilling for payment and invoice questions.
-        Use routeToTechnical for API and integration issues.`,
-    tools: [routeToBilling, routeToTechnical]
+# Route a conversation to the technical specialist.
+# + message - The user's question
+# + return - The specialist's response
+@ai:AgentTool
+isolated function routeToTechnical(string message) returns string|error {
+    return technicalAgent.run(message);
+}
+
+final ai:Agent routerAgent = check new (
+    systemPrompt = {
+        role: "Support Router",
+        instructions: string `You are a customer support router.
+            Use routeToBilling for payment and invoice questions.
+            Use routeToTechnical for API and integration issues.`
+    },
+    tools = [routeToBilling, routeToTechnical],
+    model = check ai:getDefaultModelProvider()
 );
-```
-
-### Agent Handoff
-
-Transfer a conversation from one agent to another while preserving context.
-
-```ballerina
-function handoff(
-    agent:ChatAgent sourceAgent,
-    agent:ChatAgent targetAgent,
-    string sessionId,
-    string reason
-) returns string|error {
-    agent:ChatMessage[] history = check sourceAgent.getHistory(sessionId);
-
-    string summary = check ai:natural<string>(
-        "Summarize this conversation history concisely for a handoff", history.toString()
-    );
-
-    check targetAgent.addSystemMessage(
-        sessionId,
-        string `This conversation has been transferred. Reason: ${reason}
-            Previous conversation summary: ${summary}`
-    );
-
-    return check targetAgent.chat(
-        "Please continue assisting the customer from where the previous agent left off.",
-        sessionId
-    );
-}
 ```
 
 ### Pipeline Agent Pattern
@@ -212,50 +183,55 @@ function handoff(
 Chain agents sequentially where each agent's output feeds into the next.
 
 ```ballerina
-function processDocument(string document) returns ProcessedResult|error {
-    // Agent 1: Extract key information
-    string extracted = check extractionAgent.run(document);
+function processDocument(string document) returns string|error {
+    string extracted = check extractionAgent.run(
+        string `Extract the key information from this document:
+            ${document}`
+    );
 
-    // Agent 2: Classify and categorize
-    string classified = check classificationAgent.run(extracted);
+    string classified = check classificationAgent.run(
+        string `Classify the following extracted information:
+            ${extracted}`
+    );
 
-    // Agent 3: Generate final output
-    return check outputAgent.run(classified);
+    return check outputAgent.run(
+        string `Generate a final summary from:
+            ${classified}`
+    );
 }
 ```
 
-## Exposing Agents as APIs
+### Agent Handoff
 
-Expose an agent as a REST API with session management.
+When routing a live conversation from one agent to another, summarise the conversation so far and pass the summary into the next agent as part of its first prompt. Since there is no cross-agent shared memory API, composing via prompts keeps the pattern simple and predictable.
 
 ```ballerina
-import ballerina/http;
-import ballerina/uuid;
+function handoff(string sessionId, string reason, string conversationSummary)
+        returns string|error {
+    string seed = string `This conversation has been transferred. Reason: ${reason}.
+        Previous conversation summary: ${conversationSummary}.
+        Please continue assisting the customer from where the previous agent left off.`;
+    return check specialistAgent.run(seed, sessionId);
+}
+```
 
-service /api/v1 on new http:Listener(8090) {
+## Exposing Agents over `ai:Listener`
 
-    resource function post sessions() returns SessionResponse {
-        string sessionId = uuid:createType4AsString();
-        return {sessionId};
-    }
+The idiomatic way to expose an agent over HTTP in WSO2 Integrator is to attach a service to `ai:Listener`. The listener knows about `ai:ChatReqMessage` / `ai:ChatRespMessage` and manages per-session memory automatically.
 
-    resource function post sessions/[string sessionId]/messages(
-        @http:Payload MessageRequest request
-    ) returns MessageResponse|error {
-        string response = check routerAgent.chat(request.message, sessionId);
-        return {response};
-    }
+```ballerina
+import ballerina/ai;
 
-    resource function delete sessions/[string sessionId]() returns http:Ok {
-        routerAgent.clearMemory(sessionId);
-        return http:OK;
+service /support on new ai:Listener(8090) {
+    resource function post chat(ai:ChatReqMessage request)
+            returns ai:ChatRespMessage|error {
+        string response = check routerAgent.run(request.message, request.sessionId);
+        return {message: response};
     }
 }
-
-type SessionResponse record {|string sessionId;|};
-type MessageRequest record {|string message;|};
-type MessageResponse record {|string response;|};
 ```
+
+You do not need to define your own chat request or response types -- `ai:ChatReqMessage` (`{ string sessionId; string message; }`) and `ai:ChatRespMessage` (`{ string message; }`) are provided by the module.
 
 ## What's Next
 

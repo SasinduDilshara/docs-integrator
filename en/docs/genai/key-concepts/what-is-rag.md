@@ -27,7 +27,7 @@ A RAG pipeline has two phases: **ingestion** (offline) and **querying** (online)
 Documents are split into chunks, converted to vector embeddings, and stored in a vector database.
 
 ```
-Documents  -->  Chunking  -->  Embedding  -->  Vector Database
+Documents  -->  Chunking  -->  Embedding  -->  Vector Store
 (PDF, HTML,    (Split into    (Convert to    (Store for
  JSON, etc.)    passages)      vectors)       similarity search)
 ```
@@ -56,13 +56,13 @@ Documents are split into smaller passages (chunks) that can be individually retr
 
 Each chunk is converted into a vector (an array of numbers) that captures its semantic meaning. Similar content produces similar vectors, enabling semantic search.
 
-### Vector Databases
+### Vector Stores
 
-Specialized databases that store embeddings and perform fast similarity search. WSO2 Integrator supports ChromaDB, Pinecone, Weaviate, pgvector, and Qdrant.
+Specialized databases that store embeddings and perform fast similarity search. WSO2 Integrator ships with an in-memory vector store for development and supports Pinecone, Weaviate, Milvus, and pgvector for production deployments.
 
 ### Retrieval
 
-When a query arrives, it is embedded and compared against stored vectors to find the most relevant chunks (typically the top 3-5 matches).
+When a query arrives, it is embedded and compared against stored vectors to find the most relevant chunks (typically the top 3-10 matches).
 
 ### Generation
 
@@ -70,21 +70,28 @@ The retrieved chunks are assembled into a prompt context and passed to the LLM a
 
 ## RAG in WSO2 Integrator
 
+WSO2 Integrator provides a `VectorKnowledgeBase` that wires together a vector store and an embedding provider. You ingest documents once, then call `retrieve` and augment the user query for each question.
+
 ```ballerina
-import ballerinax/ai.rag;
+import ballerina/ai;
 
-final rag:Pipeline ragPipeline = check new ({
-    embeddingModel: {provider: "openai", model: "text-embedding-3-small", apiKey: openAiApiKey},
-    vectorStore: {provider: "chromadb", url: "http://localhost:8000", collection: "knowledge_base"},
-    generationModel: {provider: "openai", model: "gpt-4o", apiKey: openAiApiKey},
-    chunking: {strategy: rag:PARAGRAPH, maxChunkSize: 500, overlap: 50}
-});
+final ai:VectorStore vectorStore = check new ai:InMemoryVectorStore();
+final ai:EmbeddingProvider embeddingProvider = check ai:getDefaultEmbeddingProvider();
+final ai:KnowledgeBase knowledgeBase =
+        new ai:VectorKnowledgeBase(vectorStore, embeddingProvider);
+final ai:ModelProvider modelProvider = check ai:getDefaultModelProvider();
 
-// Ingest a document
-check ragPipeline.ingest("Product documentation content...", {source: "product-guide"});
+// Ingest documents into the knowledge base.
+ai:DataLoader loader = check new ai:TextDataLoader("./policy.md");
+ai:Document|ai:Document[] documents = check loader.load();
+check knowledgeBase.ingest(documents);
 
-// Query the knowledge base
-rag:Response answer = check ragPipeline.query("What is the return policy?");
+// Answer a question using retrieved context.
+string query = "What is the return policy?";
+ai:QueryMatch[] matches = check knowledgeBase.retrieve(query, 10);
+ai:Chunk[] context = from ai:QueryMatch m in matches select m.chunk;
+ai:ChatUserMessage augmented = ai:augmentUserQuery(context, query);
+ai:ChatAssistantMessage response = check modelProvider->chat([augmented]);
 ```
 
 ## RAG vs. Fine-Tuning

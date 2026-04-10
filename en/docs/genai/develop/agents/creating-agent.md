@@ -6,55 +6,64 @@ description: Build interactive chat agents and task agents with system prompts, 
 
 # Creating an AI Agent
 
-Chat agents are conversational AI components that maintain context across multiple user interactions. They combine an LLM's reasoning with tools and memory to create intelligent, interactive experiences within your integrations.
+AI agents are conversational components that combine an LLM's reasoning with tools and memory to solve user tasks over multiple turns. In WSO2 Integrator you build them with the Ballerina `ai` module -- everything you need is in `ballerina/ai`, and provider-specific connectors live under `ballerinax/ai.*`.
 
-## Creating a Basic Chat Agent
+## Creating a Basic Agent
 
-The simplest chat agent needs a model connection, a system prompt, and optionally tools and memory.
+The simplest agent needs three things: a system prompt, one or more tools, and a model provider.
 
 ```ballerina
-import ballerinax/ai.agent;
-import ballerinax/ai.provider.openai;
+import ballerina/ai;
+import ballerina/io;
 
-configurable string openAiApiKey = ?;
-
-final openai:Client llmClient = check new ({
-    auth: {token: openAiApiKey},
-    model: "gpt-4o"
-});
-
-final agent:ChatAgent helpDeskAgent = check new (
-    model: llmClient,
-    systemPrompt: string `You are a helpful IT help desk assistant.
-        You help employees resolve common IT issues like password resets,
-        VPN connectivity, and software installation.
-        Always ask clarifying questions before suggesting solutions.
-        Be concise and professional.`,
-    tools: [resetPassword, checkVpnStatus, listInstalledSoftware],
-    memory: new agent:MessageWindowChatMemory(maxMessages: 30)
+final ai:Agent taskAssistantAgent = check new (
+    systemPrompt = {
+        role: "Task Assistant",
+        instructions: string `You are a helpful assistant for managing
+            a to-do list. You can manage tasks and help a user plan
+            their schedule.`
+    },
+    tools = [addTask, listTasks, getCurrentDate],
+    model = check ai:getDefaultModelProvider()
 );
+
+public function main() returns error? {
+    while true {
+        string userInput = io:readln("User (or 'exit' to quit): ");
+        if userInput == "exit" {
+            break;
+        }
+        string response = check taskAssistantAgent.run(userInput);
+        io:println("Agent: ", response);
+    }
+}
 ```
+
+`ai:getDefaultModelProvider()` reads the model configuration from your `Config.toml`, so you can switch providers without touching the code. If you prefer to wire the provider explicitly, import the relevant connector (for example, `ballerinax/ai.openai`, `ballerinax/ai.anthropic`, or `ballerinax/ai.azure`) and construct the provider directly.
 
 ## System Prompt Design
 
-The system prompt defines your agent's personality, capabilities, and constraints.
+The system prompt defines the agent's role and the rules it must follow. In the `ai` module it is a record with a short `role` and a longer `instructions` string.
 
 ```ballerina
-string systemPrompt = string `You are a financial analyst assistant for Acme Corp.
+ai:SystemPrompt analystPrompt = {
+    role: "Financial Analyst",
+    instructions: string `You are a financial analyst assistant for Acme Corp.
 
-Role and Scope:
-- Help employees analyze quarterly financial data.
-- Generate summaries of revenue, expenses, and profit trends.
+        Role and Scope:
+        - Help employees analyze quarterly financial data.
+        - Generate summaries of revenue, expenses, and profit trends.
 
-Rules:
-- Never reveal raw database queries or internal system details.
-- Round all currency values to two decimal places.
-- If asked about topics outside financial analysis, politely redirect.
+        Rules:
+        - Never reveal raw database queries or internal system details.
+        - Round all currency values to two decimal places.
+        - If asked about topics outside financial analysis, politely redirect.
 
-Response Format:
-- Use bullet points for lists of data points.
-- Include percentage changes when comparing periods.
-- Summarize key takeaways at the end of each analysis.`;
+        Response Format:
+        - Use bullet points for lists of data points.
+        - Include percentage changes when comparing periods.
+        - Summarize key takeaways at the end of each analysis.`
+};
 ```
 
 ### System Prompt Best Practices
@@ -67,130 +76,100 @@ Response Format:
 | Include constraints | "Never share customer personal data in responses" |
 | Add tool usage guidance | "Use the orderLookup tool before answering order questions" |
 
+## Equivalent Configuration Styles
+
+The agent constructor accepts its configuration either as named arguments or as a single `ai:AgentConfiguration` record. Both forms are equivalent.
+
+```ballerina
+final ai:Agent taskAssistantAgent = check new ({
+    systemPrompt: {
+        role: "Task Assistant",
+        instructions: "You are a helpful assistant for managing a to-do list."
+    },
+    tools: [addTask, listTasks, getCurrentDate],
+    model: check ai:getDefaultModelProvider(),
+    maxIter: 10
+});
+```
+
+The most commonly used fields on `ai:AgentConfiguration` are:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `systemPrompt` | `ai:SystemPrompt` | Role and instructions given to the LLM |
+| `tools` | `(ai:FunctionTool \| ai:BaseToolKit)[]` | Tool functions and toolkits the agent may call |
+| `model` | `ai:ModelProvider` | LLM provider that powers the agent |
+| `memory` | `ai:Memory?` | Optional explicit memory; defaults to session memory under `ai:Listener` |
+| `maxIter` | `int` | Maximum ReAct iterations per query (default `5`) |
+| `agentType` | `ai:AgentType` | Reserved for future agent strategies; defaults to `ai:REACT_AGENT` |
+
 ## Multi-Turn Conversations
 
-Chat agents automatically maintain conversation context through their memory component.
+An agent keeps context across turns through its memory component. The easiest way to run a chat service is to expose the agent over `ai:Listener`, which wires session memory automatically using the `sessionId` on each request.
 
 ```ballerina
-import ballerina/http;
+import ballerina/ai;
 
-service /helpdesk on new http:Listener(8090) {
-
-    resource function post chat(@http:Payload ChatMessage request) returns ChatResponse|error {
-        string response = check helpDeskAgent.chat(
-            request.message,
-            request.sessionId
-        );
-        return {response};
+service /tasks on new ai:Listener(8080) {
+    resource function post chat(ai:ChatReqMessage request)
+            returns ai:ChatRespMessage|error {
+        string response = check taskAssistantAgent.run(request.message, request.sessionId);
+        return {message: response};
     }
 }
-
-type ChatMessage record {|
-    string message;
-    string sessionId;
-|};
 ```
 
-## Task Agents
-
-Task agents complete a specific task and return a structured result. They are best for data extraction, classification, and automated processing.
-
-```ballerina
-final agent:TaskAgent classifierAgent = check new (
-    model: llmClient,
-    systemPrompt: "Classify the incoming support ticket.",
-    outputType: TicketClassification
-);
-
-TicketClassification result = check classifierAgent.run("I can't connect to the API");
-```
+`ai:ChatReqMessage` is `{ string sessionId; string message; }` and `ai:ChatRespMessage` is `{ string message; }`. You never have to define your own chat record types -- the module provides them.
 
 ## Configuring Agent Behavior
 
-### Temperature and Creativity
-
-```ballerina
-final agent:ChatAgent preciseAgent = check new (
-    model: llmClient,
-    systemPrompt: "You are a data analyst. Be precise and factual.",
-    modelParams: {
-        temperature: 0.1,   // Lower = more deterministic
-        topP: 0.5
-    }
-);
-```
-
 ### Maximum Iterations
 
-Limit how many reason-act-observe loops the agent can perform per request.
+Use `maxIter` to cap how many reason-act-observe loops the agent can run per query. If the agent reaches the limit it returns the best answer it has so far.
 
 ```ballerina
-final agent:ChatAgent boundedAgent = check new (
-    model: llmClient,
-    systemPrompt: "You are a research assistant.",
-    tools: [searchDatabase, fetchDocument],
-    maxIterations: 5
+final ai:Agent boundedAgent = check new (
+    systemPrompt = {
+        role: "Research Assistant",
+        instructions: "You are a research assistant."
+    },
+    tools = [searchDatabase, fetchDocument],
+    model = check ai:getDefaultModelProvider(),
+    maxIter = 5
 );
 ```
 
-## Session Management
+### Tuning the Model Provider
 
-### Session Isolation
+Model-specific parameters such as `temperature` or `topP` belong on the provider, not on the agent. For example, when you construct an OpenAI provider directly you can pass model parameters to its constructor (see the provider documentation). The agent then uses that provider without any further changes.
 
-Each session ID creates an independent conversation thread.
+## Session Isolation
+
+Each unique `sessionId` creates an independent conversation thread when the agent is hosted on an `ai:Listener`.
 
 ```ballerina
-string r1 = check agent.chat("Hello!", "user-alice-session-1");
-string r2 = check agent.chat("Hello!", "user-bob-session-1");
-string r3 = check agent.chat("Follow up", "user-alice-session-1");  // Only sees Alice's history
+string r1 = check taskAssistantAgent.run("Hello!", "user-alice-session-1");
+string r2 = check taskAssistantAgent.run("Hello!", "user-bob-session-1");
+string r3 = check taskAssistantAgent.run("Follow up", "user-alice-session-1");
+// r3 only sees Alice's history.
 ```
 
-### Session Cleanup
+## Handling Errors in Tools
+
+Tools can return errors, and the agent will surface them back to the LLM so the model can reason about the failure. Return a descriptive error or a structured record so the agent can communicate the issue to the user.
 
 ```ballerina
-resource function delete session/[string sessionId]() returns http:Ok {
-    helpDeskAgent.clearMemory(sessionId);
-    return http:OK;
-}
-```
+import ballerina/ai;
 
-## Streaming Chat Responses
-
-Stream agent responses token by token for a more responsive experience.
-
-```ballerina
-resource function post chat(@http:Payload ChatMessage request)
-        returns stream<http:SseEvent, error?>|error {
-    stream<string, error?> tokenStream = check helpDeskAgent.chatStream(
-        request.message,
-        request.sessionId
-    );
-
-    return tokenStream.'map(
-        isolated function(string token) returns http:SseEvent {
-            return {data: token, event: "token"};
-        }
-    );
-}
-```
-
-## Handling Errors
-
-Design tools to return descriptive error information so the LLM can communicate issues naturally.
-
-```ballerina
-@agent:Tool {
-    name: "getAccountBalance",
-    description: "Retrieve the current balance for a bank account"
-}
+# Returns the current balance for a bank account.
+# + accountId - The customer's account identifier
+# + return - Current balance or an error explaining the failure
+@ai:AgentTool
 isolated function getAccountBalance(string accountId) returns json|error {
-    json|error result = trap bankApi->getBalance(accountId);
+    json|error result = bankApi->/accounts/[accountId]/balance;
     if result is error {
-        return {
-            "status": "error",
-            "message": string `Unable to retrieve balance for account ${accountId}. ` +
-                       "The banking system may be temporarily unavailable."
-        };
+        return error(string `Unable to retrieve balance for account ${accountId}. ` +
+            "The banking system may be temporarily unavailable.");
     }
     return result;
 }

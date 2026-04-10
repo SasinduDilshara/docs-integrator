@@ -16,7 +16,7 @@ Before MCP, connecting AI assistants to enterprise data required custom code for
 
 - **Claude Desktop** can query your CRM
 - **GitHub Copilot** can access your internal APIs
-- **Custom agents** can use community MCP servers for Slack, GitHub, and file systems
+- **Custom AI Agents** can use community MCP servers for Slack, GitHub, and file systems
 
 All through the same protocol, with no client-specific code.
 
@@ -47,38 +47,45 @@ MCP defines three types of capabilities:
 
 ## MCP in WSO2 Integrator
 
-WSO2 Integrator supports MCP in two directions:
+WSO2 Integrator supports MCP in two directions.
 
 ### As an MCP Server
 
-Expose your integrations as tools that AI assistants can discover and call.
+Expose your integrations as tools that AI assistants can discover and call. Use the `ballerina/mcp` module and attach an `mcp:Service` to an `mcp:Listener`. Each `remote function` on the service becomes an MCP tool automatically -- the tool description and parameter descriptions are taken from the Ballerina doc comment.
 
 ```ballerina
-import ballerinax/mcp;
+import ballerina/mcp;
 
-@mcp:Tool {
-    name: "getOrderStatus",
-    description: "Look up the status of a customer order by order ID"
-}
-isolated function getOrderStatus(string orderId) returns json|error {
-    return check orderApi->get(string `/orders/${orderId}/status`);
+listener mcp:Listener mcpListener = new (9090);
+
+service mcp:Service /mcp on mcpListener {
+
+    # Look up the status of a customer order by order ID.
+    #
+    # + orderId - The unique order identifier
+    # + return - The current status of the order
+    remote function getOrderStatus(string orderId) returns json|error {
+        return check orderApi->get(string `/orders/${orderId}/status`);
+    }
 }
 ```
 
 ### As an MCP Client
 
-Consume external MCP tools from within your agents.
+Consume tools from an external MCP server inside an AI Agent. The `ai:McpToolKit` connects to a remote MCP endpoint and exposes all of its tools to the AI Agent.
 
 ```ballerina
-final mcp:Client githubMcp = check new ({
-    serverCommand: "npx",
-    serverArgs: ["-y", "@modelcontextprotocol/server-github"]
-});
+import ballerina/ai;
 
-final agent:ChatAgent myAgent = check new (
-    model: llmClient,
-    systemPrompt: "You are a development assistant.",
-    tools: check githubMcp.getTools()
+final ai:McpToolKit weatherMcp = check new ("http://localhost:9090/mcp");
+
+final ai:Agent myAgent = check new (
+    systemPrompt = {
+        role: "Weather Assistant",
+        instructions: string `You help users check the weather.`
+    },
+    tools = [weatherMcp],
+    model = check ai:getDefaultModelProvider()
 );
 ```
 
@@ -87,11 +94,10 @@ final agent:ChatAgent myAgent = check new (
 | Transport | Use Case |
 |-----------|----------|
 | **stdio** | Local MCP clients like Claude Desktop |
-| **SSE** | Remote or web-based clients |
-| **Streamable HTTP** | Modern HTTP with streaming support |
+| **Streamable HTTP** | Remote or web-based clients, modern HTTP with streaming support |
 
 ## What's Next
 
 - [What is RAG?](what-is-rag.md) -- Retrieval-augmented generation concepts
 - [Creating an MCP Server](/docs/genai/develop/mcp/creating-mcp-server) -- Build your own MCP server
-- [Building AI Agents with MCP Servers](/docs/genai/develop/mcp/agents-with-mcp) -- Consume MCP tools in agents
+- [Building AI Agents with MCP Servers](/docs/genai/develop/mcp/agents-with-mcp) -- Consume MCP tools in AI Agents

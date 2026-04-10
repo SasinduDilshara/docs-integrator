@@ -6,7 +6,7 @@ description: Understand how AI agents retain conversation context across multipl
 
 # What is AI Agent Memory?
 
-Agent memory controls how your AI agent retains and manages conversation history. Without memory, every message is processed in isolation. With memory, the agent remembers what was said earlier in the conversation, enabling multi-turn interactions like follow-up questions and contextual references.
+AI Agent memory controls how your AI Agent retains and manages conversation history. Without memory, every message is processed in isolation. With memory, the AI Agent remembers what was said earlier in the conversation, enabling multi-turn interactions like follow-up questions and contextual references.
 
 ## Why Memory Matters
 
@@ -20,30 +20,40 @@ User: "And ORD-002?"
 Agent: ???
 ```
 
-Without memory, the agent has no context for "And ORD-002?" -- it does not know the user was previously asking about order status. With memory, the agent understands this is a follow-up request for another order's status.
+Without memory, the AI Agent has no context for "And ORD-002?" -- it does not know the user was previously asking about order status. With memory, the AI Agent understands this is a follow-up request for another order's status.
 
-## Memory Types
+## How Memory Works in WSO2 Integrator
 
-WSO2 Integrator provides several memory implementations:
+Conversation history is tracked per **session ID**. Each session is an independent thread of messages; different users or conversations never share context.
 
-| Memory Type | How It Works | Best For |
-|-------------|-------------|----------|
-| `MessageWindowChatMemory` | Keeps the last N messages | General chat agents (default choice) |
-| `TokenWindowChatMemory` | Keeps messages within a token budget | Cost-sensitive applications |
-| `SummaryChatMemory` | Summarizes older messages, keeps recent ones verbatim | Long conversations (50+ turns) |
-| `PersistentChatMemory` | Stores history in an external database | Sessions that survive restarts |
-| None | Stateless, no history retained | Single-turn task processing |
-
-## Basic Configuration
+The recommended way to get memory is to expose your AI Agent over an `ai:Listener` chat service. The listener provides per-session memory automatically -- you do not need to allocate or wire up a memory instance yourself.
 
 ```ballerina
-import ballerinax/ai.agent;
+import ballerina/ai;
 
-// Keep the last 20 messages
-final agent:ChatAgent myAgent = check new (
-    model: llmClient,
-    systemPrompt: "You are a helpful assistant.",
-    memory: new agent:MessageWindowChatMemory(maxMessages: 20)
+service /support on new ai:Listener(8080) {
+    resource function post chat(ai:ChatReqMessage request)
+            returns ai:ChatRespMessage|error {
+        // Conversation history for request.sessionId is retained automatically.
+        string response = check myAgent.run(request.message, request.sessionId);
+        return {message: response};
+    }
+}
+```
+
+For standalone AI Agents that are not served over `ai:Listener`, you can attach an `ai:ShortTermMemory` instance directly.
+
+```ballerina
+import ballerina/ai;
+
+final ai:Agent myAgent = check new (
+    systemPrompt = {
+        role: "Support Assistant",
+        instructions: string `You are a helpful assistant.`
+    },
+    tools = [lookupOrder, searchProducts],
+    memory = new ai:ShortTermMemory(),
+    model = check ai:getDefaultModelProvider()
 );
 ```
 
@@ -52,21 +62,19 @@ final agent:ChatAgent myAgent = check new (
 Each session ID creates an independent conversation thread. Different users or conversations never share context.
 
 ```ballerina
-// Independent conversations
-string r1 = check agent.chat("Hello!", "user-alice");
-string r2 = check agent.chat("Hello!", "user-bob");
-string r3 = check agent.chat("Follow up", "user-alice");  // Only sees Alice's history
+// Independent conversations -- each session has its own history.
+string r1 = check myAgent.run("Hello!", "user-alice");
+string r2 = check myAgent.run("Hello!", "user-bob");
+string r3 = check myAgent.run("Follow up", "user-alice");  // Only sees Alice's history
 ```
 
-## Choosing the Right Memory
+## Choosing the Right Memory Strategy
 
-| Scenario | Recommended Memory |
-|----------|--------------------|
-| Quick support interactions (< 10 turns) | `MessageWindowChatMemory(20)` |
-| Cost-sensitive production deployment | `TokenWindowChatMemory(4000)` |
-| Long advisory sessions (50+ turns) | `SummaryChatMemory` |
-| Multi-day onboarding workflows | `PersistentChatMemory` |
-| Single-turn task processing | No memory |
+| Scenario | Recommended Approach |
+|----------|----------------------|
+| Chat service with per-session history | Use `ai:Listener` -- memory is automatic |
+| Standalone AI Agent with short conversations | `ai:ShortTermMemory` |
+| Single-turn task processing | No memory -- call `agent.run(input)` without a session ID |
 
 ## What's Next
 
