@@ -326,8 +326,8 @@ You now have a fully visual HR RAG pipeline that grounds an LLM in your actual p
 
 ## What's Next
 
-- [Components → Vector Stores](/docs/genai/develop/components/vector-stores) — Swap the in-memory store for a persistent backend (Pinecone, Milvus, Pgvector, Weaviate).
-- [Components → Chunkers](/docs/genai/develop/components/chunkers) — Tune chunk size and overlap, or plug in a custom chunker.
+- [AI Connections and Stores → Vector Stores](/docs/genai/develop/components/vector-stores) — Swap the in-memory store for a persistent backend (Pinecone, Milvus, Pgvector, Weaviate).
+- [AI Connections and Stores → Chunkers](/docs/genai/develop/components/chunkers) — Tune chunk size and overlap, or plug in a custom chunker.
 - [RAG → The Query Flow](/docs/genai/develop/rag/overview#the-query-flow) — Customize retrieval (top-K, filters, hybrid search).
 - [AI Customer Support Agent](ai-customer-support.md) — Reuse `aiVectorknowledgebase` from a chat agent as a tool.
 - [Multi-Agent Workflow](multi-agent-workflow.md) — Combine RAG with other agents in a larger workflow.

@@ -168,7 +168,7 @@ The **Configure Model Provider** panel opens. This is **not** the same as creati
 | Field | What it does |
 |---|---|
 | **Select Model Provider*** | Pick from existing model-provider connections in the project. **Select / Expression** toggle lets you bind to an expression. |
-| **+ Create New Model Provider** | Link to add a brand-new provider connection without leaving the panel — opens the Select Model Provider picker. See [Components → Model Providers](/docs/genai/develop/components/model-providers) for the full per-provider form reference. |
+| **+ Create New Model Provider** | Link to add a brand-new provider connection without leaving the panel — opens the Select Model Provider picker. See [AI Connections and Stores → Model Providers](/docs/genai/develop/components/model-providers) for the full per-provider form reference. |
 | **Save** | Wires the chosen provider into the agent. |
 
 Sampling parameters (temperature, top-p, max tokens) live on the **model provider connection**, not on the agent. To make the agent more deterministic, lower the temperature on its provider via Connections → edit the provider → Advanced Configurations.

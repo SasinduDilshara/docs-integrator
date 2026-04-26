@@ -1709,6 +1709,8 @@ const sidebars: SidebarsConfig = {
             'genai/key-concepts/what-is-agent-memory',
             'genai/key-concepts/what-is-mcp',
             'genai/key-concepts/what-is-rag',
+            'genai/key-concepts/writing-effective-prompts',
+            'genai/key-concepts/typed-responses',
           ],
         },
         // Develop AI Applications
@@ -1717,10 +1719,10 @@ const sidebars: SidebarsConfig = {
           label: 'Develop AI Applications',
           items: [
             'genai/develop/overview',
-            // Components (reference for the six AI building blocks)
+            // AI Connections and Stores (reference for shared AI primitives)
             {
               type: 'category',
-              label: 'Components',
+              label: 'AI Connections and Stores',
               link: { type: 'doc', id: 'genai/develop/components/overview' },
               collapsed: true,
               items: [
@@ -1734,19 +1736,8 @@ const sidebars: SidebarsConfig = {
             },
             // Direct LLM Calls (single page)
             'genai/develop/direct-llm/overview',
-            // Natural Functions
-            {
-              type: 'category',
-              label: 'Natural Functions',
-              link: { type: 'doc', id: 'genai/develop/natural-functions/overview' },
-              collapsed: true,
-              items: [
-                'genai/develop/natural-functions/creating-a-natural-function',
-                'genai/develop/natural-functions/the-natural-block',
-                'genai/develop/natural-functions/typed-return-inference',
-                'genai/develop/natural-functions/calling-from-a-flow',
-              ],
-            },
+            // Natural Functions (single page)
+            'genai/develop/natural-functions/overview',
             // RAG (single page)
             'genai/develop/rag/overview',
             // AI Agents

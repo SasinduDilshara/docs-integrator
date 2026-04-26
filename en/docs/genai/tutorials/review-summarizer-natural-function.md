@@ -106,7 +106,7 @@ Click **Import**. BI infers and registers three types under the **Types** node i
 
 `ReviewResponse` is selected automatically as the function's return type.
 
-> Why these field names matter: the runtime turns the record (and its nested types) into a JSON schema and sends it to the LLM. Field names, types, and any descriptions you add become part of the contract the model is constrained to. See [Typed Return Inference](/docs/genai/develop/natural-functions/typed-return-inference) for the details.
+> Why these field names matter: the runtime turns the record (and its nested types) into a JSON schema and sends it to the LLM. Field names, types, and any descriptions you add become part of the contract the model is constrained to. See [Typed Return Inference](/docs/genai/develop/natural-functions/overview#typed-return-inference) for the details.
 
 ### Step 1.4 — Create the Function
 
@@ -322,7 +322,5 @@ The LLM analyzed the review, identified the overall sentiment, extracted per-top
 
 ## What's Next
 
-- **[Typed Return Inference](/docs/genai/develop/natural-functions/typed-return-inference)** — squeeze more accuracy out of the return type (closed records, enum unions, field descriptions).
-- **[The `natural { }` Block](/docs/genai/develop/natural-functions/the-natural-block)** — write better prompt bodies.
-- **[Calling from a Flow](/docs/genai/develop/natural-functions/calling-from-a-flow)** — use the function from automations, other functions, or as an agent tool.
+- **[Natural Functions reference](/docs/genai/develop/natural-functions/overview)** — the single-page reference covering the form, the Prompt node, typed return inference, and calling from a flow.
 - **[Email Generator with Direct LLM](email-generator-direct-llm.md)** — a similar tutorial built around direct LLM calls.

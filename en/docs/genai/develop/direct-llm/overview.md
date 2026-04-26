@@ -10,6 +10,8 @@ A **direct LLM call** is the simplest way to use AI in WSO2 Integrator: you add 
 
 This page is a single, end-to-end reference for everything you need to make that call work in BI: adding a model provider, dropping a `generate` node, writing the prompt, and binding the response to a Ballerina type.
 
+> **Looking for a hands-on walkthrough?** See the **[Email Generator with Direct LLM](/docs/genai/tutorials/email-generator-direct-llm)** tutorial — it builds a `POST /emails/generate` service end to end using everything described on this page.
+
 ## When to Use Direct LLM Calls
 
 | Use direct LLM when… | Look elsewhere when… |
@@ -27,13 +29,13 @@ A typical flow with a direct LLM call has a `generate` node sitting between your
 
 To build this you do three things, in order:
 
-1. **Make sure a Model Provider connection exists** — the connection to the LLM. Adding one (and the per-provider form fields, model lists, and advanced HTTP knobs) is documented in **[Components → Model Providers](/docs/genai/develop/components/model-providers)**. You only need to do this once per project.
+1. **Make sure a Model Provider connection exists** — the connection to the LLM. Adding one (and the per-provider form fields, model lists, and advanced HTTP knobs) is documented in **[AI Connections and Stores → Model Providers](/docs/genai/develop/components/model-providers)**. You only need to do this once per project.
 2. [**Add the Generate Node**](#the-generate-node), the call itself.
-3. [**Write the Prompt**](#writing-the-prompt) and [**Pick the Expected Type**](#binding-typed-responses).
+3. [**Write the Prompt**](#writing-the-prompt) and [**Pick the Expected Type**](#picking-the-expected-type).
 
 The rest of this page walks each step in order.
 
-> If your project does not have a model provider yet, head over to [Components → Model Providers](/docs/genai/develop/components/model-providers) first. The fastest one is the **Default WSO2 Model Provider** — no API key, just a one-time WSO2 sign-in.
+> If your project does not have a model provider yet, head over to [AI Connections and Stores → Model Providers](/docs/genai/develop/components/model-providers) first. The fastest one is the **Default WSO2 Model Provider** — no API key, just a one-time WSO2 sign-in.
 
 ---
 
@@ -49,7 +51,7 @@ The `generate` action lives **on the model-provider connection itself**, not as 
 
 ### The Configuration Form
 
-When the form opens, three fields are all you need: the **Prompt**, the **Result** variable, and the **Expected Type**. **Add the prompt that describes the work, pick the type you want the response in for your use case, and click Save.** Both fields are covered in detail in [Writing the Prompt](#writing-the-prompt) and [Binding Typed Responses](#binding-typed-responses) below.
+When the form opens, three fields are all you need: the **Prompt**, the **Result** variable, and the **Expected Type**. **Add the prompt that describes the work, pick the type you want the response in for your use case, and click Save.** Both fields are covered in detail in [Writing the Prompt](#writing-the-prompt) and [Picking the Expected Type](#picking-the-expected-type) below.
 
 ![The Generate configuration panel for openaiModelprovider → generate. Below the header: a Prompt* field with rich-text content; a Result* field set to 'result'; an Expected Type* field set to 'string'; a Save button.](/img/genai/develop/direct-llm/16-generate-form-rendered.png)
 
@@ -57,9 +59,9 @@ When the form opens, three fields are all you need: the **Prompt**, the **Result
 |---|---|---|
 | **Prompt*** | Yes | The instruction sent to the LLM. Detailed in [Writing the Prompt](#writing-the-prompt). |
 | **Result*** | Yes | The variable name where the response is stored. Used by later nodes. |
-| **Expected Type*** | Yes | The Ballerina type the response should be parsed into. Detailed in [Binding Typed Responses](#binding-typed-responses). |
+| **Expected Type*** | Yes | The Ballerina type the response should be parsed into. Detailed in [Picking the Expected Type](#picking-the-expected-type). |
 
-There are no per-call overrides on the `generate` node — anything you'd tune (temperature, max tokens, etc.) lives on the model provider connection and applies to every call that uses it. See [Components → Model Providers](/docs/genai/develop/components/model-providers) for the full list of advanced configurations per provider.
+There are no per-call overrides on the `generate` node — anything you'd tune (temperature, max tokens, etc.) lives on the model provider connection and applies to every call that uses it. See [AI Connections and Stores → Model Providers](/docs/genai/develop/components/model-providers) for the full list of advanced configurations per provider.
 
 ### After Saving
 
@@ -91,102 +93,29 @@ The **Insert** menu is the bridge between the prompt and the rest of your projec
 
 The prompt is stored as a Ballerina **template literal** (`` `...` ``). The editor is just a friendly view onto that template; picking a value from the **Insert** menu is the same as typing `${variableName}` by hand.
 
-### Interpolation
+### Prompt Practices
 
-Anywhere in the prompt you can refer to a variable from the surrounding flow with `${variableName}`:
-
-> *"Write a short email to* `${recipientName}` *confirming* `${meetingDate}`*. The sender's name is* `${senderName}`*."*
-
-What you can interpolate:
-
-| Kind | Example | What lands in the prompt |
-|---|---|---|
-| **Strings** | `${customerName}` | The string value, inline. |
-| **Numbers, booleans, decimals** | `${amount}` | Their textual representation. |
-| **Records** | `${customer}` | The record serialised as JSON, so the LLM can read every field. |
-| **Arrays** | `${reviews}` | Each item serialised as JSON, joined into a list. |
-| **Expressions** | `${reviews.length()}` | Any in-scope expression: function calls, field access, arithmetic. |
-
-> **Tip:** Don't paste raw values that need quoting into the prompt; use interpolation. It avoids escaping issues and makes the template self-documenting.
-
-### Structuring Long Prompts
-
-For prompts over a paragraph, structure helps the model:
-
-| Section header | Used for |
-|---|---|
-| **Role** | One sentence: *"You are a customer support assistant for ACME Inc."* |
-| **Task** | What this specific call should produce. |
-| **Constraints / Rules** | Bullet list of must-do and must-not-do. |
-| **Format hints** | Style ("polite, concise"), length ("under 100 words"). |
-| **Inputs** | The actual data, interpolated with `${...}`. |
-| **Examples** | One or two exemplars when accuracy matters. |
-
-Models follow bulleted rules and labelled sections more reliably than long paragraphs.
-
-If the task is unusual, give the model one or two worked examples right before the actual input:
-
-> *"Classify each review as **positive**, **negative**, or **mixed**.*
->
-> *Example:*
-> *Review: "Great product but shipping took forever."*
-> *Sentiment: mixed*
->
-> *Now classify this one:*
-> *Review:* `${review}` *"*
-
-### What NOT to Put in the Prompt
-
-- **The output schema.** WSO2 Integrator handles this through the **Expected Type**, see [Binding Typed Responses](#binding-typed-responses) below. Asking for *"return JSON with fields title, topic, …"* is at best redundant, at worst it fails in production when the prompt and the type disagree.
-- **Secrets.** API keys, customer PII, anything you would not paste into a public conversation. Anything in the prompt is sent to the LLM provider on every call.
-- **Megabytes of context.** Prompts are paid per token. Trim, or use [RAG](/docs/genai/develop/rag/overview) to bring in only the relevant pieces.
-- **"Be smart" instructions.** *"Think carefully", "be very accurate"* don't help. Specific constraints do.
+The same prompt-writing practices apply across `generate` nodes, [Natural Functions](/docs/genai/develop/natural-functions/overview), and AI Agent **Instructions**. They are documented once in the key concept page **[Writing Effective Prompts](/docs/genai/key-concepts/writing-effective-prompts)** — covering interpolation (`${variable}`), structuring long prompts with Role / Task / Constraints sections, and what to leave out (secrets, hand-written schemas, "be smart" instructions).
 
 ---
 
-## Binding Typed Responses
+## Picking the Expected Type
 
-WSO2 Integrator supports **automatic type binding for Direct LLM calls**. You declare a Ballerina type as the **Expected Type** on the `generate` node and the runtime takes care of the rest: it derives a JSON schema from the type, instructs the LLM to fill it, parses the response back into a typed value, and hands it to the next node.
+The **Expected Type** field on the `generate` node is what makes the response come back as a real Ballerina value — a `string`, an `int`, a record, an array — not a blob of text you have to parse yourself.
 
-The point of type binding is to keep the result **accurate, user-friendly, and predictable**. The next node in your flow receives a real `string`, `int`, record, or array, not a blob of text you have to parse yourself.
+The runtime derives a JSON schema from the type, asks the model to fill it, parses the response back, and hands the typed value to the next node. **You don't need to write any schema instructions in the prompt** — the type drives that automatically.
 
-### Pick a Type, Not a Prompt Instruction
+The full conceptual reference, including how to pick a type, why you should never describe the schema in the prompt, error handling, and tips for result types, is on the key concept page **[Typed Responses](/docs/genai/key-concepts/typed-responses)**.
 
-You define the shape you want by picking a type. For a structured result, that type is usually a small project record. For example, a record called `BlogContent` with a `title` and a `topic` looks like this in the BI type editor:
-
-![A BI type card titled BlogContent with two fields: title (string) and topic (string).](/img/genai/develop/direct-llm/19-blogcontent-type-card.png)
-
-Set **Expected Type** to `BlogContent` on the `generate` node, and the result variable lands in the next node already typed: `blogContent.title` and `blogContent.topic` are real string fields.
+A quick orientation:
 
 | Use this Expected Type | When you want… |
 |---|---|
-| `string` | Free-form text: a summary, an email body, a translation. |
+| `string` | Free-form text — a summary, an email body, a translation. |
 | A scalar (`int`, `decimal`, `boolean`) | A single number or yes/no answer. |
-| A record (e.g. `BlogContent`) | Named fields, the most common choice in integrations. |
-| An array of records (e.g. `Topic[]`) | A list of items: extracted entities, suggestions. |
-| A union (e.g. `Approved\|Rejected`) | The answer is one of several shapes, `match` on it. |
-
-### Don't Put the Schema in the Prompt
-
-Because the type already drives the schema, **writing *"please return JSON with fields title, topic, …"* in the prompt is wrong**. It's redundant when it agrees with the type, and it fails in production when it doesn't:
-
-- The type is enforced by the runtime; the prompt is a hint to the model. If they disagree, the type wins and the call may error on outputs the prompt encouraged.
-- A change to the type silently invalidates the hand-written schema in the prompt.
-- The prompt grows brittle and hard to read, mixing instructions for the user task with structural noise.
-
-**Set the Expected Type, leave the schema out of the prompt.** The prompt should describe the *task*; the type drives the *shape*.
-
-### When the LLM Doesn't Comply
-
-The runtime returns `T|error`. If the model produces something the type can't accept, an error propagates up your flow, you can wrap with an error handler to retry or fall back. Strict (closed) records are easier to validate than open ones; the default WSO2 model and modern flagship models from each provider are reliable on schema adherence in practice.
-
-### Tips for Result Types
-
-- **Use plain field names that match how the task is described**, `summary` not `respText`.
-- **Use enums (singleton union types) for fixed sets of values**, `"positive"|"negative"|"mixed"` rather than `string`.
-- **Keep types small**, two or three fields beat fifteen.
-- **Avoid nesting deeper than two levels**, it confuses the model and bloats the response.
-- **Add field doc comments** (`# what this field is`). They're sent to the model alongside the schema and improve accuracy.
+| A record | Named fields — the most common choice in integrations. |
+| An array of records | A list of items. |
+| A union (e.g. `Approved\|Rejected`) | The answer is one of several shapes; `match` on it. |
 
 ---
 
@@ -197,11 +126,15 @@ The runtime returns `T|error`. If the model produces something the type can't ac
 | Response comes back as a string of JSON instead of a parsed record. | Expected Type is `string`. | Set Expected Type to the record type. |
 | Response stops half-way. | Hit the model's max output tokens. | Raise **Maximum Tokens** in the model provider's [Advanced Configurations](/docs/genai/develop/components/model-providers#standard-http-advanced-configurations), or shorten the requested output. |
 | Same prompt produces wildly different answers. | Temperature is high. | Lower the temperature on the model provider connection. |
-| Parsing fails for some inputs in production. | The prompt and the type disagree, or the type is too loose. | [Pick a Type, Not a Prompt Instruction](#pick-a-type-not-a-prompt-instruction); use closed records. |
+| Parsing fails for some inputs in production. | The prompt and the type disagree, or the type is too loose. | Remove schema instructions from the prompt — see [Typed Responses → Don't put the schema in the prompt](/docs/genai/key-concepts/typed-responses#dont-put-the-schema-in-the-prompt); use closed records. |
 
 ## What's Next
 
-- **[Natural Functions](/docs/genai/develop/natural-functions/overview)**, when the same prompt is used in many places, package it as a typed function.
-- **[RAG](/docs/genai/develop/rag/overview)**, ground the model's answers in your own documents.
-- **[AI Agents](/docs/genai/develop/agents/overview)**, if the task needs tools or multi-turn reasoning.
-- **[What is an LLM?](/docs/genai/key-concepts/what-is-llm)**, conceptual background.
+- **[Email Generator with Direct LLM (Tutorial)](/docs/genai/tutorials/email-generator-direct-llm)** — build a complete `POST /emails/generate` service from scratch using everything on this page.
+- **[Writing Effective Prompts](/docs/genai/key-concepts/writing-effective-prompts)** — interpolation, structuring long prompts, and what to leave out.
+- **[Typed Responses](/docs/genai/key-concepts/typed-responses)** — the full reference for the Expected Type field.
+- **[AI Connections and Stores → Model Providers](/docs/genai/develop/components/model-providers)** — switch the LLM provider for production; tune temperature, max tokens, retries.
+- **[Natural Functions](/docs/genai/develop/natural-functions/overview)** — when the same prompt is used in many places, package it as a typed function.
+- **[RAG](/docs/genai/develop/rag/overview)** — ground the model's answers in your own documents.
+- **[AI Agents](/docs/genai/develop/agents/overview)** — if the task needs tools or multi-turn reasoning.
+- **[What is an LLM?](/docs/genai/key-concepts/what-is-llm)** — conceptual background.

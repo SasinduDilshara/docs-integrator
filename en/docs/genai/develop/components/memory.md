@@ -1,12 +1,12 @@
 ---
 sidebar_position: 7
-title: Memory
-description: Reference for every Memory implementation in WSO2 Integrator BI — the default Short Term Memory (in-memory store) and the durable MS SQL store, with init form fields, defaults, and overflow strategies.
+title: AI Agent Memory
+description: Reference for every AI Agent Memory implementation in WSO2 Integrator BI — the default Short Term Memory (in-memory store) and the durable MS SQL store, with the BI Configure Memory panel, store picker, and per-store create forms.
 ---
 
-# Memory
+# AI Agent Memory
 
-**Memory** stores per-session chat history for an Agent. Without memory, every agent turn is independent — the agent has no idea what the user said in previous turns. With memory, the agent reasons across the conversation.
+**AI Agent Memory** stores per-session chat history for an Agent. Without memory, every agent turn is independent — the agent has no idea what the user said earlier in the conversation. With memory, the agent reasons across the full session.
 
 > Memory is **only** used by Agents. Direct LLM calls, natural functions, and RAG retrieval do not touch memory.
 
@@ -31,40 +31,77 @@ A "chat message" is one of:
 
 ## Implementations at a Glance
 
-| Implementation | Module | Status | Durability |
-|---|---|---|---|
-| **Short Term Memory** | `ballerina/ai` | Default | In-memory (process-local) by default; pluggable backing store. |
-| **MS SQL Short Term Memory Store** | [`ballerinax/ai.memory.mssql`](https://central.ballerina.io/ballerinax/ai.memory.mssql/latest) | Available | Durable (table on Microsoft SQL Server). |
-| **PostgreSQL Short Term Memory Store** | [`ballerinax/ai.memory.postgresql`](https://github.com/ballerina-platform/module-ballerinax-ai.memory.postgresql) | Planned (placeholder repo) | — |
-| **Redis Short Term Memory Store** | [`ballerinax/ai.memory.redis`](https://github.com/ballerina-platform/module-ballerinax-ai.memory.redis) | Planned (placeholder repo) | — |
+| Implementation | Status | Durability |
+|---|---|---|
+| **Short Term Memory** | Default | In-memory (process-local) by default; pluggable backing store. |
+| **MS SQL Short Term Memory Store** | Available | Durable (table on Microsoft SQL Server). |
+| **PostgreSQL Short Term Memory Store** | Planned | — |
+| **Redis Short Term Memory Store** | Planned | — |
 
-> The Vector Knowledge Base, Chunker, and Embedding Provider sections of this site have BI screenshots; the **Configure Memory** screenshot lives in the [Agents → Memory](/docs/genai/develop/agents/memory) page since memory is only configured from inside the AI Agent node. This page is the reference for what each option does.
+---
+
+## Where Memory Is Configured in BI
+
+Memory is wired in from inside an **AI Agent** node — open an agent, hover the cog at the top-right of the AI Agent node, and click **Configure Memory**. The **Configure Memory** panel slides in from the right.
+
+![Configure Memory panel open on the right of an AI Chat Agent flow. Select Memory dropdown shows "Short Term Memory" with an inline description ("Initializes short term memory with an optional store and overflow configuration"). Memory Name field is set to "aiShorttermmemory". A Save button is at the bottom right.](/img/genai/develop/components/memory/01-configure-memory-panel.png)
+
+| Field | What it does |
+|---|---|
+| **Select Memory** | Pick a memory implementation from the available list. The default is **Short Term Memory**. |
+| **Memory Name** | Variable name for this memory instance, used in the generated source. |
+
+Click **Advanced Configurations → Expand** to reveal the **Store** and **Overflow Configuration** rows.
+
+![The same Configure Memory panel with Advanced Configurations expanded. A Store row shows the default ("In-Memory Short Term Memory Store") with a "+ Create New Memory Store" link below it. An Overflow Configuration row shows the default Overflow Trim Configuration (Trim Count 1).](/img/genai/develop/components/memory/02-configure-memory-advanced.png)
+
+| Advanced field | Default | What it controls |
+|---|---|---|
+| **Store** | In-Memory Short Term Memory Store | The backing storage. Defaults to a process-local in-memory store; switch to **MS SQL** for durability across restarts. |
+| **Overflow Configuration** | Trim Overflow Handler (Trim Count `1`) | What happens when the message store fills up. See [Overflow Configurations](#overflow-configurations). |
+
+---
+
+## Picking a Store
+
+To use a different store (or to tune the in-memory store), click **+ Create New Memory Store** under the **Store** row.
+
+![Configure Memory panel with the cursor over the "+ Create New Memory Store" link beneath the Store row.](/img/genai/develop/components/memory/03-create-new-memory-store-link.png)
+
+The **Select Memory Store** picker opens with every store the project knows about.
+
+![Select Memory Store picker showing two entries: "In-Memory Short Term Memory Store" (Provides an in-memory chat message store) and "MSSQL Short Term Memory Store" (Represents an MS SQL backed short term memory store for messages).](/img/genai/develop/components/memory/04-select-memory-store.png)
+
+| Store | When to use |
+|---|---|
+| **In-Memory Short Term Memory Store** | Single-instance development; tests; short-lived sessions. Process-local — does not survive restarts. |
+| **MSSQL Short Term Memory Store** | Production; multi-replica deployments; sessions that must survive restarts. Durable. |
 
 ---
 
 ## Short Term Memory (Default)
 
-The default memory implementation. Backed by an in-memory message store and an overflow strategy that decides what to do when the store fills up.
+The default memory implementation. Backed by a message store and an overflow strategy that decides what to do when the store fills up.
 
-### Configuration fields
+### In-Memory Store — Basic
+
+Pick **In-Memory Short Term Memory Store** in the picker. The basic create form has only the universal **Memory Store Name** and **Result Type** fields.
+
+![Create Memory Store form for In-Memory Short Term Memory Store with Memory Store Name "aiInmemoryshorttermmemorystore" and Result Type "ai:InMemoryShortTermMemoryStore" (locked). A note above reads "This operation has no required parameters. Optional settings can be configured below."](/img/genai/develop/components/memory/05-create-inmemory-store-basic.png)
+
+### In-Memory Store — Advanced
+
+Click **Advanced Configurations → Expand** to set the per-session capacity.
+
+![Same form with Advanced Configurations expanded. A Size field shows the default (10) and a description: "The maximum capacity for stored messages". The current value in the input is 8.](/img/genai/develop/components/memory/06-create-inmemory-store-advanced.png)
 
 | Field | Default | Available values | What it controls |
 |---|---|---|---|
-| **Store** | In-Memory Short Term Memory Store | An in-memory store, the MS SQL store, or any custom Short Term Memory Store | The backing storage. Defaults to a process-local store; switch to MS SQL for durability across restarts. See [Stores](#stores) below. |
-| **Overflow Configuration** | Trim Overflow Handler | Trim Overflow Handler, Model Assisted Overflow Handler | What happens when the message store fills up. See [Overflow Configurations](#overflow-configurations) below. |
-
-### Stores
-
-The store is what actually persists messages. Pick one from the table below.
-
-| Store | When to use | Configuration |
-|---|---|---|
-| **In-Memory Short Term Memory Store** | Single-instance development; tests; short-lived sessions. | Optional **Size** (default `10`, must be ≥ 3). Maximum interactive messages stored per session key. |
-| **MS SQL Short Term Memory Store** | Production; multi-replica deployments; sessions that must survive restarts. | See [MS SQL Store](#ms-sql-store) below. |
+| **Size** | `10` | Any integer ≥ 3 | Maximum interactive messages stored per session key. The oldest messages are subject to the overflow handler when the store reaches this capacity. |
 
 ### Overflow Configurations
 
-When the store reaches capacity for a session, the overflow handler decides what gets dropped or replaced.
+When a session reaches the configured **Size**, the overflow handler decides what gets dropped or replaced.
 
 #### Trim Overflow Handler *(default)*
 
@@ -89,16 +126,29 @@ Asks an LLM to summarise the oldest messages and replaces them with the summary.
 
 A durable Short Term Memory Store backed by Microsoft SQL Server. The connector creates the message table automatically on first use. Official: [Microsoft SQL Server](https://www.microsoft.com/sql-server).
 
-### Init form fields
+### MS SQL Store — Basic
+
+Pick **MSSQL Short Term Memory Store** in the picker. The basic create form requires an **MS SQL Client** (or a database configuration record).
+
+![Create Memory Store form for MSSQL Short Term Memory Store. MS SQL Client field shows a Record/Expression toggle and a connection record placeholder. Memory Store Name is "mssqlShorttermmemorystore" and Result Type is "mssql:ShortTermMemoryStore" (locked).](/img/genai/develop/components/memory/07-create-mssql-store-basic.png)
 
 | Field | Required | Default | Available values |
 |---|---|---|---|
-| **MSSQL Client** | Yes | — | An existing `mssql:Client` connection, **or** a database configuration record (host, user, password, database, port, instance, options, connection pool). |
-| **Max Messages Per Key** | No | `20` | Maximum interactive messages stored per session. |
-| **Cache Configuration** | No | `()` | Optional in-memory cache layer. Useful for high-traffic agents. |
-| **Table Name** | No | `"ChatMessages"` | Name of the database table. Must match `^[A-Za-z_][A-Za-z0-9_]*$`. |
+| **MS SQL Client** | Yes | — | An existing `mssql:Client` connection, **or** a database configuration record (host, user, password, database, port, instance, options, connection pool). |
 
-### Database configuration record
+### MS SQL Store — Advanced
+
+Click **Advanced Configurations → Expand** to tune caching, per-key capacity, and the table name.
+
+![Same form with Advanced Configurations expanded. Cache Config field with Record/Expression toggle. Max Messages Per Key (default 20) currently set to 8. Table Name (default "ChatMessages") with a note about naming rules. Memory Store Name and Result Type at the bottom.](/img/genai/develop/components/memory/08-create-mssql-store-advanced.png)
+
+| Field | Required | Default | What it controls |
+|---|---|---|---|
+| **Cache Config** | No | `()` | Optional in-memory cache layer in front of MS SQL. Useful for high-traffic agents. |
+| **Max Messages Per Key** | No | `20` | Maximum interactive messages stored per session. |
+| **Table Name** | No | `"ChatMessages"` | Name of the database table. Must match `^[A-Za-z_][A-Za-z0-9_]*$` — start with a letter or underscore, contain only letters, digits, and underscores. |
+
+### Database Configuration Record
 
 When you pass a database config record (instead of an existing client), the fields are:
 
@@ -113,7 +163,7 @@ When you pass a database config record (instead of an existing client), the fiel
 | **Options** | No | `()` | Additional MSSQL client options. |
 | **Connection Pool** | No | `()` | Connection pool settings. |
 
-### Auto-created schema
+### Auto-created Schema
 
 The connector creates the table on first init if it doesn't already exist:
 

@@ -55,14 +55,16 @@ Before looking at any canvas, it helps to have the mental model. RAG in BI is a 
 
 The **Knowledge Base** is the central abstraction. It owns three things:
 
-- A **Vector Store**, where the embeddings live (in-memory for development; Pinecone, Weaviate, Milvus, pgvector, or Azure AI Search for production).
-- An **Embedding Provider**, what turns text into vectors (Default WSO2, OpenAI, Azure, Google Vertex, OpenSearch, or a custom one).
-- A **Chunker**, how documents are split before embedding (AUTO by default, or a custom recursive chunker for fine control).
+- A **Vector Store**, where the embeddings live.
+- An **Embedding Provider**, what turns text into vectors.
+- A **Chunker**, how documents are split before embedding.
 
 Two more nodes flank it:
 
 - A **Data Loader** sits before ingestion, it reads documents from disk into memory so the Knowledge Base can ingest them.
 - The **query nodes** (`ai:retrieve`, `ai:augmentUserQuery`, `ai:generate`) sit after retrieval, they pull chunks out of the Knowledge Base and feed them to the LLM.
+
+> The full list of supported implementations and their configuration is in **[AI Connections and Stores](/docs/genai/develop/components/overview)** — [Knowledge Bases](/docs/genai/develop/components/knowledge-bases), [Vector Stores](/docs/genai/develop/components/vector-stores), [Embedding Providers](/docs/genai/develop/components/embedding-providers), [Chunkers](/docs/genai/develop/components/chunkers). This page focuses on how the pieces are wired into RAG flows.
 
 ## Anatomy of a RAG Project
 
@@ -93,22 +95,19 @@ The **Vector Knowledge Base** is the connection that ties a vector store, an emb
 
 ![The ai:Vector Knowledge Base configuration panel with Vector Store set to 'aiInmemoryvectorstore', Embedding Model set to 'aiWso2embeddingprovider', Chunker set to AUTO (default), Knowledge Base Name set to 'aiVectorknowledgebase', and Result Type set to 'ai:VectorKnowledgeBase'.](/img/genai/develop/rag/22-vector-knowledge-base-filled.png)
 
-Three pluggable parts:
+The form has three pluggable fields — **Vector Store**, **Embedding Model**, and **Chunker**. Each is a connection in its own right and is documented in detail on its own component reference page:
 
-| Part | What it is | Common choices |
-|---|---|---|
-| **Vector Store** | Where the embeddings are persisted. The Knowledge Base will store vectors here on ingest and search them on retrieve. | **In-Memory** (good for dev), **Pinecone**, **Weaviate**, **Milvus**, **pgvector**. See [Components → Vector Stores](/docs/genai/develop/components/vector-stores). |
-| **Embedding Model** | The function that turns text into a vector. **Must be the same provider on ingest and on retrieve**, otherwise nothing matches. | **Default WSO2** (no key, signs in once), **OpenAI**, **Azure OpenAI**, **Google Vertex**, **OpenRouter**, custom. See [Components → Embedding Providers](/docs/genai/develop/components/embedding-providers). |
-| **Chunker** | How a document gets split before embedding. Smaller chunks improve retrieval precision; larger chunks preserve context. | **AUTO** (chooses based on document type), **DISABLE**, or a structure-aware chunker (Generic Recursive, Markdown, HTML, Devant). See [Components → Chunkers](/docs/genai/develop/components/chunkers). |
+- [**Knowledge Bases**](/docs/genai/develop/components/knowledge-bases) — the Vector Knowledge Base itself, plus the alternative Azure AI Search Knowledge Base.
+- [**Vector Stores**](/docs/genai/develop/components/vector-stores) — In-Memory, Pinecone, pgvector, Weaviate, Milvus.
+- [**Embedding Providers**](/docs/genai/develop/components/embedding-providers) — Default WSO2, OpenAI, Azure OpenAI, Google Vertex, OpenRouter.
+- [**Chunkers**](/docs/genai/develop/components/chunkers) — AUTO, DISABLE, Generic Recursive, Markdown, HTML, Devant.
 
-The **+ Create New** link next to each field lets you create a fresh connection inline. Each pluggable part is a connection in its own right and can be reused across multiple Knowledge Bases.
+The **+ Create New** link next to each field lets you create a fresh connection inline.
 
-> The form fields, defaults, and advanced configurations for each part live on the dedicated component pages — [Vector Stores](/docs/genai/develop/components/vector-stores), [Embedding Providers](/docs/genai/develop/components/embedding-providers), [Chunkers](/docs/genai/develop/components/chunkers), and the Knowledge Base itself on [Knowledge Bases](/docs/genai/develop/components/knowledge-bases). They are not duplicated here.
-
-A few rules worth remembering when wiring a Knowledge Base:
+A few rules to keep in mind when wiring a Knowledge Base for a RAG flow:
 
 - **Use the same Embedding Provider on ingest and retrieve.** Vectors from different providers are not interchangeable; if you change the provider, you must re-ingest everything.
-- **In-Memory is fine for development**; switch to a hosted Vector Store (Pinecone, Weaviate, Milvus, pgvector) for production. The Knowledge Base only needs the connection swapped — your flows don't change.
+- **In-Memory is fine for development**; switch to a hosted Vector Store for production. The Knowledge Base only needs the connection swapped — your flows don't change.
 - **Leave the Chunker on `AUTO`** until retrieval quality drops. AUTO picks the right chunker (Markdown / HTML / Generic Recursive) based on document type.
 
 
@@ -178,7 +177,7 @@ You don't need to write a prompt that interleaves chunks and the question yourse
 
 ### Generate
 
-`ai:generate` calls the LLM with the augmented message. The Prompt field references `${aiChatusermessage.content}` so the model sees the chunks plus the question, and the **Expected Type** field shapes the response (see [Direct LLM → Binding Typed Responses](/docs/genai/develop/direct-llm/overview#binding-typed-responses)).
+`ai:generate` calls the LLM with the augmented message. The Prompt field references `${aiChatusermessage.content}` so the model sees the chunks plus the question, and the **Expected Type** field shapes the response (see [Typed Responses](/docs/genai/key-concepts/typed-responses)).
 
 ![A BI HTTP-service resource flow showing Start → ai:retrieve → ai:augmentUserQuery, with the right-side panel showing aiWso2modelprovider → generate. The Prompt field uses the content of the augmented chat user message; Result and Expected Type fields are below.](/img/genai/develop/rag/23-rag-generate-augmented-prompt.png)
 
@@ -221,7 +220,7 @@ Two knobs make the biggest difference at query time:
 - **Top K** (on `retrieve`) — how many chunks to pull. Default is `10`. Raise it when relevant content gets missed; pass `-1` to return everything (be careful — this can return a lot of data).
 - **Filters** (on `retrieve` and on `deleteByFilter`) — restrict matches by metadata. Useful for multi-tenant projects where each user should only see their own documents. See [Vector Stores → Metadata filters](/docs/genai/develop/components/vector-stores#metadata-filters) for the operator reference.
 
-For deep changes — different vector store, different embedding model, custom chunker, hybrid search — see the relevant [Components](/docs/genai/develop/components/overview) page.
+For deep changes — different vector store, different embedding model, custom chunker, hybrid search — see the relevant [AI Connections and Stores](/docs/genai/develop/components/overview) page.
 
 ---
 
