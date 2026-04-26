@@ -10,7 +10,7 @@ A **natural function** is a Ballerina function whose body is written in **Englis
 
 This page is a single, end-to-end reference: the BI form that creates the function, the Prompt node, the return type, and how to call it from a flow.
 
-> **Looking for a hands-on walkthrough?** See the **[Review Summarizer with Natural Function](/docs/genai/tutorials/review-summarizer-natural-function)** tutorial — it builds the example shown on this page from an empty project to a working `POST /api/v1/analyze` endpoint.
+> **Looking for a hands-on walkthrough?** See the **[Customer Review Analyzer with Natural Function](/docs/genai/tutorials/review-summarizer-natural-function)** tutorial — it builds the example shown on this page from an empty project to a working `POST /api/v1/analyze` endpoint.
 
 :::caution Experimental Feature
 Natural expressions are an **experimental** language feature. The integration runtime adds the `--experimental` flag automatically when you click **Run** in BI; from the terminal use `bal run --experimental`.
@@ -264,7 +264,7 @@ A natural function can also be wired up as an [agent tool](/docs/genai/develop/a
 
 ## What's Next
 
-- **[Review Summarizer with Natural Function (Tutorial)](/docs/genai/tutorials/review-summarizer-natural-function)** — end-to-end tutorial that builds a `POST /api/v1/analyze` service using everything on this page.
+- **[Customer Review Analyzer with Natural Function (Tutorial)](/docs/genai/tutorials/review-summarizer-natural-function)** — end-to-end tutorial that builds a `POST /api/v1/analyze` service using everything on this page.
 - **[AI Connections and Stores → Model Providers](/docs/genai/develop/components/model-providers)** — switch providers, tune temperature, max tokens, and retries for the Prompt node's connection.
 - **[Direct LLM Calls](/docs/genai/develop/direct-llm/overview)** — when you only need a single in-flow call without packaging it as a function.
 - **[AI Agents](/docs/genai/develop/agents/overview)** — when natural functions become tools an agent can choose to call.

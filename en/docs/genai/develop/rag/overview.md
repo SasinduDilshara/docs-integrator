@@ -77,7 +77,7 @@ Below is what those two flows look like on the BI canvas after they're built. Th
 
 **Ingestion flow** (in an Automation):
 
-![A BI automation flow on the canvas: Start → ai:load (aiDocumentAlDocument) → ai:ingest → log:printInfo with message 'Ingestion Completed!' → Error Handler. Left sidebar shows Connections including aiVectorknowledgebase, aiWso2embeddingprovider, aiWso2modelprovider, milvusVectorStore.](/img/genai/develop/rag/19-ingestion-flow-full.png)
+![A BI automation flow on the canvas: Start → ai:load (hrDocuments) → ai:ingest → log:printInfo with message 'Ingestion Completed!' → Error Handler. Left sidebar shows Connections including aiVectorknowledgebase, aiWso2embeddingprovider, aiWso2modelprovider, milvusVectorStore.](/img/genai/develop/rag/19-ingestion-flow-full.png)
 
 **Query flow** (in an HTTP service resource):
 

@@ -80,12 +80,12 @@ A Knowledge Base that stores chunks directly in Azure AI Search and uses Azure's
 
 ### Advanced configurations
 
-![Azure AI Search Knowledge Base Create form with Advanced Configurations expanded showing Verbose (default false), Api Version (default 2025-09-01), Content Field Name (default 'content'), Search Client Connection Config (default {}), Index Client Connection Config (default {}), Semantic Configuration Name.](/img/genai/develop/components/knowledge-bases/azure-search-advanced.png)
+![Azure AI Search Knowledge Base Create form with Advanced Configurations expanded showing Verbose (default false), API Version (default 2025-09-01), Content Field Name (default 'content'), Search Client Connection Config (default {}), Index Client Connection Config (default {}), Semantic Configuration Name.](/img/genai/develop/components/knowledge-bases/azure-search-advanced.png)
 
 | Field | Default | Available values | What it controls |
 |---|---|---|---|
 | **Verbose** | `false` | `true`, `false` | Whether to enable verbose logging during ingest and retrieve. Useful when debugging. |
-| **Api Version** | `2025-09-01` | Azure AI Search API version string | The Azure AI Search REST API version to use. |
+| **API Version** | `2025-09-01` | Azure AI Search API version string | The Azure AI Search REST API version to use. |
 | **Content Field Name** | `"content"` | String | The name of the field in the index that contains the main chunk content. |
 | **Search Client Connection Config** | `{}` | Record | Connection configuration for the Azure AI Search service client. Required only when `Index` is provided as a `search:SearchIndex` definition (i.e. when the connector creates the index for you). Standard HTTP knobs — see [Standard HTTP Advanced Configurations](/docs/genai/develop/components/model-providers#standard-http-advanced-configurations). |
 | **Index Client Connection Config** | `{}` | Record | Connection configuration for the Azure AI Search index client. Standard HTTP knobs — see [Standard HTTP Advanced Configurations](/docs/genai/develop/components/model-providers#standard-http-advanced-configurations). |

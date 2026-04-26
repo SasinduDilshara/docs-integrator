@@ -70,7 +70,7 @@ your documents  ─►  Chunking  ─►  Embedding  ─►  Vector Store
 ```
 
 - **Chunking** — Documents are too big to embed whole, so you split them into pieces. Usually a paragraph or two each.
-- **Embedding** — Each piece is turned into a vector by an *embedding model* (a small AI model that specialises in this).
+- **Embedding** — Each piece is turned into a vector by an *embedding model* (a small AI model that specialises in this). In WSO2 Integrator you use this through an **embedding provider** connection — see [Embedding Providers](/docs/genai/develop/components/embedding-providers).
 - **Storing** — The vectors go into a vector store. From now on, you can ask *"give me the chunks closest to this query"* and it answers in milliseconds.
 
 You only do this once per document. If a document changes, you re-ingest it.

@@ -32,11 +32,11 @@ Two equivalent places:
 
 Click **+ Add Model Provider** and the **Select Model Provider** picker opens with a card for each provider type:
 
-![Select Model Provider picker listing Default Model Provider (WSO2), Anthropic, Azure OpenAI, Deepseek, Google Vertex, Mistral, Ollama, OpenAI, with one-line descriptions for each.](/img/genai/develop/components/model-providers/01-select-list-top.png)
+![Select Model Provider picker listing Default Model Provider (WSO2), Anthropic, Azure OpenAI, DeepSeek, Google Vertex, Mistral, Ollama, OpenAI, with one-line descriptions for each.](/img/genai/develop/components/model-providers/01-select-list-top.png)
 
 Scroll for the rest:
 
-![Select Model Provider picker scrolled to show Deepseek (highlighted), Google Vertex, Mistral, Ollama, OpenAI, and OpenRouter Model Provider entries.](/img/genai/develop/components/model-providers/02-select-list-bottom.png)
+![Select Model Provider picker scrolled to show DeepSeek (highlighted), Google Vertex, Mistral, Ollama, OpenAI, and OpenRouter Model Provider entries.](/img/genai/develop/components/model-providers/02-select-list-bottom.png)
 
 ## Implementations at a Glance
 
@@ -252,7 +252,7 @@ DeepSeek's chat and reasoning models. Official: [deepseek.com](https://www.deeps
 
 ### Init form
 
-![Create Model Provider form for Deepseek showing one required field: API Key. Below: Advanced Configurations Expand link, Model Provider Name deepseekModelprovider, Result Type deepseek:ModelProvider.](/img/genai/develop/components/model-providers/deepseek-basic.png)
+![Create Model Provider form for DeepSeek showing one required field: API Key. Below: Advanced Configurations Expand link, Model Provider Name deepseekModelprovider, Result Type deepseek:ModelProvider.](/img/genai/develop/components/model-providers/deepseek-basic.png)
 
 | Field | Required | Default | Available values |
 |---|---|---|---|
@@ -260,13 +260,13 @@ DeepSeek's chat and reasoning models. Official: [deepseek.com](https://www.deeps
 
 ### Advanced configurations
 
-![DeepSeek Create Model Provider form with Advanced Configurations expanded showing Model Type (default DEEPSEEK_CHAT), Service URL (default https://api.deepseek.com), Maximum Token (default 512), Temperature (default 0.7), HTTP Version, HTTP1 Settings.](/img/genai/develop/components/model-providers/deepseek-advanced.png)
+![DeepSeek Create Model Provider form with Advanced Configurations expanded showing Model Type (default DEEPSEEK_CHAT), Service URL (default https://api.deepseek.com), Maximum Tokens (default 512), Temperature (default 0.7), HTTP Version, HTTP1 Settings.](/img/genai/develop/components/model-providers/deepseek-advanced.png)
 
 | Field | Default | Available values | What it controls |
 |---|---|---|---|
 | **Model Type** | `deepseek-chat` | `deepseek-chat`, `deepseek-reasoner` | Which DeepSeek model to use. |
 | **Service URL** | `https://api.deepseek.com` | URL string | DeepSeek API base URL. |
-| **Maximum Token** | `512` | Any positive integer | Hard cap on response length. |
+| **Maximum Tokens** | `512` | Any positive integer | Hard cap on response length. |
 | **Temperature** | `0.7` | `0.0`–`1.0` | Sampling temperature. |
 
 Plus the [Standard HTTP Advanced Configurations](#standard-http-advanced-configurations).

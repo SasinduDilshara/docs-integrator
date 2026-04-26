@@ -12,8 +12,8 @@ In this tutorial you build a complete HR RAG pipeline visually in WSO2 Integrato
 
 ## Prerequisites
 
-- [WSO2 Integrator installed](/docs/get-started/install) and signed into [WSO2 Integrator Copilot](/docs/genai/getting-started/setup) — the default model and embedding providers are provisioned through Copilot.
-- A folder of HR policy documents in plain-text form (leave policy, benefits, code of conduct, onboarding, etc.).
+- [WSO2 Integrator installed](/docs/get-started/install) and signed into [WSO2 Integrator Copilot](/docs/genai/getting-started/setup) — Copilot provisions the default model and embedding providers; the first time you use them, BI prompts you to run **Ballerina: Configure default WSO2 model provider** from the Command Palette and writes the credentials into `Config.toml` automatically.
+- A folder of HR policy documents in plain-text form (leave policy, benefits, code of conduct, onboarding, etc.). A few short `.txt` files are enough to follow the tutorial — content does not have to be production-ready.
 
 ## Architecture
 
@@ -60,7 +60,7 @@ Under **AI → RAG**, click **Data Loader**. The **Data Loaders** picker lists t
 
 ![Data Loaders picker](/img/genai/tutorials/hr-knowledge-base-rag/05-data-loaders-picker.png)
 
-The **ai : Data Loader** side panel opens. The default name is `aiTextdataloader` and **Result Type** is `ai:TextDataLoader`.
+The **ai : Data Loader** side panel opens. BI suggests a default **Data Loader Name** (e.g. `aiTextdataloader`); rename it to `textDocumentLoader` for this tutorial so later screenshots match. **Result Type** stays at the auto-filled `ai:TextDataLoader`.
 
 ![Data Loader form — initial state](/img/genai/tutorials/hr-knowledge-base-rag/06-data-loader-form-empty.png)
 
@@ -179,12 +179,16 @@ Set **Documents** to your loaded array `hrDocuments` and click **Save**.
 
 ![ai:ingest filled](/img/genai/tutorials/hr-knowledge-base-rag/18-ai-ingest-filled.png)
 
-### 2.6 Review the Completed Ingestion Flow
+### 2.6 Log Completion (Optional)
+
+Click **+** below `ai:ingest` and pick **Log → printInfo** under **Logging**. Set the message to `"Ingestion Completed!"` so you can confirm in the run log when ingestion has actually finished — useful before kicking off any queries against the store.
+
+### 2.7 Review the Completed Ingestion Flow
 
 Your ingestion automation now contains:
 
 ```
-Start → ai:load (hrDocuments) → ai:ingest → Error Handler
+Start → ai:load (hrDocuments) → ai:ingest → log:printInfo → Error Handler
 ```
 
 ![Completed automation flow](/img/genai/tutorials/hr-knowledge-base-rag/19-automation-flow-complete.png)
@@ -272,6 +276,7 @@ The **generate** form opens. Fill in:
   ```
   check aiChatusermessage.content.ensureType()
   ```
+  The `content` field on `ai:ChatUserMessage` is typed as `string|ai:Prompt` — `ai:augmentUserQuery` populates it with one or the other depending on the augmentation strategy. The `generate` node's **Prompt** expects a Ballerina template literal (`string`-compatible), so use `ensureType()` to assert the `string` branch at runtime; `check` propagates any conversion error to the resource's error handler.
 - **Result** — `result`
 - **Expected Type** — `string`
 
@@ -295,9 +300,10 @@ Start → ai:retrieve (queryMatch)
 
 ## Step 4: Run and Try It
 
-1. Make sure the Automation has been run at least once so the in-memory store is populated with your HR documents.
-2. Click **▶ Run** on the integration to start the HTTP Service.
-3. Use the built-in **Try It** panel (top-right of the resource view) or `curl`:
+1. Set the `path` configurable to the folder that holds your HR documents (BI prompts you for this on first run; you can also edit `Config.toml` directly).
+2. Run the **Automation** once so the in-memory store is populated with your HR documents — wait for the `Ingestion Completed!` log line before continuing.
+3. Click **▶ Run** on the integration to start the HTTP Service.
+4. Use the built-in **Try It** panel (top-right of the resource view) or `curl`. Tailor the question to a topic that appears in the documents you ingested:
 
    ```bash
    curl -X POST http://localhost:8080/api/v1/query \
@@ -305,7 +311,7 @@ Start → ai:retrieve (queryMatch)
      -d '{"userQuery": "What is the leave policy for new joiners?"}'
    ```
 
-The response is the LLM's answer grounded in the chunks retrieved from your HR knowledge base.
+The response is the LLM's answer grounded in the chunks retrieved from your HR knowledge base. If the answer comes back as *"I don't have that information"*, double-check that the Automation finished ingesting and that the question matches a topic actually present in the source documents.
 
 ## What You Built
 

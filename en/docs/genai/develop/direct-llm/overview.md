@@ -65,7 +65,7 @@ There are no per-call overrides on the `generate` node — anything you'd tune (
 
 ### After Saving
 
-Click **Save** and the node lands in the flow as `<provider>:generate`, with a small connection wire to its model-provider node on the right. From here you can chain follow-up nodes the same way you would after any other call. (See the canvas screenshot at the [top of this page](#how-a-direct-llm-call-looks-in-a-flow).)
+Click **Save** and the node lands in the flow as `<provider>:generate` (for example `ai:generate` for the WSO2 default provider, `openai:generate` for OpenAI, `azure:generate` for Azure OpenAI), with a small connection wire to its model-provider node on the right. From here you can chain follow-up nodes the same way you would after any other call. (See the canvas screenshot at the [top of this page](#how-a-direct-llm-call-looks-in-a-flow).)
 
 ---
 

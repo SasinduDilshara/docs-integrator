@@ -90,6 +90,8 @@ It is easy to assume an agent will figure things out by itself. In practice:
 - **Agents can be wrong.** The LLM is still a probabilistic system. Important actions (refunds, deletions, sending emails) deserve a confirmation step.
 - **Agents can be slow and expensive.** Each loop of Reason → Act → Observe is one or more LLM calls. Tasks that take three steps cost roughly three times as much as a single direct LLM call.
 
+> **AI Agent vs. AI Chat Agent in BI.** *AI agent* is the general concept above. In WSO2 Integrator BI, the ready-made artifact you create from **+ Add Artifact → AI Integration → AI Chat Agent** packages a chat-style agent (listener + agent node + return) so you don't have to assemble it yourself. The lower-level **Agent** node under **AI → Agent** in the Add Node panel gives you the same capability inside any flow. Both are the same idea — the artifact is just a faster starting point.
+
 ## What's Next
 
 - [What are Tools?](what-are-tools.md) — How an agent learns to take actions.

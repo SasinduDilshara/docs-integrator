@@ -100,9 +100,9 @@ Paste the following JSON sample into the textarea:
 
 Click **Import**. BI infers and registers three types under the **Types** node in the sidebar:
 
-- `ReviewResponse` (`sentiment`, `summary`, `topics`, `churn_risk`, `suggested_action`).
-- `Topics` (the array element record: `name`, `sentiment`).
-- `TopicsItem` (the per-element type for the inferred array).
+- `ReviewResponse` — the top-level record with fields `sentiment`, `summary`, `topics`, `churn_risk`, `suggested_action`.
+- `Topics` — the array type used for the `topics` field (an alias for `TopicsItem[]`).
+- `TopicsItem` — the per-element record with fields `name` and `sentiment`.
 
 `ReviewResponse` is selected automatically as the function's return type.
 
@@ -150,7 +150,7 @@ The inline editor opens. Click **Expand Editor** for the full Markdown editor wi
 
 Type the following prompt (use **Bold** for the role line, and the **Insert** menu — or just type — to interpolate the parameter):
 
-> You are a **customer review analyzer**. For each review, identify the overall sentiment, extract the key topics being discussed with their individual sentiment, and suggest a follow-up action if needed.
+> You are a **customer review analyzer**. For the review below, identify the overall sentiment, extract the key topics being discussed with their individual sentiment, and suggest a follow-up action if needed.
 >
 > Review: `${customerReview}`
 
@@ -165,8 +165,8 @@ The natural function is complete. Behind the scenes, BI generated:
 ```ballerina
 function analyzeCustomerReviewes(string customerReview) returns ReviewResponse|error {
     ReviewResponse|error result = natural {
-        You are a **customer review analyzer**. For each review, identify the
-        overall sentiment, extract the key topics being discussed with their
+        You are a **customer review analyzer**. For the review below, identify
+        the overall sentiment, extract the key topics being discussed with their
         individual sentiment, and suggest a follow-up action if needed.
 
         Review: ${customerReview}
@@ -245,7 +245,7 @@ The configuration form opens. Each parameter on the function becomes a row; here
 
 ![Configuration form for the analyzeCustomerReviewes call: empty CustomerReview field with Text/Expression toggle, Result name reviewResponse, Variable Type ReviewResponse (locked), Save button.](/img/genai/develop/natural-functions/34-call-config-empty.png)
 
-Bind **CustomerReview** to the inbound payload variable `review`. Leave **Result** as `reviewResponse` and **Variable Type** as the locked `ReviewResponse`.
+Bind **CustomerReview** to the inbound payload variable `review`. Leave **Result** (the variable name that will hold the typed return value, used by the next node) as `reviewResponse`, and **Variable Type** as the locked `ReviewResponse` (it always matches the function's declared return type).
 
 ![Configuration form filled in: CustomerReview bound to review (variable pill), Result reviewResponse, Variable Type ReviewResponse, Save button enabled.](/img/genai/develop/natural-functions/35-call-config-filled.png)
 
