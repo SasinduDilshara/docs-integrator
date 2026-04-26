@@ -25,128 +25,15 @@ A typical flow with a direct LLM call has a `generate` node sitting between your
 
 ![A BI flow on the canvas showing Start → Declare Variable (blogTitle) → Declare Variable (blogContent) → openai:generate (result) connected to a small openaiModelprov node on the right with the OpenAI logo → log:printInfo with template `${result}` → Error Handler.](/img/genai/develop/direct-llm/18-generate-saved-flow.png)
 
-To build this you do four things, in order:
+To build this you do three things, in order:
 
-1. [**Add a Model Provider**](#adding-a-model-provider), the connection to the LLM.
+1. **Make sure a Model Provider connection exists** — the connection to the LLM. Adding one (and the per-provider form fields, model lists, and advanced HTTP knobs) is documented in **[Components → Model Providers](/docs/genai/develop/components/model-providers)**. You only need to do this once per project.
 2. [**Add the Generate Node**](#the-generate-node), the call itself.
-3. [**Write the Prompt**](#writing-the-prompt), the instruction to the model.
-4. [**Pick the Expected Type**](#binding-typed-responses), the Ballerina type the response is bound to.
+3. [**Write the Prompt**](#writing-the-prompt) and [**Pick the Expected Type**](#binding-typed-responses).
 
 The rest of this page walks each step in order.
 
----
-
-## Adding a Model Provider
-
-A **Model Provider** is the connection to an LLM. Direct LLM calls, natural functions, RAG, and AI agents all use a model provider to talk to the model. You only need to add a provider once per project, and after that every feature in the project can use it.
-
-### Creating a Provider
-
-Adding a provider is a linear three-step flow. The first two steps are the same for every provider; the third step's form depends on which provider you pick.
-
-**Step 1: Open the Add Node panel from a flow.** Open any flow editor and click the **+** between two nodes. The **Add Node** panel slides in from the right. Under **AI** → **Direct LLM**, click **Model Provider**.
-
-![The Add Node panel with the AI section expanded, showing the Direct LLM sub-category with a Model Provider item hovered, displaying the tooltip 'Model providers available within the integration for connecting to an LLM'. RAG and Agent sub-categories are also visible.](/img/genai/develop/agents/27-add-node-model-provider-hover.png)
-
-**Step 2: Pick a provider type.** The **Select Model Provider** picker slides in. It lists every provider type with a one-line description. The list is fetched live from Ballerina Central, so you always see the latest provider versions.
-
-![The Select Model Provider side panel listing all available model providers in alphabetical order: Default Model Provider (WSO2) (highlighted with a 'Default' badge), Anthropic Model Provider, Azure OpenAi Model Provider, DeepSeek Model Provider, Google Vertex Model Provider, Mistral Model Provider, Ollama Model Provider, OpenAI Model Provider, OpenRouter Model Provider. Each entry has a one-line description.](/img/genai/develop/agents/04-select-model-provider.png)
-
-**Step 3: Fill the Create Model Provider form.** Click a provider in the picker and its form opens. The fields depend on which provider you chose, jump to the matching section in [Provider Forms](#provider-forms) below. When the form is filled in, click **Save**, the provider is now a connection in your project.
-
-### Provider Forms
-
-Two fields appear at the bottom of every Create Model Provider form, regardless of which provider you picked:
-
-| Field | What it controls |
-|---|---|
-| **Model Provider Name*** | The variable name used in the generated code. Keep it descriptive (`emailGenerator`, `supportModel`). Cannot start with a digit; only letters, digits, underscores. |
-| **Result Type*** | The Ballerina type of the connection. Locked to the provider's own type (`ai:Wso2ModelProvider`, `openai:ModelProvider`, etc.). |
-
-For every external provider (everything except Default WSO2), the form also has an **Advanced Configurations** section, the details are in [Advanced Configurations](#advanced-configurations) below. **Always reference a `configurable`** for API keys in production, it keeps secrets out of source control.
-
-The form fields differ per provider — typically an API key plus a model name, with a few providers (Azure, Vertex, Ollama) needing endpoint or auth-specific fields. The full per-provider parameter reference, including supported model names and configuration records, is on the **[Model Providers](/docs/genai/develop/components/model-providers)** component reference page.
-
-#### Default WSO2 Provider
-
-The simplest form. No API key, no model selection, just a name and a type:
-
-![Create Model Provider form for the Default WSO2 provider. Two fields: Model Provider Name* (default 'aiWso2modelprovider') and Result Type* (default 'ai:Wso2ModelProvider', locked). Save button.](/img/genai/develop/agents/14-create-default-model-provider.png)
-
-There are no provider-specific fields. The defaults are `aiWso2modelprovider` and `ai:Wso2ModelProvider`.
-
-When you click Save, BI runs a one-time auth flow:
-
-1. The Command Palette opens with **Ballerina: Configure default WSO2 model provider**.
-2. Sign in with your WSO2 account when prompted.
-3. BI writes a `wso2aiKey` value into your project's `Config.toml` automatically.
-
-You can also run **`Ballerina: Configure default WSO2 model provider`** manually from the Command Palette at any time to re-run the sign-in:
-
-![VS Code Command Palette open with the 'Ballerina:' filter showing 'Ballerina: Configure default WSO2 model provider' near the top.](/img/genai/develop/agents/18-command-palette.png)
-
-See [Default WSO2 Model Provider](/docs/genai/develop/components/model-providers#default-wso2-model-provider) for the full reference.
-
-#### Other Providers
-
-Each external provider has its own form. The shape is always the same — required provider-specific fields, then the universal Name + Type, then **Advanced Configurations** — but the fields themselves vary:
-
-![Create Model Provider form for OpenAI showing two required fields: API Key* (with Text/Expression toggle) and Model Type* (with Select/Expression toggle, value 'No Selection'), then Advanced Configurations Expand link, Model Provider Name* set to 'openaiModelprovider', Result Type* set to 'openai:ModelProvider'.](/img/genai/develop/agents/23-create-openai-model-provider.png)
-
-| Provider | Module | Reference |
-|---|---|---|
-| **OpenAI** | `ballerinax/ai.openai` | [Model Providers → OpenAI](/docs/genai/develop/components/model-providers#openai) |
-| **Azure OpenAI** | `ballerinax/ai.azure` | [Model Providers → Azure OpenAI](/docs/genai/develop/components/model-providers#azure-openai) |
-| **Anthropic** | `ballerinax/ai.anthropic` | [Model Providers → Anthropic](/docs/genai/develop/components/model-providers#anthropic) |
-| **Google Vertex** | `ballerinax/ai.googleapis.vertex` | [Model Providers → Google Vertex AI](/docs/genai/develop/components/model-providers#google-vertex-ai) |
-| **Mistral** | `ballerinax/ai.mistral` | [Model Providers → Mistral](/docs/genai/develop/components/model-providers#mistral) |
-| **DeepSeek** | `ballerinax/ai.deepseek` | [Model Providers → DeepSeek](/docs/genai/develop/components/model-providers#deepseek) |
-| **Ollama** | `ballerinax/ai.ollama` | [Model Providers → Ollama](/docs/genai/develop/components/model-providers#ollama) |
-| **OpenRouter** | `ballerinax/ai.openrouter` | [Model Providers → OpenRouter](/docs/genai/develop/components/model-providers#openrouter) |
-
-> Each link goes straight to the provider's `init` parameters, supported models, and provider-specific notes (e.g. Anthropic requires Max Tokens on every call; Vertex routes by publisher prefix; Ollama runs locally and needs no key).
-
-### Advanced Configurations
-
-Every external provider's form has an **Advanced Configurations** section. Click **Expand** to see the full list:
-
-![Create Model Provider form for an OpenAI-compatible provider with Advanced Configurations expanded. Visible fields include Cache Configuration, Circuit Breaker Configuration, Compression, Forwarded, HTTP1 Settings.](/img/genai/develop/agents/17-model-provider-advanced-config.png)
-
-The fields are split into two groups:
-
-- **HTTP-client knobs** — timeout, retry, circuit breaker, proxy, TLS, compression, response limits, etc. The full field reference is in [Components → Standard HTTP Advanced Configurations](/docs/genai/develop/components/model-providers#standard-http-advanced-configurations). The same set applies to every external provider.
-- **Model-behaviour knobs** — temperature, max tokens, top-p, top-k, frequency/presence penalty, seed. Vary slightly per provider (e.g. Ollama exposes Mirostat sampling). See each provider's section in [Model Providers](/docs/genai/develop/components/model-providers).
-
-To make a `generate` call deterministic, lower **Temperature** to `0.0`.
-
-### Where Providers Live (After Creation)
-
-Once you click **Save**, the provider is a **connection** in your project and shows up in three places at once:
-
-- The left **Connections** tree, under your project (e.g. `wso2ModelProvider`, `openaiModelprovider`).
-- The **Model Providers** panel on the right side of any flow editor.
-- Wherever a node asks for a model: a `generate` node, a natural function, or the **Model** field of an agent.
-
-The **Model Providers** right-side panel lists every provider connection in the project, with a **+** button to add another and a chevron to expand each connection's available actions:
-
-![The Model Providers right-side panel listing four model-provider connections: anthropicModelprovider, azureOpenaimodelprovider, openaiModelprovider, wso2ModelProvider, each with a chevron and provider logo.](/img/genai/develop/agents/25-model-providers-panel-multi.png)
-
-At the project level, every provider also appears in the left **Connections** tree, and the integration project's **Design** view wires each artifact to the provider it depends on:
-
-![The integration project Design overview with the left sidebar Connections tree populated with four model-provider connections, and the main canvas wiring three artifacts (chat agent service, HTTP service, MCP service) to their respective model-provider nodes on the right with provider logos.](/img/genai/develop/agents/26-project-design-multi-providers.png)
-
-### Editing a Provider
-
-To change a provider's API key, model name, or any other field after it's been created, click the provider name in the left **Connections** tree. The **Edit Connection** modal opens:
-
-![Edit Connection modal centered on screen with Variable Name* field, Variable Type* field with edit pencil icon, Update Connection button at the bottom.](/img/genai/develop/shared/10-edit-connection-modal.png)
-
-| Field | What it does |
-|---|---|
-| **Variable Name*** | Rename the connection. Updates every reference automatically. |
-| **Variable Type*** | The Ballerina type. Click the pencil icon to change it (e.g. swap one provider implementation for another). |
-| **Advanced Configurations** | Expand to edit HTTP and model parameters. |
-| **Update Connection** | Save the change. Existing nodes that referenced the connection continue to work. |
+> If your project does not have a model provider yet, head over to [Components → Model Providers](/docs/genai/develop/components/model-providers) first. The fastest one is the **Default WSO2 Model Provider** — no API key, just a one-time WSO2 sign-in.
 
 ---
 
@@ -172,7 +59,7 @@ When the form opens, three fields are all you need: the **Prompt**, the **Result
 | **Result*** | Yes | The variable name where the response is stored. Used by later nodes. |
 | **Expected Type*** | Yes | The Ballerina type the response should be parsed into. Detailed in [Binding Typed Responses](#binding-typed-responses). |
 
-There are no per-call overrides on the `generate` node, anything you would tune (temperature, max tokens, etc.) lives on the [model provider connection](#advanced-configurations) and applies to every call that uses that provider.
+There are no per-call overrides on the `generate` node — anything you'd tune (temperature, max tokens, etc.) lives on the model provider connection and applies to every call that uses it. See [Components → Model Providers](/docs/genai/develop/components/model-providers) for the full list of advanced configurations per provider.
 
 ### After Saving
 
@@ -308,7 +195,7 @@ The runtime returns `T|error`. If the model produces something the type can't ac
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | Response comes back as a string of JSON instead of a parsed record. | Expected Type is `string`. | Set Expected Type to the record type. |
-| Response stops half-way. | Hit the model's max output tokens. | Raise **Max Output Tokens** under the model provider's [Advanced Configurations](#advanced-configurations), or shorten the requested output. |
+| Response stops half-way. | Hit the model's max output tokens. | Raise **Maximum Tokens** in the model provider's [Advanced Configurations](/docs/genai/develop/components/model-providers#standard-http-advanced-configurations), or shorten the requested output. |
 | Same prompt produces wildly different answers. | Temperature is high. | Lower the temperature on the model provider connection. |
 | Parsing fails for some inputs in production. | The prompt and the type disagree, or the type is too loose. | [Pick a Type, Not a Prompt Instruction](#pick-a-type-not-a-prompt-instruction); use closed records. |
 

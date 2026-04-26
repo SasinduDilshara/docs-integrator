@@ -1,7 +1,7 @@
 ---
-sidebar_position: 4
+sidebar_position: 5
 title: Calling from a Flow
-description: Use a natural function inside a resource, automation, or another function in WSO2 Integrator.
+description: Use a natural function inside a resource, automation, or another function in WSO2 Integrator BI.
 ---
 
 # Calling a Natural Function from a Flow
@@ -14,47 +14,50 @@ Once a natural function exists in the project, calling it from a flow is a one-s
 2. Click **+** between two nodes.
 3. In the **Add Node** panel, expand the **AI** category and click **Call Natural Function**.
 
-![The Add Node panel showing the AI section expanded with the Call Natural Function option.](/img/genai/develop/natural-functions/01-add-node-call-natural-function.png)
+![Add Node panel with the AI section expanded, showing Direct LLM (Model Provider, Call Natural Function), RAG (Knowledge Base, Data Loader, Augment Query). The Call Natural Function tile is highlighted with a tooltip "Call a natural programming function".](/img/genai/develop/natural-functions/32-add-node-call-natural-function.png)
 
-4. Pick the natural function you want to call.
-5. Map the function's parameters to in-scope variables in the configuration form on the right.
-6. Click **Save**.
+4. The **Natural Functions** picker opens, listing every natural function in the current integration.
 
-A new node appears in the flow, named after the bound result variable.
+![Natural Functions picker showing a Search box and a Current Integration section with the analyzeCustomerReviewes natural function listed.](/img/genai/develop/natural-functions/33-natural-functions-picker.png)
 
-## What the Configuration Form Asks For
+5. Pick the function. The configuration form for that function opens.
+
+## Configuring the Call
+
+The configuration form has one field per parameter, plus a result variable and a (locked) variable type. The field labels match the parameter names you declared on the function — here `CustomerReview` for the `customerReview` parameter:
+
+![Configuration form for the analyzeCustomerReviewes call: CustomerReview field with Text/Expression toggle, Result name reviewResponse, Variable Type ReviewResponse (locked), Save button.](/img/genai/develop/natural-functions/34-call-config-empty.png)
 
 | Field | What it does |
 |---|---|
-| **Function** | The natural function to invoke. The list shows every natural function in the project. |
-| **Arguments** | One row per parameter. Bind each parameter to an in-scope value or expression. |
+| **\<ParameterName\>** | One row per parameter on the function. Bind each to an in-scope value or expression. The **Text / Expression** toggle on the right switches between literal text and an expression. |
 | **Result** | The variable name where the typed return value is stored. |
-| **Expected Type** | Pre-filled from the function's declared return type. |
+| **Variable Type** | Locked, pre-filled from the function's declared return type. Override only when you intentionally want a narrower type than the function returns. |
 
-You typically don't need to touch **Expected Type** — the function already declares it. Override it only when you intentionally want a narrower type than the function returns.
+Bind each parameter to the variable you want to send. In the example, `CustomerReview` is bound to the inbound `review` value from the request payload:
 
-## Use the Result Like Any Other Value
+![Configuration form filled in: CustomerReview bound to the variable review (shown as a pill), Result reviewResponse, Variable Type ReviewResponse, Save button enabled.](/img/genai/develop/natural-functions/35-call-config-filled.png)
 
-After the natural function call, the result variable behaves like any other value:
+Click **Save**. A new node appears in the flow, named after the bound result variable.
 
-```
-Start ─► reviews (read body)
-     │
-     ▼
-   summarizeReviews(reviews)
-     │
-     ▼
-   Return  (return summary)
-```
+![Resource flow showing Start, the analyzeCustomerReviewes (reviewResponse) node, an empty placeholder, and Error Handler. The Add Node panel on the right is open with Return highlighted under Control.](/img/genai/develop/natural-functions/36-resource-flow-with-call.png)
 
-You can:
+## Returning the Result
+
+After the natural-function node, add a **Return** node (Control → Return) and bind it to the result variable.
+
+![Return node configuration panel with the message "This operation has no required parameters. Optional settings can be configured below." Expression field set to the variable reviewResponse. A Saving... indicator on the right.](/img/genai/develop/natural-functions/37-return-node-config.png)
+
+The completed flow:
+
+![Final resource flow: Start → analyzeCustomerReviewes (reviewResponse) → Return reviewResponse → Error Handler.](/img/genai/develop/natural-functions/38-final-resource-flow.png)
+
+Because the result is already a typed value, the rest of the flow does not need to know it came from an LLM. You can:
 
 - Return it from an HTTP resource (the typed record becomes the JSON response automatically).
 - Pass it into another node — `If`, `Match`, `Map Data`, another function call.
 - Persist it via a connector.
 - Branch on a field with a `Match` node.
-
-Because the result is already a typed value, the rest of the flow does not need to know it came from an LLM.
 
 ## Calling a Natural Function from Another Function
 
@@ -76,36 +79,34 @@ When you mark a natural function as an [agent tool](/docs/genai/develop/agents/t
 
 ## Testing the Service
 
-The standard Try-It surface in BI works for natural functions just like any other operation. You can either:
+The standard Try-It surface in BI works for natural functions just like any other operation. From an HTTP resource that calls the natural function:
 
-- **Try the surrounding service** — for example, an HTTP resource that calls the natural function. Click **Try It** at the top right.
-- **Use the Copilot's Try-it-with-AI** — for an HTTP resource, the Copilot will check for compilation errors, start the service, and send a test request automatically.
+- **Try It** in the top-right of the resource editor sends a request you author by hand.
+- **Try it with AI** lets the Copilot check for compile errors, start the service, and send a sample request automatically.
 
-After invoking, the Copilot displays the JSON response and validates each field against the declared type:
-
-![Test results panel showing the structured JSON response with assertions on each field of the typed return.](/img/genai/develop/natural-functions/04-test-results.png)
-
-Sample request and response for a review summariser exposed as `POST /api/v1/reviews/summarize`:
+Sample request and response for the `POST /api/v1/analyze` resource shown above (it calls `analyzeCustomerReviewes` and returns the `ReviewResponse`):
 
 ```json
 // Request
 {
-  "reviews": [
-    "Great product, fast shipping!",
-    "Quality is excellent but support was slow."
-  ]
+  "review": "Loved the sound quality, but the charging case died after a week and support never replied."
 }
 
-// Response  (matches the Summary record type exactly)
+// Response  (matches the ReviewResponse record type exactly)
 {
-  "summary": "Customers praise quality and shipping speed but flag slow support.",
   "sentiment": "mixed",
-  "topPositive": ["product quality", "shipping speed"],
-  "topNegative": ["support response time"]
+  "summary": "Customer loves the sound quality but is frustrated by a faulty charging case and slow support response.",
+  "topics": [
+    { "name": "sound quality",     "sentiment": "positive" },
+    { "name": "charging case",     "sentiment": "negative" },
+    { "name": "customer support",  "sentiment": "negative" }
+  ],
+  "churn_risk": true,
+  "suggested_action": "Reach out with a replacement case and apologize for the support delay."
 }
 ```
 
-The fields, types, and structure match the natural function's `Summary` return type — there is no JSON-parsing layer to write or maintain.
+The fields, types, and structure match the natural function's `ReviewResponse` return type — there is no JSON-parsing layer to write or maintain.
 
 ## Common Patterns
 
@@ -129,9 +130,9 @@ A `Map Data` step right after the natural-function call lets you reshape the res
 A natural function exposed via an HTTP service makes a clean classification or extraction API:
 
 ```
-POST /reviews/summarize  ─►  summarizeReviews(reviews)  ─►  Return Summary
-POST /tickets/triage     ─►  triageTicket(body)          ─►  Return Triage
-POST /emails/extract     ─►  extractEntities(body)       ─►  Return Entities
+POST /reviews/analyze    ─►  analyzeCustomerReviewes(review)  ─►  Return ReviewResponse
+POST /tickets/triage     ─►  triageTicket(body)                ─►  Return Triage
+POST /emails/extract     ─►  extractEntities(body)             ─►  Return Entities
 ```
 
 These are some of the highest-leverage uses of natural functions in an integration platform.
@@ -146,6 +147,7 @@ Each call is one LLM round-trip — typically a few hundred milliseconds and a f
 
 ## What's Next
 
+- **[Creating a Natural Function](creating-a-natural-function.md)** — build the function this page calls.
 - **[The `natural { }` Block](the-natural-block.md)** — back to the function body.
 - **[Typed Return Inference](typed-return-inference.md)** — get the most out of the return type.
 - **[AI Agents](/docs/genai/develop/agents/overview)** — when natural functions become tools an agent can choose to call.

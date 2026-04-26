@@ -344,9 +344,36 @@ Plus the [Standard HTTP Advanced Configurations](#standard-http-advanced-configu
 
 ---
 
+## Where Providers Live (After Creation)
+
+Once you click **Save**, the provider becomes a **connection** in your project and shows up in three places at once:
+
+- The left **Connections** tree, under your project (e.g. `wso2ModelProvider`, `openaiModelprovider`).
+- The **Model Providers** panel on the right side of any flow editor.
+- Wherever a node asks for a model — a `generate` node, a natural function, or the **Model** field of an agent.
+
+The right-side **Model Providers** panel lists every provider connection in the project, with a **+** button to add another and a chevron to expand each connection's available actions:
+
+![The Model Providers right-side panel listing four model-provider connections — anthropicModelprovider, azureOpenaimodelprovider, openaiModelprovider, wso2ModelProvider — each with a chevron and provider logo.](/img/genai/develop/agents/25-model-providers-panel-multi.png)
+
+At the project level, every provider also appears in the left **Connections** tree, and the integration project's **Design** view wires each artifact to the provider it depends on:
+
+![The integration project Design overview with the left sidebar Connections tree populated with four model-provider connections, and the main canvas wiring three artifacts (chat agent service, HTTP service, MCP service) to their respective model-provider nodes on the right with provider logos.](/img/genai/develop/agents/26-project-design-multi-providers.png)
+
 ## Editing or Replacing a Provider
 
-Once a provider is saved, click its name in the left **Connections** tree to open the **Edit Connection** modal. From there you can rename it, change any field, or swap the underlying type (e.g. move from OpenAI to Azure OpenAI without changing the connection's name in the rest of your code).
+To change a provider's API key, model name, or any other field after it's been created, click the provider name in the left **Connections** tree. The **Edit Connection** modal opens:
+
+![Edit Connection modal centered on screen with Variable Name field, Variable Type field with edit pencil icon, Update Connection button at the bottom.](/img/genai/develop/shared/10-edit-connection-modal.png)
+
+| Field | What it does |
+|---|---|
+| **Variable Name** | Rename the connection. Updates every reference automatically. |
+| **Variable Type** | The Ballerina type. Click the pencil icon to change it (e.g. swap one provider implementation for another — OpenAI → Azure OpenAI — without renaming the connection in the rest of your code). |
+| **Advanced Configurations** | Expand to edit HTTP and model parameters. |
+| **Update Connection** | Save the change. Existing nodes that referenced the connection continue to work. |
+
+> Editing a connection follows the same pattern for every component type — embedding providers, vector stores, knowledge bases, chunkers, and memory connections all use the same Edit Connection modal.
 
 ## What's Next
 

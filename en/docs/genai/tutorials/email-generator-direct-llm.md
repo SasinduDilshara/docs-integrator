@@ -97,7 +97,7 @@ Click **Default Model Provider (WSO2)**. In the configuration form:
 
 ![Model Provider configuration with name emailGenerator.](/img/genai/develop/direct-llm/07-model-provider-config.png)
 
-> **Tip:** The Default WSO2 Model Provider does not require an API key. For a different provider see [Adding a Model Provider](/docs/genai/develop/direct-llm/overview#adding-a-model-provider).
+> **Tip:** The Default WSO2 Model Provider does not require an API key. For a different provider see [Components → Model Providers](/docs/genai/develop/components/model-providers).
 
 ---
 

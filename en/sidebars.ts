@@ -1741,6 +1741,7 @@ const sidebars: SidebarsConfig = {
               link: { type: 'doc', id: 'genai/develop/natural-functions/overview' },
               collapsed: true,
               items: [
+                'genai/develop/natural-functions/creating-a-natural-function',
                 'genai/develop/natural-functions/the-natural-block',
                 'genai/develop/natural-functions/typed-return-inference',
                 'genai/develop/natural-functions/calling-from-a-flow',
