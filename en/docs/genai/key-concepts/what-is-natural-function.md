@@ -85,4 +85,4 @@ You define it once, and the rest of your integration treats it as a normal build
 
 - [What is an LLM?](what-is-llm.md) — The model that actually runs the function body.
 - [What is an AI Agent?](what-is-ai-agent.md) — When you need more than a single-step transformation.
-- [Natural Functions](/docs/genai/develop/natural-functions) — How to build one in WSO2 Integrator.
+- [Natural Functions](/docs/genai/develop/natural-functions/overview) — How to build one in WSO2 Integrator.

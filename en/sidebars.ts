@@ -1716,19 +1716,24 @@ const sidebars: SidebarsConfig = {
           type: 'category',
           label: 'Develop AI Applications',
           items: [
-            // Direct LLM Calls
+            'genai/develop/overview',
+            // Components (reference for the six AI building blocks)
             {
               type: 'category',
-              label: 'Direct LLM Calls',
-              link: { type: 'doc', id: 'genai/develop/direct-llm/overview' },
+              label: 'Components',
+              link: { type: 'doc', id: 'genai/develop/components/overview' },
               collapsed: true,
               items: [
-                'genai/develop/direct-llm/adding-a-model-provider',
-                'genai/develop/direct-llm/the-generate-node',
-                'genai/develop/direct-llm/prompts-and-interpolation',
-                'genai/develop/direct-llm/binding-and-typed-responses',
+                'genai/develop/components/model-providers',
+                'genai/develop/components/embedding-providers',
+                'genai/develop/components/vector-stores',
+                'genai/develop/components/knowledge-bases',
+                'genai/develop/components/chunkers',
+                'genai/develop/components/memory',
               ],
             },
+            // Direct LLM Calls (single page)
+            'genai/develop/direct-llm/overview',
             // Natural Functions
             {
               type: 'category',
@@ -1741,21 +1746,8 @@ const sidebars: SidebarsConfig = {
                 'genai/develop/natural-functions/calling-from-a-flow',
               ],
             },
-            // RAG
-            {
-              type: 'category',
-              label: 'RAG',
-              link: { type: 'doc', id: 'genai/develop/rag/overview' },
-              collapsed: true,
-              items: [
-                'genai/develop/rag/knowledge-bases',
-                'genai/develop/rag/embedding-providers',
-                'genai/develop/rag/vector-stores',
-                'genai/develop/rag/chunker',
-                'genai/develop/rag/data-loaders',
-                'genai/develop/rag/query-node',
-              ],
-            },
+            // RAG (single page)
+            'genai/develop/rag/overview',
             // AI Agents
             {
               type: 'category',

@@ -11,7 +11,10 @@ An **MCP Service** is a WSO2 Integrator artifact that publishes a set of tools o
 ## Creating an MCP Service
 
 1. Click **+ Add Artifact** on the project view.
-2. In the **Artifacts** page pick **MCP Service**.
+2. In the **Artifacts** page, under the **AI Integration** section pick **MCP Service** — sitting next to AI Chat Agent:
+
+   ![Artifacts page showing the AI Integration category with two artifacts: AI Chat Agent (highlighted) and MCP Service. Above is Automation; below is Integration as API (HTTP Service, GraphQL Service Beta, TCP Service Beta).](/img/genai/develop/shared/07-artifacts-page-full.png)
+
 3. The MCP Service editor opens.
 
 ## The MCP Service Editor
@@ -50,6 +53,19 @@ Click **+ Add Tool** to open the **Tool Configuration** panel:
 | **Tool Description** | Yes | What the tool does **and when** the assistant should use it. The single most important field for tool discoverability. |
 | **Parameters** | No | Each parameter has a name, type, and description. The description is included in the schema sent to the client. |
 | **Return Type** | Yes | The Ballerina type returned. The schema is generated from this and shown to the client. |
+
+A typical filled-in tool form, with two `int` parameters and the Return Type picker open:
+
+![The Tool Configuration panel filled in. Tool Name* set to 'add'. Tool Description set to 'Add two numbers'. Parameters section showing two rows: 'int / a' (with edit/delete icons) and 'int / b' (with edit/delete icons), plus + Add Parameter link. Return Type* with type picker dropdown OPEN showing search box, Primitive Types section (string, int, float, decimal, boolean), and at the bottom + Create New Type and Open Type Browser links.](/img/genai/develop/mcp/04-mcp-tool-return-type-picker.png)
+
+The Return Type picker shows:
+
+| Section | What's in it |
+|---|---|
+| **Search** | Filter all visible types by name. |
+| **Primitive Types** | `string`, `int`, `float`, `decimal`, `boolean`, `()` (nil). |
+| **+ Create New Type** | Open the Type editor to define a record on the spot — useful when the return is structured. |
+| **Open Type Browser** | Browse every type defined in the project plus the imported standard library. |
 
 After **Save**, BI generates a `remote function` on the MCP service:
 

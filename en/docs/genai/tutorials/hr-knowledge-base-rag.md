@@ -1,322 +1,333 @@
 ---
 sidebar_position: 1
-title: "Building an HR Knowledge Base Agent with RAG"
-description: Build an HR agent that answers employee questions about company policies and procedures using retrieval-augmented generation (RAG).
+title: "Building an HR Knowledge Base with RAG"
+description: Step-by-step tutorial for building an HR knowledge base in WSO2 Integrator that ingests HR policy documents and answers employee questions over HTTP using retrieval-augmented generation.
 ---
 
-# Building an HR Knowledge Base Agent with RAG
+# Building an HR Knowledge Base with RAG
 
-**Time:** 45 minutes | **Level:** Intermediate | **What you'll build:** An HR knowledge base AI Agent that answers employee questions about company policies, benefits, and procedures by retrieving relevant context from ingested HR documents using RAG.
+**Time:** 30 minutes&nbsp;&nbsp;|&nbsp;&nbsp;**Level:** Intermediate&nbsp;&nbsp;|&nbsp;&nbsp;**What you'll build:** Two artifacts in a single integration — an Automation that ingests a folder of HR policy documents into a vector knowledge base, and an HTTP Service that answers employee questions with retrieval-augmented generation.
 
-In this tutorial, you build an end-to-end HR knowledge base AI Agent powered by retrieval-augmented generation. The agent ingests HR policy documents into a vector knowledge base, retrieves relevant sections when employees ask questions, and generates accurate answers grounded in your actual policies. This ensures employees get consistent, up-to-date answers rather than responses based on generic LLM training data.
-
-You will use the canonical `ballerina/ai` module — which ships with the WSO2 Integrator distribution — for the model provider, embeddings, vector store, and AI Agent.
+In this tutorial you build a complete HR RAG pipeline visually in WSO2 Integrator's flow designer. The Automation walks documents → chunker → embedding model → vector store. The HTTP Service walks employee question → retrieve → augment → generate → response. No third-party SDK code is required — everything is wired with the built-in `ai` module nodes.
 
 ## Prerequisites
 
-- [WSO2 Integrator VS Code extension installed](/docs/get-started/install)
-- A default model provider configured via the VS Code command **"Configure default WSO2 Model Provider"**, OR an OpenAI API key if you prefer to bring your own
-- A sample set of HR policy documents (PDF or text) to ingest
+- [WSO2 Integrator installed](/docs/get-started/install) and signed into [WSO2 Integrator Copilot](/docs/genai/getting-started/setup) — the default model and embedding providers are provisioned through Copilot.
+- A folder of HR policy documents in plain-text form (leave policy, benefits, code of conduct, onboarding, etc.).
 
 ## Architecture
 
-```mermaid
-flowchart TD
-    subgraph Ingestion["Ingestion Pipeline"]
-        Docs[HR Documents] --> Loader[ai:TextDataLoader] --> KB[(ai:VectorKnowledgeBase)]
-    end
+```
+Ingestion (Automation):
+folder path → Data Loader → ai:load → ai:ingest → Vector Knowledge Base
+                                                  ├── Vector Store (In-Memory)
+                                                  ├── Embedding Provider (WSO2)
+                                                  └── Chunker (AUTO)
 
-    subgraph Query["Query Pipeline"]
-        Question([Employee Question]) --> Agent
-    end
-
-    subgraph HRAgent["HR AI Agent"]
-        Agent[ai:Agent<br/>+ ai:ModelProvider<br/>+ Tools]
-    end
-
-    LeaveAPI[Leave Balance API]
-    DirAPI[Employee Directory API]
-
-    Agent ----> KB
-    Agent ----> LeaveAPI
-    Agent ----> DirAPI
+Query (HTTP Service POST /api/v1/query):
+employee question → ai:retrieve → ai:augmentUserQuery → ai:generate → JSON response
 ```
 
-## Step 1: Create the Project
+## Step 1: Open the Integration
 
-Create a new WSO2 Integrator project. The `ballerina/ai` module is bundled with the distribution, so you do not need a separate dependency block for it.
+Open or create an integration project in WSO2 Integrator (this tutorial uses **Sample-Integration**). The empty integration view shows an **+ Add Artifact** button — that's your starting point for the whole tutorial.
 
-```toml
-# Ballerina.toml
-[package]
-org = "myorg"
-name = "hr_knowledge_base_agent"
-version = "0.1.0"
-distribution = "2201.13.0"
+![Empty integration overview](/img/genai/tutorials/hr-knowledge-base-rag/01-empty-integration.png)
+
+Click **+ Add Artifact**. The artifact catalog opens, grouping the artifact types by category.
+
+![Add Artifact catalog](/img/genai/tutorials/hr-knowledge-base-rag/02-add-artifact-catalog.png)
+
+You will create two artifacts in this catalog: an **Automation** (under *Automation*) for ingestion, then an **HTTP Service** (under *Integration as API*) for querying.
+
+## Step 2: Create the Ingestion Automation
+
+### 2.1 Pick the Automation artifact
+
+Click the **Automation** card. WSO2 Integrator opens the **Create New Automation** dialog — accept the defaults and click **Create**.
+
+![Create New Automation](/img/genai/tutorials/hr-knowledge-base-rag/03-create-new-automation.png)
+
+The automation flow editor opens with an empty `Start` node and an `Error Handler` end node. Click the **+** between them to open the node palette.
+
+The palette groups every node type — **Statement** (Declare/Update Variable, Call Function, Map Data), **Control** (If, Match, While, Foreach, Return), **AI** (Direct LLM, RAG, Agent), and so on.
+
+![Automation node palette](/img/genai/tutorials/hr-knowledge-base-rag/04-automation-node-palette.png)
+
+### 2.2 Add a Data Loader
+
+Under **AI → RAG**, click **Data Loader**. The **Data Loaders** picker lists the available loader types. Pick **Text Data Loader**.
+
+![Data Loaders picker](/img/genai/tutorials/hr-knowledge-base-rag/05-data-loaders-picker.png)
+
+The **ai : Data Loader** side panel opens. The default name is `aiTextdataloader` and **Result Type** is `ai:TextDataLoader`.
+
+![Data Loader form — initial state](/img/genai/tutorials/hr-knowledge-base-rag/06-data-loader-form-empty.png)
+
+Click into the **Paths** field to start entering the source folder. Select **+ New Configurable** to externalise the folder path so you can change it without editing the flow. Fill in:
+
+- **Variable Name** — `path`
+- **Variable Type** — `string`
+- **Documentation** — *Path for the HR documents to ingest.*
+
+![New Configurable for path](/img/genai/tutorials/hr-knowledge-base-rag/07-new-configurable-path.png)
+
+Save the configurable and complete the Data Loader form:
+
+- **Paths** — `` string `${path}` `` (uses the configurable)
+- **Data Loader Name** — `textDocumentLoader`
+- **Result Type** — `ai:TextDataLoader`
+
+![Data Loader form filled](/img/genai/tutorials/hr-knowledge-base-rag/08-data-loader-form-filled.png)
+
+Click **Save**.
+
+### 2.3 Add the `ai : load` Node
+
+Click the **+** below the Data Loader. The **Data Loaders** panel opens and lists the `textDocumentLoader` connection you just created with its **Load** action — *"Loads documents as `TextDocument`s from a source."* Hover and click **Load**.
+
+![Load action just before click](/img/genai/tutorials/hr-knowledge-base-rag/09a-load-action-picker.png)
+
+The **ai : load** form opens. Set:
+
+- **Result** — `hrDocuments`
+- **Result Type** — `ai:Document[] | ai:Document` (auto-filled)
+
+![ai:load form filled](/img/genai/tutorials/hr-knowledge-base-rag/09-ai-load-form-filled.png)
+
+### 2.4 Create the Vector Knowledge Base
+
+Click **+** below `ai:load` and choose **Knowledge Base** under **AI → RAG**. The **Knowledge Bases** picker shows the supported types — pick **Vector Knowledge Base**.
+
+![Knowledge Bases picker](/img/genai/tutorials/hr-knowledge-base-rag/10-knowledge-bases-picker.png)
+
+The **ai : Vector Knowledge Base** form opens with all fields empty. It has three required building blocks: **Vector Store**, **Embedding Model**, and **Chunker**. Each can be created inline.
+
+![Empty Vector Knowledge Base form](/img/genai/tutorials/hr-knowledge-base-rag/16a-vector-knowledge-base-empty.png)
+
+Build them one at a time.
+
+#### 2.4.1 Create the Vector Store
+
+Click **+ Create New Vector Store**. The picker lists the supported stores: **In Memory**, **Milvus**, **Pgvector**, **Pinecone**, **Weaviate**.
+
+![Select Vector Store](/img/genai/tutorials/hr-knowledge-base-rag/11-vector-store-picker.png)
+
+Pick **In Memory Vector Store** — no external infra required for this tutorial. The **Create Vector Store** form opens. Fill in:
+
+- **Vector Store Name** — `aiInmemoryvectorstore`
+- **Result Type** — `ai:InMemoryVectorStore` (auto-filled)
+
+![Create Vector Store filled](/img/genai/tutorials/hr-knowledge-base-rag/12-create-vector-store-filled.png)
+
+Click **Save**. The new connection appears in the left **Connections** tree.
+
+#### 2.4.2 Create the Embedding Provider
+
+Back on the Vector Knowledge Base form, click **+ Create New Embedding Model**. The picker lists the supported providers: **Default Embedding Provider (WSO2)**, **Azure**, **Google Vertex**, **OpenAI**, **OpenRouter**.
+
+![Select Embedding Provider](/img/genai/tutorials/hr-knowledge-base-rag/13-embedding-provider-picker.png)
+
+Pick **Default Embedding Provider (WSO2)** — it is provisioned through your Copilot login, no API key required. The **Create Embedding Provider** form opens. Fill in:
+
+- **Embedding Provider Name** — `aiWso2embeddingprovider`
+- **Result Type** — `ai:Wso2EmbeddingProvider` (auto-filled)
+
+![Create Embedding Provider filled](/img/genai/tutorials/hr-knowledge-base-rag/14-create-embedding-provider-filled.png)
+
+Click **Save**.
+
+#### 2.4.3 Pick (or Create) a Chunker
+
+Back on the Vector Knowledge Base form, the **Chunker** field defaults to `AUTO` — the runtime selects a chunker based on document type. For most HR text documents this is fine.
+
+If you want to control chunking explicitly, click **+ Create New Chunker**. The picker offers:
+
+- **Generic Recursive Chunker** — recursive splitting with configurable `maxChunkSize` and `maxOverlapSize`.
+- **Markdown Chunker** — preserves markdown structure.
+- **Html Chunker** — preserves HTML structure.
+
+![Select Chunker](/img/genai/tutorials/hr-knowledge-base-rag/15-chunker-picker.png)
+
+For this tutorial, leave the chunker at `AUTO`.
+
+#### 2.4.4 Save the Knowledge Base
+
+The Vector Knowledge Base form is now fully populated:
+
+- **Vector Store** — `aiInmemoryvectorstore`
+- **Embedding Model** — `aiWso2embeddingprovider`
+- **Chunker** — `AUTO`
+- **Knowledge Base Name** — `aiVectorknowledgebase`
+- **Result Type** — `ai:VectorKnowledgeBase`
+
+![Vector Knowledge Base filled](/img/genai/tutorials/hr-knowledge-base-rag/16-vector-knowledge-base-filled.png)
+
+Click **Save**. The left **Connections** tree now lists `aiInmemoryvectorstore`, `aiWso2embeddingprovider`, and `aiVectorknowledgebase` — these are reusable from any artifact in the project.
+
+### 2.5 Add the `ai : ingest` Node
+
+Click **+** below the previous node. The **Knowledge Bases** panel opens and lists `aiVectorknowledgebase` with its actions — **Ingest**, **Retrieve**, **Delete By Filter**. Hover **Ingest** — the description reads *"Indexes a collection of chunks. Converts each chunk to an embedding and stores it in the vector store, making the chunk searchable through the retriever."* Click it.
+
+![Ingest action just before click](/img/genai/tutorials/hr-knowledge-base-rag/17a-ingest-action-picker.png)
+
+The **ai : ingest** form opens. The **Documents** field expects an array of `Document` records. The expression editor exposes the record shape so you can confirm each chunk has the required fields:
+
+![Ingest record configuration](/img/genai/tutorials/hr-knowledge-base-rag/17-ingest-record-configuration.png)
+
+Set **Documents** to your loaded array `hrDocuments` and click **Save**.
+
+![ai:ingest filled](/img/genai/tutorials/hr-knowledge-base-rag/18-ai-ingest-filled.png)
+
+### 2.6 Review the Completed Ingestion Flow
+
+Your ingestion automation now contains:
+
+```
+Start → ai:load (hrDocuments) → ai:ingest → Error Handler
 ```
 
-The only explicit dependency you might add is for an external connector such as `ballerinax/ai.openai` (if you want to use OpenAI directly) or `ballerina/http` (for the HR API client). Those are pulled automatically when imported.
+![Completed automation flow](/img/genai/tutorials/hr-knowledge-base-rag/19-automation-flow-complete.png)
 
-## Step 2: Set Up Configuration
+Run the automation once (▶ **Run**) — it loads every file under `path`, chunks it, embeds it, and populates `aiInmemoryvectorstore`. Back on the project overview, you can see the Automation artifact connected to its embedding provider:
 
-If you are using the WSO2 default model provider, run the VS Code command **"Configure default WSO2 Model Provider"** and it will add a `[ballerina.ai]` block to `Config.toml` for you. Otherwise, add an OpenAI key:
+![Project overview after automation](/img/genai/tutorials/hr-knowledge-base-rag/20-project-after-automation.png)
 
-```toml
-# Config.toml
-openAiApiKey = "<your-openai-api-key>"
-hrApiUrl = "http://localhost:8080/api/hr"
-```
-
-```ballerina
-// config.bal
-configurable string openAiApiKey = ?;
-configurable string hrApiUrl = ?;
-```
-
-## Step 3: Define Data Types
-
-```ballerina
-// types.bal
-type LeaveBalance record {|
-    string employeeId;
-    string employeeName;
-    int annualLeave;
-    int sickLeave;
-    int personalLeave;
-    int carryOver;
-|};
-
-type EmployeeInfo record {|
-    string employeeId;
-    string name;
-    string department;
-    string manager;
-    string email;
-    string startDate;
-|};
-
-type LeaveRequestInput record {|
-    string employeeId;
-    string leaveType;
-    string startDate;
-    string endDate;
-    string reason;
-|};
-```
-
-## Step 4: Build the Knowledge Base
-
-The `ballerina/ai` module provides everything you need for RAG: an in-memory vector store, a text data loader, and a vector knowledge base. For production, you can swap in an external vector store such as Pinecone, Weaviate, Milvus, or pgvector by importing the corresponding `ballerinax/ai.*` connector.
-
-```ballerina
-// knowledge_base.bal
-import ballerina/ai;
-
-final ai:VectorStore vectorStore = check new ai:InMemoryVectorStore();
-final ai:EmbeddingProvider embeddingProvider = check ai:getDefaultEmbeddingProvider();
-final ai:KnowledgeBase knowledgeBase =
-        new ai:VectorKnowledgeBase(vectorStore, embeddingProvider);
-final ai:ModelProvider modelProvider = check ai:getDefaultModelProvider();
-
-# Load an HR policy document from disk and ingest it into the knowledge base.
-#
-# + filePath - Absolute or workspace-relative path to the document
-# + return - `()` on success, or an error if the file cannot be loaded or ingested
-public function ingestPolicyDocument(string filePath) returns error? {
-    ai:DataLoader loader = check new ai:TextDataLoader(filePath);
-    ai:Document|ai:Document[] docs = check loader.load();
-    check knowledgeBase.ingest(docs);
-}
-```
-
-:::tip Swap in a production vector store
-To use Pinecone instead of the in-memory store, change two lines:
-
-```ballerina
-import ballerinax/ai.pinecone;
-
-configurable string pineconeServiceUrl = ?;
-configurable string pineconeApiKey = ?;
-
-final ai:VectorStore vectorStore =
-        check new pinecone:VectorStore(pineconeServiceUrl, pineconeApiKey);
-```
-The rest of the code does not change — `ai:VectorKnowledgeBase` works with any `ai:VectorStore`.
+:::tip In-Memory store is volatile
+Restart the runtime and you must re-ingest. For a persistent store, swap the vector store for Pinecone, Milvus, Pgvector, or Weaviate; the rest of the flow stays the same.
 :::
 
-## Step 5: Define Agent Tools
+## Step 3: Create the Query HTTP Service
 
-The agent needs four tools: one that searches the knowledge base (this is the RAG-in-a-tool pattern), and three that talk to the HR backend. Each tool is an `isolated` function annotated with `@ai:AgentTool`. Descriptions come from doc comments — there is no `@ai:Param` annotation.
+### 3.1 Add the HTTP Service Artifact
 
-```ballerina
-// tools.bal
-import ballerina/ai;
-import ballerina/http;
+Go back to the project overview and click **+ Add Artifact** again. Under **Integration as API**, pick **HTTP Service**.
 
-final http:Client hrApi = check new (hrApiUrl);
+In the configuration screen, accept the default **Listener** (`httpDefaultListener`) and set **Base Path** to `/api/v1`.
 
-# Search the HR knowledge base for policies, benefits, and procedures.
-# Use this for any question about leave policies, benefits, code of conduct,
-# or onboarding. Returns an answer grounded in the company's HR documents.
-#
-# + question - The employee's HR question
-# + return - A natural-language answer grounded in retrieved policy chunks
-@ai:AgentTool
-isolated function searchHrKnowledgeBase(string question) returns string|error {
-    ai:QueryMatch[] matches = check knowledgeBase.retrieve(question, 5);
-    ai:Chunk[] context = from ai:QueryMatch m in matches select m.chunk;
-    ai:ChatUserMessage augmented = ai:augmentUserQuery(context, question);
-    ai:ChatAssistantMessage answer = check modelProvider->chat(augmented);
-    return answer.content ?: "No answer could be generated from the knowledge base.";
-}
+![HTTP Service configured](/img/genai/tutorials/hr-knowledge-base-rag/21-http-service-config.png)
 
-# Retrieve the current leave balance for an employee.
-# Use this when an employee asks how many leave days they have remaining.
-#
-# + employeeId - Employee ID in the format `EMP-XXXXX`
-# + return - The employee's leave balance, or an error if not found
-@ai:AgentTool
-isolated function getLeaveBalance(string employeeId) returns LeaveBalance|error {
-    return hrApi->get(string `/leave-balance/${employeeId}`);
-}
+### 3.2 Add the `query` Resource
 
-# Look up an employee by name or ID.
-# Returns department, manager, and contact details.
-#
-# + query - Employee name or employee ID
-# + return - Employee information
-@ai:AgentTool
-isolated function lookupEmployee(string query) returns EmployeeInfo|error {
-    return hrApi->get(string `/employees?search=${query}`);
-}
+Click **+ Add Resource** and fill in:
 
-# Submit a leave request on behalf of an employee.
-# Use this only when the employee has explicitly confirmed all leave details.
-#
-# + request - The leave request payload
-# + return - The created leave request response
-@ai:AgentTool
-isolated function submitLeaveRequest(LeaveRequestInput request) returns json|error {
-    return hrApi->post("/leave-requests", request);
-}
+- **HTTP Method** — `POST`
+- **Resource Path** — `query`
+- **Define Payload** — accept JSON (the body becomes `userQuery`)
+- **Responses** — `201` returning `json`, `500` returning `error`
+
+![Add Resource configuration](/img/genai/tutorials/hr-knowledge-base-rag/22-add-resource-form.png)
+
+Click **Save** and open the resource flow.
+
+### 3.3 Retrieve Relevant Chunks
+
+Click the **+** in the resource flow. The **Knowledge Bases** panel opens with `aiVectorknowledgebase` (the same connection you created in the Automation) and its three actions. Click **Retrieve**.
+
+![Retrieve action just before click](/img/genai/tutorials/hr-knowledge-base-rag/22a-retrieve-action-picker.png)
+
+The **ai : retrieve** form opens — it runs a vector search against your HR knowledge base. Fill in:
+
+- **Query** — `userQuery` (the request payload)
+- **Result** — `queryMatch`
+- **Result Type** — `ai:QueryMatch[]` (auto-filled)
+
+![ai:retrieve filled](/img/genai/tutorials/hr-knowledge-base-rag/23-ai-retrieve-filled.png)
+
+Click **Save**.
+
+### 3.4 Augment the User Query
+
+Click **+** below `ai:retrieve` and pick **`ai : augmentUserQuery`**. It packages the employee's question together with the retrieved chunks into a `ChatUserMessage` ready for the LLM — no manual prompt-templating required. Fill in:
+
+- **Context** — `[queryMatch]` (the array of matches from the previous node)
+- **Query** — `userQuery` (the employee's original question)
+- **Result** — `aiChatusermessage`
+- **Result Type** — `ai:ChatUserMessage` (auto-filled)
+
+![ai:augmentUserQuery filled](/img/genai/tutorials/hr-knowledge-base-rag/24-ai-augment-filled.png)
+
+Click **Save**.
+
+### 3.5 Add a Model Provider
+
+In the AI section of the palette, click **Model Provider** and add the WSO2 default provider. Fill in:
+
+- **Model Provider Name** — `aiWso2modelprovider`
+- **Result Type** — `ai:Wso2ModelProvider` (auto-filled)
+
+![Model Provider filled](/img/genai/tutorials/hr-knowledge-base-rag/25-model-provider-filled.png)
+
+Click **Save**. The new connection appears in the **Connections** tree.
+
+### 3.6 Generate the Answer
+
+Click **+** below `ai:augmentUserQuery`. The **Model Providers** panel opens and lists `aiWso2modelprovider` with two actions — **Chat** and **Generate**. Hover **Generate** — the description reads *"Sends a chat request to the model and generates a value that belongs to the type corresponding to the type descriptor argument."* Click it.
+
+![Generate action just before click](/img/genai/tutorials/hr-knowledge-base-rag/25a-generate-action-picker.png)
+
+The **generate** form opens. Fill in:
+
+- **Prompt** (Expression mode) —
+  ```
+  check aiChatusermessage.content.ensureType()
+  ```
+- **Result** — `result`
+- **Expected Type** — `string`
+
+![ai:generate filled](/img/genai/tutorials/hr-knowledge-base-rag/26-ai-generate-filled.png)
+
+Click **Save**.
+
+### 3.7 Return the Answer
+
+Add a **Return** node (under **Control**) and return `result`. The completed query flow is:
+
+```
+Start → ai:retrieve (queryMatch)
+      → ai:augmentUserQuery (aiChatusermessage)
+      → ai:generate (result)
+      → Return result
+      → Error Handler
 ```
 
-:::info The RAG-in-a-tool pattern
-The `searchHrKnowledgeBase` tool is the canonical way to combine RAG with an AI Agent. Inside the tool, you `retrieve` relevant chunks, call `ai:augmentUserQuery` to build a grounded user message, and then ask the model to answer. The agent decides *when* to call this tool based on its doc comment.
-:::
+![Completed query flow](/img/genai/tutorials/hr-knowledge-base-rag/27-query-flow-complete.png)
 
-## Step 6: Create the AI Agent
+## Step 4: Run and Try It
 
-```ballerina
-// agent.bal
-import ballerina/ai;
+1. Make sure the Automation has been run at least once so the in-memory store is populated with your HR documents.
+2. Click **▶ Run** on the integration to start the HTTP Service.
+3. Use the built-in **Try It** panel (top-right of the resource view) or `curl`:
 
-final ai:Agent hrAgent = check new (
-    systemPrompt = {
-        role: "HR Knowledge Base Assistant",
-        instructions: string `You are an HR Knowledge Base Assistant for the company.
-
-Role:
-- Help employees find answers to HR-related questions about policies, benefits, leave, and procedures.
-- Provide accurate information grounded in the company's actual HR documents.
-
-Tool usage:
-- ALWAYS call searchHrKnowledgeBase for questions about policies, benefits, or procedures. Never guess.
-- Call getLeaveBalance to check remaining leave days.
-- Call lookupEmployee to find employee details, managers, or contact information.
-- Call submitLeaveRequest only when the employee has confirmed all leave details.
-
-Guidelines:
-- Cite the source when referencing a specific policy.
-- If the answer is not in the knowledge base, clearly state that and suggest contacting HR directly.
-- Be professional, empathetic, and concise.
-- For sensitive topics (termination, disciplinary actions, salary), advise the employee to speak with their HR representative.
-- Never disclose another employee's personal information, leave balance, or salary.`
-    },
-    tools = [searchHrKnowledgeBase, getLeaveBalance, lookupEmployee, submitLeaveRequest],
-    model = modelProvider
-);
-```
-
-## Step 7: Expose as a Chat Service
-
-Use `ai:Listener` to get built-in session memory and the standard `ai:ChatReqMessage` / `ai:ChatRespMessage` payloads. The `sessionId` from each request is what drives per-user conversation history.
-
-```ballerina
-// service.bal
-import ballerina/ai;
-
-service /hr on new ai:Listener(8090) {
-
-    # Chat endpoint for employee HR questions.
-    #
-    # + request - The incoming chat request with a session ID and user message
-    # + return - The agent's response, or an error
-    resource function post chat(ai:ChatReqMessage request)
-            returns ai:ChatRespMessage|error {
-        string response = check hrAgent.run(request.message, request.sessionId);
-        return {message: response};
-    }
-}
-```
-
-You can add a separate plain HTTP service for document ingestion if you want to trigger it over the network; for this tutorial we expose a simple function and call it from `main`.
-
-```ballerina
-// main.bal
-import ballerina/io;
-
-public function main() returns error? {
-    // Ingest a few HR documents on startup.
-    check ingestPolicyDocument("./docs/leave-policy.pdf");
-    check ingestPolicyDocument("./docs/benefits-guide.pdf");
-    check ingestPolicyDocument("./docs/code-of-conduct.pdf");
-
-    io:println("HR knowledge base ingestion complete. Chat service ready on :8090.");
-}
-```
-
-## Step 8: Run and Test
-
-1. Start the service:
    ```bash
-   bal run
-   ```
-
-2. Ask HR questions. The request body matches `ai:ChatReqMessage`:
-   ```bash
-   curl -X POST http://localhost:8090/hr/chat \
+   curl -X POST http://localhost:8080/api/v1/query \
      -H "Content-Type: application/json" \
-     -d '{"sessionId": "emp-10042", "message": "How many annual leave days do I get per year?"}'
+     -d '{"userQuery": "What is the leave policy for new joiners?"}'
    ```
 
-3. Continue the conversation using the same `sessionId` — the `ai:Listener` keeps conversation state in process:
-   ```bash
-   curl -X POST http://localhost:8090/hr/chat \
-     -H "Content-Type: application/json" \
-     -d '{"sessionId": "emp-10042", "message": "And what about sick leave?"}'
-   ```
-
-4. Ask a question that triggers a backend tool call:
-   ```bash
-   curl -X POST http://localhost:8090/hr/chat \
-     -H "Content-Type: application/json" \
-     -d '{"sessionId": "emp-10042", "message": "How many sick days does EMP-10042 have left?"}'
-   ```
+The response is the LLM's answer grounded in the chunks retrieved from your HR knowledge base.
 
 ## What You Built
 
-You now have an HR knowledge base AI Agent that:
-- Ingests HR policy documents into an `ai:VectorKnowledgeBase` using the default embedding provider
-- Retrieves relevant policy sections using semantic search wrapped as an agent tool
-- Generates accurate, grounded answers using `ai:augmentUserQuery`
-- Checks employee leave balances and submits leave requests through a plain HTTP client
-- Maintains conversation context across turns via `ai:Listener`
-- Protects sensitive employee information through its system prompt
+| Component | Where | Purpose |
+|---|---|---|
+| `path` (Configurable) | Configurations | Folder to ingest |
+| `textDocumentLoader` (Data Loader) | Automation | Reads HR files from `path` |
+| `aiInmemoryvectorstore` (Vector Store) | Connections | Stores embeddings |
+| `aiWso2embeddingprovider` (Embedding Model) | Connections | Generates vector representations |
+| `aiVectorknowledgebase` (Vector Knowledge Base) | Connections | Combines store + embedder + chunker |
+| `aiWso2modelprovider` (Model Provider) | Connections | Calls the LLM |
+| `ai:load` / `ai:ingest` | Automation | Loads, chunks, embeds, and writes documents |
+| `ai:retrieve` | HTTP Service | Top-K vector search |
+| `ai:augmentUserQuery` | HTTP Service | Builds the grounded chat message |
+| `ai:generate` | HTTP Service | Generates the typed answer |
+
+You now have a fully visual HR RAG pipeline that grounds an LLM in your actual policies — no glue code, and every connection is reusable across other artifacts in the same project.
 
 ## What's Next
 
-- [RAG Knowledge Base](rag-knowledge-base.md) — Explore advanced RAG techniques
-- [Chunking & Embedding](/docs/genai/rag/chunking-embedding) — Tune chunking strategies for policy documents
-- [Memory Configuration](/docs/genai/agents/memory-configuration) — Configure persistent memory for long conversations
-- [AI Governance and Security](/docs/genai/reference/ai-governance) — Add governance and audit logging
+- [Components → Vector Stores](/docs/genai/develop/components/vector-stores) — Swap the in-memory store for a persistent backend (Pinecone, Milvus, Pgvector, Weaviate).
+- [Components → Chunkers](/docs/genai/develop/components/chunkers) — Tune chunk size and overlap, or plug in a custom chunker.
+- [RAG → The Query Flow](/docs/genai/develop/rag/overview#the-query-flow) — Customize retrieval (top-K, filters, hybrid search).
+- [AI Customer Support Agent](ai-customer-support.md) — Reuse `aiVectorknowledgebase` from a chat agent as a tool.
+- [Multi-Agent Workflow](multi-agent-workflow.md) — Combine RAG with other agents in a larger workflow.

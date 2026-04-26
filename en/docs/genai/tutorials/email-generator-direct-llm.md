@@ -97,7 +97,7 @@ Click **Default Model Provider (WSO2)**. In the configuration form:
 
 ![Model Provider configuration with name emailGenerator.](/img/genai/develop/direct-llm/07-model-provider-config.png)
 
-> **Tip:** The Default WSO2 Model Provider does not require an API key. For a different provider see [Adding a Model Provider](/docs/genai/develop/direct-llm/adding-a-model-provider).
+> **Tip:** The Default WSO2 Model Provider does not require an API key. For a different provider see [Adding a Model Provider](/docs/genai/develop/direct-llm/overview#adding-a-model-provider).
 
 ---
 
@@ -137,7 +137,7 @@ Click **Save**.
 
 ![emailGenerator > generate form with prompt, Result generatedEmail, and Expected Type EmailGenerateResponse.](/img/genai/develop/direct-llm/10-generate-config.png)
 
-The Expected Type is what makes the response come back structured. Without it you'd get a string and have to parse JSON yourself; with it, you get a typed `EmailGenerateResponse` directly. (See [Binding & Typed Responses](/docs/genai/develop/direct-llm/binding-and-typed-responses) for more.)
+The Expected Type is what makes the response come back structured. Without it you'd get a string and have to parse JSON yourself; with it, you get a typed `EmailGenerateResponse` directly. (See [Binding Typed Responses](/docs/genai/develop/direct-llm/overview#binding-typed-responses) for more.)
 
 ### Step 3.3 — Add a Return Step
 
@@ -197,7 +197,7 @@ The LLM produced a complete, professionally written email — subject and body �
 
 ## What's Next
 
-- **[Adding a Model Provider](/docs/genai/develop/direct-llm/adding-a-model-provider)** — switch the LLM provider for production.
-- **[Prompts & Interpolation](/docs/genai/develop/direct-llm/prompts-and-interpolation)** — interpolate the request fields (`${recipientName}`, `${timeSlots}`) directly into the prompt instead of asking the LLM to invent them.
+- **[Components → Model Providers](/docs/genai/develop/components/model-providers)** — switch the LLM provider for production (init params, supported models, advanced HTTP configs for OpenAI, Azure, Anthropic, Vertex, Mistral, DeepSeek, Ollama, OpenRouter).
+- **[Writing the Prompt](/docs/genai/develop/direct-llm/overview#writing-the-prompt)** — interpolate the request fields (`${recipientName}`, `${timeSlots}`) directly into the prompt instead of asking the LLM to invent them.
 - **[Natural Functions](/docs/genai/develop/natural-functions/overview)** — package this same prompt as a reusable typed function.
 - **[Review Summarizer with Natural Function](review-summarizer-natural-function.md)** — a similar tutorial built around natural functions.

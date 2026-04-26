@@ -87,4 +87,4 @@ A well-designed agent often uses all three: it remembers the conversation (memor
 
 - [What are Tools?](what-are-tools.md) — How an agent gets things done, not just remembers.
 - [What is RAG?](what-is-rag.md) — Giving an agent access to a body of knowledge beyond the conversation.
-- [Adding Memory to an Agent](/docs/genai/develop/agents/adding-memory) — Configure memory in WSO2 Integrator.
+- [Memory](/docs/genai/develop/agents/memory) — Configure memory in WSO2 Integrator.

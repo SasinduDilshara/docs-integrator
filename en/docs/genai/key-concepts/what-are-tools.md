@@ -91,4 +91,4 @@ Mix and match freely. An agent can use a function tool, an MCP-provided tool, an
 
 - [What is AI Agent Memory?](what-is-agent-memory.md) — How an agent remembers context across turns.
 - [What is MCP?](what-is-mcp.md) — A protocol for sharing tools between agents and AI applications.
-- [Adding Tools to an Agent](/docs/genai/develop/agents/adding-tools) — Build tools in WSO2 Integrator.
+- [Tools](/docs/genai/develop/agents/tools) — Build tools in WSO2 Integrator.

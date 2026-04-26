@@ -9,7 +9,7 @@ description: Set up and use Ballerina Copilot for AI-assisted integration develo
 Ballerina Copilot is the AI-powered coding assistant that ships with the WSO2 Integrator extension for VS Code. It helps you write integration code faster by suggesting completions inline, generating Ballerina code from natural-language descriptions, and configuring the default WSO2 Model Provider for your project.
 
 :::info This page is about AI helping YOU code
-Ballerina Copilot assists you while you write code. For building AI-powered integrations (AI Agents, RAG, MCP), see the [GenAI develop guides](/docs/genai/develop/direct-llm).
+Ballerina Copilot assists you while you write code. For building AI-powered integrations (AI Agents, RAG, MCP), see the [GenAI develop guides](/docs/genai/develop/direct-llm/overview).
 :::
 
 ## Prerequisites

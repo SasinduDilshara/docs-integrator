@@ -86,5 +86,5 @@ A few common misconceptions:
 
 - [What are Tools?](what-are-tools.md) — How tools work in general; MCP is one way to deliver them.
 - [What is an AI Agent?](what-is-ai-agent.md) — The natural consumer of MCP servers.
-- [Creating an MCP Server](/docs/genai/develop/mcp/creating-mcp-server) — Expose your integrations as MCP tools.
-- [Building AI Agents with MCP Servers](/docs/genai/develop/mcp/agents-with-mcp) — Use MCP tools from inside an agent.
+- [Exposing a Service as MCP](/docs/genai/develop/mcp/exposing-as-mcp) — Expose your integrations as MCP tools.
+- [Consuming MCP from an Agent](/docs/genai/develop/mcp/consuming-mcp-from-agent) — Use MCP tools from inside an agent.

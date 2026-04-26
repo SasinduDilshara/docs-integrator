@@ -151,4 +151,4 @@ There's nothing AI-specific about the rest of the integration. You get to keep a
 
 - **[Typed Return Inference](typed-return-inference.md)** — how the function's return type drives the prompt's output shape.
 - **[Calling from a Flow](calling-from-a-flow.md)** — use the natural function from a resource or automation.
-- **[Prompts & Interpolation](/docs/genai/develop/direct-llm/prompts-and-interpolation)** — extra prompt-writing tips that apply here too.
+- **[Writing the Prompt](/docs/genai/develop/direct-llm/overview#writing-the-prompt)** — extra prompt-writing tips that apply here too.

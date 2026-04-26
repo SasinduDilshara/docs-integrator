@@ -56,6 +56,34 @@ When you finish the **AI Chat Agent Wizard**, BI generates this in the project:
 
 You can edit any of these later, but the wizard wires up the common shape so you don't have to.
 
+### Listeners Reference
+
+After the wizard runs, the project sidebar's **Listeners** section grows with the agent's listener. As you add more services (HTTP, MCP), each gets its own:
+
+| Listener | Type | Created by | Used for |
+|---|---|---|---|
+| **chatAgentListener** | `ai:Listener` | AI Chat Agent Wizard | All agent services. Speaks the AI chat protocol — `ai:ChatReqMessage` in, `ai:ChatRespMessage` out. Handles per-session memory routing. |
+| **httpDefaultListener** | `http:Listener` | First HTTP Service artifact | Plain HTTP services. Use this listener for RAG query endpoints, health checks, ingestion endpoints. |
+| **mcpListener** | `mcp:Listener` | First MCP Service artifact | MCP services. Implements the Streamable HTTP variant of the Model Context Protocol. |
+
+Click a listener in the sidebar to edit its configuration (port, host, base path, TLS, listener-level auth). Multiple services can share one listener — you don't need a new listener per artifact.
+
+## Multi-Artifact Project View
+
+A real project usually has more than one artifact: an agent for chat, plus an HTTP service for batch operations or RAG queries, plus an MCP service for assistants. The project Overview canvas visualizes all of them at once with the connections each one uses:
+
+![Project Overview showing the Design canvas with two services side by side. Top row: chatAgentListener (ai:Listener) connected to AI Agent Service /blogReviewer connected to wso2ModelProvider (Model Provider). Bottom row: httpDefaultListener (http:Listener) connected to /api/v1 with [POST] /test resource, connected to aiWso2embeddingp... (Embedding Provider). Right side: Deployment Options (Deploy to WSO2 Cloud, Deploy with Docker, Deploy on a VM) and Integration Control Plane (Enable ICP monitoring, Publish to local ICP). Top-right buttons: Configure, Run, Debug.](/img/genai/develop/shared/14-multi-artifact-project-canvas.png)
+
+Each artifact lives independently — they're not coupled by the canvas. The canvas just shows you who-connects-to-whom so you can spot orphan connections and shared providers at a glance.
+
+The top-right toolbar has three actions:
+
+| Action | What it does |
+|---|---|
+| **Configure** | Opens the project's `Config.toml` editor for editing configurables (API keys, endpoints, etc.). |
+| **Run** | Compiles and runs the integration with `bal run --experimental` (the experimental flag is added automatically when natural functions are present). |
+| **Debug** | Same as Run but attaches a debugger and shows breakpoint UI in the editor. |
+
 ## Generated Ballerina
 
 For an agent named `blogReviewer` with the default WSO2 model provider, the generated source is roughly:
@@ -82,6 +110,27 @@ service /blogReviewer on chatAgentListener {
 ```
 
 You don't write this by hand, but the surface is intentionally small. If you switch to source view in BI, what you see is exactly what you'd expect.
+
+## Try-It and Run Experience
+
+The agent canvas's top-right buttons are how you exercise the agent without leaving BI:
+
+| Button | What it does |
+|---|---|
+| **Tracing: Off / On** | Toggles OpenTelemetry tracing for this agent. When on, every conversation produces a span tree visible in the Tracing view. See [Observability](observability.md). |
+| **Chat** | Opens an in-IDE chat surface — a small panel where you type a message, send it, and see the agent's response inline. The chat reuses a session ID across turns so memory works. Iterating on the system prompt while keeping the same conversation thread is the typical use. |
+
+For project-level run controls (Configure / Run / Debug), see the [Multi-Artifact Project View](#multi-artifact-project-view) above. The Run button starts the integration; Debug starts it with the debugger attached so you can set breakpoints inside tools and natural-function bodies.
+
+## Common Pitfalls
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Agent doesn't pick the tool you expected. | Tool description is vague, or the system prompt doesn't mention when to use the tool. | Tighten the tool description; add a one-liner trigger condition in Instructions. |
+| Agent's first response is empty, second is fine. | The default WSO2 Model Provider isn't fully signed in yet. | Run **Ballerina: Configure default WSO2 model provider** from the Command Palette. |
+| Agent drifts off-topic over a long conversation. | Memory is full and trimming is dropping the system prompt context. | Lower **Max Messages Per Key** (MSSQL) or use a larger-context model. |
+| Same input produces wildly different responses. | Temperature is high on the model provider. | Lower temperature on the provider's Advanced Configurations. |
+| `bal run` fails with "default model provider not configured". | `wso2aiKey` missing from `Config.toml`. | Run **Configure default WSO2 model provider** again. |
 
 ## What's Next
 

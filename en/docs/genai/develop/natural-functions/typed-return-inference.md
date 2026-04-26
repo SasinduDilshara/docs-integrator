@@ -20,7 +20,7 @@ You write the type once. Everything else flows from there.
 
 ## The Same Type Choices as `generate`
 
-The full set of return types you can use is the same as for [direct LLM calls](/docs/genai/develop/direct-llm/binding-and-typed-responses):
+The full set of return types you can use is the same as for [direct LLM calls](/docs/genai/develop/direct-llm/overview#binding-typed-responses):
 
 | Return type | What you get back |
 |---|---|
@@ -154,4 +154,4 @@ The result you receive is a `Triage` record you can branch on, return, persist, 
 
 - **[The `natural { }` block](the-natural-block.md)** — back to the body of the function.
 - **[Calling from a Flow](calling-from-a-flow.md)** — invoke the function from a resource or automation.
-- **[Binding & Typed Responses](/docs/genai/develop/direct-llm/binding-and-typed-responses)** — same idea applied to direct LLM calls.
+- **[Binding Typed Responses](/docs/genai/develop/direct-llm/overview#binding-typed-responses)** — same idea applied to direct LLM calls.

@@ -142,4 +142,4 @@ You wire those together once, and from then on your integration can answer quest
 
 - [What is an LLM?](what-is-llm.md) — The model that produces the final answer.
 - [What is an AI Agent?](what-is-ai-agent.md) — Agents can use RAG as one of their tools.
-- [RAG: Knowledge Bases](/docs/genai/develop/rag/chunking-documents) — Build a RAG pipeline in WSO2 Integrator.
+- [RAG](/docs/genai/develop/rag/overview) — Build a RAG pipeline in WSO2 Integrator.

@@ -94,4 +94,4 @@ It is easy to assume an agent will figure things out by itself. In practice:
 
 - [What are Tools?](what-are-tools.md) — How an agent learns to take actions.
 - [What is AI Agent Memory?](what-is-agent-memory.md) — How an agent remembers a conversation.
-- [Creating an AI Agent](/docs/genai/develop/agents/creating-agent) — Build one in WSO2 Integrator.
+- [Creating an AI Agent](/docs/genai/develop/agents/creating-an-agent) — Build one in WSO2 Integrator.
