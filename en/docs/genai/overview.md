@@ -26,14 +26,16 @@ Build AI-powered integrations with WSO2 Integrator — direct LLM calls, natural
 
 ## Develop AI Applications
 
-- **[Direct LLM Calls](develop/direct-llm.md)** — Call any LLM through `ai:ModelProvider`
-- **[Natural Functions](develop/natural-functions/defining.md)** — Replace hand-written logic with typed `natural { ... }` expressions
-- **[RAG](develop/rag/chunking-documents.md)** — Ingest documents into a knowledge base and query them with grounded context
-- **[AI Agents](develop/agents/creating-agent.md)** — Build agents that reason over tools, memory, and external systems
-- **[MCP Integration](develop/mcp/creating-mcp-server.md)** — Expose Ballerina services as MCP tools, or consume MCP servers from an agent
+- **[Direct LLM Calls](develop/direct-llm/overview.md)** — Model providers, the `generate` node, prompts, and typed responses
+- **[Natural Functions](develop/natural-functions/overview.md)** — Typed Ballerina functions whose body is plain English
+- **[RAG](develop/rag/overview.md)** — Knowledge bases, chunkers, embeddings, vector stores, and query nodes
+- **[AI Agents](develop/agents/overview.md)** — The AI Chat Agent Wizard, tools, memory, observability, and evaluations
+- **[MCP Integration](develop/mcp/overview.md)** — Expose services as MCP servers or consume MCP tools from an agent
 
 ## Tutorials
 
+- **[Email Generator with Direct LLM](tutorials/email-generator-direct-llm.md)**
+- **[Review Summarizer with Natural Function](tutorials/review-summarizer-natural-function.md)**
 - **[HR Knowledge Base Agent with RAG](tutorials/hr-knowledge-base-rag.md)**
 - **[Customer Care Agent with MCP](tutorials/customer-care-mcp.md)**
 - **[IT Helpdesk Chatbot with Persistent Memory](tutorials/it-helpdesk-chatbot.md)**

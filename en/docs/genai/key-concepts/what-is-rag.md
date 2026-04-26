@@ -1,110 +1,145 @@
 ---
 sidebar_position: 7
 title: What is RAG?
-description: Understand retrieval-augmented generation -- how to ground LLM responses in your own data.
+description: A plain-English explanation of Retrieval-Augmented Generation — how to make an AI answer questions about your own documents.
 ---
 
 # What is RAG?
 
-Retrieval-Augmented Generation (RAG) combines the reasoning power of large language models with the accuracy of your own data. Instead of relying solely on the LLM's training data, a RAG pipeline retrieves relevant documents from a knowledge base and passes them as context to the model before generating a response.
+**RAG** stands for **Retrieval-Augmented Generation**. In plain English, it's a way of letting an [LLM](what-is-llm.md) answer questions about *your* documents — files, manuals, policies, knowledge-base articles — even though the LLM was never trained on them.
 
-## Why RAG?
+If you have ever wished ChatGPT could answer questions using your company's HR handbook, your product documentation, or last quarter's reports, RAG is the technique that makes that possible.
 
-LLMs have three key limitations that RAG addresses:
+## The Problem RAG Solves
 
-| Limitation | How RAG Solves It |
-|------------|-------------------|
-| **Knowledge cutoff** -- Training data has a fixed date | RAG retrieves up-to-date documents from your knowledge base |
-| **Hallucination** -- Models can generate plausible but incorrect information | RAG grounds responses in actual documents |
-| **Domain specificity** -- General models lack deep knowledge of your data | RAG provides your proprietary data as context |
+An LLM is trained on a huge slice of public text. It does *not* know:
 
-## How RAG Works
+- Your company's internal policies.
+- The contents of any document you have not shown it.
+- Anything that happened after its training cutoff.
 
-A RAG pipeline has two phases: **ingestion** (offline) and **querying** (online).
+You could try fixing this by pasting all your documents into the prompt, but most companies have far more documentation than fits in any model's context window. RAG is the workaround: instead of giving the model **everything**, give it just **the few passages that are most likely to answer this specific question**.
 
-### Ingestion: Preparing Your Data
-
-Documents are split into chunks, converted to vector embeddings, and stored in a vector database.
+## The Idea in One Picture
 
 ```
-Documents  -->  Chunking  -->  Embedding  -->  Vector Store
-(PDF, HTML,    (Split into    (Convert to    (Store for
- JSON, etc.)    passages)      vectors)       similarity search)
+                    ┌──────────────────┐
+   user's question  │                  │  the right
+   ───────────────► │  Find the most   │ ─── few passages ───►  LLM  ───►  answer
+                    │  relevant bits   │
+                    │  of my documents │
+                    └──────────────────┘
+                              ▲
+                              │
+                       my big pile
+                       of documents
 ```
 
-### Querying: Answering Questions
+Two halves: a **retrieval** half that searches your documents for whatever is relevant to the question, and a **generation** half that hands those passages to the LLM along with the question. The LLM produces a fluent answer, grounded in your actual documents instead of in whatever it happens to remember.
 
-When a user asks a question, it is embedded and compared against stored vectors to find relevant chunks, which are then passed to the LLM.
+## Why Not Just Ctrl+F?
+
+Plain keyword search is not enough. People ask questions in their own words, and the right document might not contain those exact words.
+
+> *"How long do I get to settle in before I start losing PTO?"*
+
+A keyword search for `"settle in"` and `"PTO"` will probably miss the policy that uses the phrase *"probationary period"* and *"paid time off"*.
+
+RAG sidesteps this by searching on **meaning** instead of letters. It does this with two ideas:
+
+| Concept | Plain-English meaning |
+|---|---|
+| **Embedding** | A way to turn a piece of text into a list of numbers (a vector) so that pieces with similar *meaning* end up near each other in number-space, even if they use different words. |
+| **Vector store** | A database designed to find vectors that are close to each other very quickly. |
+
+You convert every chunk of every document into a vector once, store them, and then at query time you convert the user's question into a vector too and look for the nearest matches. Result: *"settle in"* and *"probationary period"* end up near each other.
+
+## How a RAG System Gets Built
+
+A RAG pipeline has two phases. They happen at different times.
+
+### Phase 1 — Ingestion (done in advance)
+
+You take your documents and prepare them for fast search:
 
 ```
-User Query  -->  Embed Query  -->  Vector Search  -->  LLM + Context  -->  Answer
-                                  (Find similar      (Generate answer
-                                   chunks)            from context)
+your documents  ─►  Chunking  ─►  Embedding  ─►  Vector Store
+                    (split into     (turn each       (save the
+                     smaller          chunk into      vectors so
+                     passages)        a vector)       we can search them)
 ```
 
-## Key Concepts
+- **Chunking** — Documents are too big to embed whole, so you split them into pieces. Usually a paragraph or two each.
+- **Embedding** — Each piece is turned into a vector by an *embedding model* (a small AI model that specialises in this).
+- **Storing** — The vectors go into a vector store. From now on, you can ask *"give me the chunks closest to this query"* and it answers in milliseconds.
 
-### Chunking
+You only do this once per document. If a document changes, you re-ingest it.
 
-Documents are split into smaller passages (chunks) that can be individually retrieved. Common strategies include:
+### Phase 2 — Querying (every time the user asks something)
 
-- **Fixed-size** -- Split by token or character count
-- **Paragraph-based** -- Split at natural paragraph boundaries
-- **Semantic** -- Group semantically related sentences together
-
-### Embedding
-
-Each chunk is converted into a vector (an array of numbers) that captures its semantic meaning. Similar content produces similar vectors, enabling semantic search.
-
-### Vector Stores
-
-Specialized databases that store embeddings and perform fast similarity search. WSO2 Integrator ships with an in-memory vector store for development and supports Pinecone, Weaviate, Milvus, and pgvector for production deployments.
-
-### Retrieval
-
-When a query arrives, it is embedded and compared against stored vectors to find the most relevant chunks (typically the top 3-10 matches).
-
-### Generation
-
-The retrieved chunks are assembled into a prompt context and passed to the LLM alongside the user's question. The LLM generates an answer grounded in the provided context.
-
-## RAG in WSO2 Integrator
-
-WSO2 Integrator provides a `VectorKnowledgeBase` that wires together a vector store and an embedding provider. You ingest documents once, then call `retrieve` and augment the user query for each question.
-
-```ballerina
-import ballerina/ai;
-
-final ai:VectorStore vectorStore = check new ai:InMemoryVectorStore();
-final ai:EmbeddingProvider embeddingProvider = check ai:getDefaultEmbeddingProvider();
-final ai:KnowledgeBase knowledgeBase =
-        new ai:VectorKnowledgeBase(vectorStore, embeddingProvider);
-final ai:ModelProvider modelProvider = check ai:getDefaultModelProvider();
-
-// Ingest documents into the knowledge base.
-ai:DataLoader loader = check new ai:TextDataLoader("./policy.md");
-ai:Document|ai:Document[] documents = check loader.load();
-check knowledgeBase.ingest(documents);
-
-// Answer a question using retrieved context.
-string query = "What is the return policy?";
-ai:QueryMatch[] matches = check knowledgeBase.retrieve(query, 10);
-ai:Chunk[] context = from ai:QueryMatch m in matches select m.chunk;
-ai:ChatUserMessage augmented = ai:augmentUserQuery(context, query);
-ai:ChatAssistantMessage response = check modelProvider->chat([augmented]);
 ```
+user's question  ─►  Embed the question  ─►  Vector search (top K matches)
+                                                       │
+                                                       ▼
+                                          ┌─────────────────────────┐
+                                          │ Send the question +     │
+                                          │ those K chunks to LLM   │
+                                          └─────────────────────────┘
+                                                       │
+                                                       ▼
+                                                    answer
+```
+
+- **Embed the query** — same kind of vector, same embedding model as the documents.
+- **Find the closest chunks** — typically the top 5 or 10. These are the passages most likely to contain the answer.
+- **Generate** — bundle the chunks and the question together and ask the LLM to answer using them.
+
+The result is a fluent answer that is grounded in your documents instead of in the model's training data.
+
+## What RAG Buys You
+
+| Without RAG | With RAG |
+|---|---|
+| Model only knows what was in its training data. | Model knows about anything you have ingested. |
+| Updating a fact requires retraining or fine-tuning. | Updating a fact means re-ingesting the changed document. |
+| Hallucination is hard to control — model just guesses. | You can ask the model to answer *only* from the retrieved chunks. |
+| Hard to show *where* an answer came from. | Easy: each retrieved chunk has a source. You can cite it. |
+
+That last point is often the biggest win for enterprise use cases. With RAG you can build an assistant that says *"Yes, you can carry over up to 5 days of leave (HR Handbook, section 4.3)"* — and you can link to the actual section, because the system knows which chunk it came from.
 
 ## RAG vs. Fine-Tuning
 
-| Approach | Best For | Data Requirements |
-|----------|----------|-------------------|
-| **RAG** | Dynamic knowledge, frequently updated data | Any amount of text |
-| **Fine-tuning** | Changing model behavior or style | Curated training examples |
-| **RAG + Fine-tuning** | Domain-specific behavior with dynamic knowledge | Both |
+People often ask which is better. They solve different problems.
+
+| Use RAG when… | Use fine-tuning when… |
+|---|---|
+| You want the model to know *facts* from your documents. | You want the model to *behave* differently — adopt a tone, follow a format, answer in a specific style. |
+| Your data changes (new policies, new content). | The behaviour you want is stable and not data-dependent. |
+| You want easy updates and citations. | You're comfortable retraining when things change. |
+
+For most "let an LLM answer questions about my data" use cases, the answer is RAG.
+
+## Where RAG Sits in WSO2 Integrator
+
+RAG isn't a single feature — it's a pipeline made of several pieces, each of which is a feature in WSO2 Integrator:
+
+- A **knowledge base** ties together a vector store and an embedding provider.
+- A **vector store** holds the embeddings (in-memory for development, or a real vector database for production).
+- An **embedding provider** generates the vectors (default WSO2-hosted, OpenAI, Azure, and others).
+- A **chunker** decides how documents get split, with sensible defaults.
+- A **data loader** reads documents in (PDF, Markdown, HTML, and more).
+- A **query node** in your flow performs the retrieval and hands the chunks to the LLM.
+
+You wire those together once, and from then on your integration can answer questions over your documents just like any other operation in your flow.
+
+## What RAG Is Not
+
+- **Not magic.** If a fact isn't in your documents, RAG won't conjure it up. It can only retrieve what you've ingested.
+- **Not a replacement for clean data.** Bad chunks (whole books in one chunk, or single words split across chunks) make for bad answers. Chunking matters.
+- **Not free.** Every query embeds the question, searches the vector store, then calls the LLM. There is real cost — though usually less than fine-tuning.
 
 ## What's Next
 
-- [Chunking Documents](/docs/genai/develop/rag/chunking-documents) -- Chunking strategies for RAG
-- [Generating Embeddings](/docs/genai/develop/rag/generating-embeddings) -- Embedding model selection
-- [Connecting to Vector Databases](/docs/genai/develop/rag/connecting-vector-dbs) -- Vector store setup
-- [RAG Querying](/docs/genai/develop/rag/rag-querying) -- Building the query pipeline
+- [What is an LLM?](what-is-llm.md) — The model that produces the final answer.
+- [What is an AI Agent?](what-is-ai-agent.md) — Agents can use RAG as one of their tools.
+- [RAG: Knowledge Bases](/docs/genai/develop/rag/chunking-documents) — Build a RAG pipeline in WSO2 Integrator.

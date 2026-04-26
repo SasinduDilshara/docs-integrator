@@ -1,69 +1,94 @@
 ---
 sidebar_position: 4
 title: What are Tools?
-description: Understand tools -- the bridge between AI agent reasoning and integration logic.
+description: A plain-English explanation of tools — the buttons that let an AI agent do things, not just talk.
 ---
 
 # What are Tools?
 
-Tools are Ballerina functions that an AI Agent can call during its reasoning loop. They are the bridge between the LLM's reasoning and your integration logic -- APIs, databases, services, and business rules.
+A **tool** is something an [AI agent](what-is-ai-agent.md) can use to do work in the real world. Looking up an order, querying a database, sending an email, calling an API — each of those is a tool.
 
-The LLM sees the tool's name, description, and parameter schema, then decides whether and how to call it. The LLM **never** executes code directly; it produces a structured tool call request, and the agent runtime executes the actual function safely.
+By itself, an LLM only produces text. Tools are how you turn that text-producer into something that can *act*. If the agent is the brain, tools are the hands.
 
-## How Tools Work
+## A Pocket Analogy
 
-A tool is an `isolated` Ballerina function annotated with `@ai:AgentTool`. The tool name, description, and parameter descriptions are all derived from the function signature and its Ballerina doc comment -- there is no separate metadata to maintain.
+Imagine you ask a smart friend to help you handle customer support emails. They are very capable, but they are sitting in another room. You hand them a folder with three small buttons taped to it:
 
-```ballerina
-import ballerina/ai;
+- A button labelled **"Look up customer by ID"**.
+- A button labelled **"Find recent orders"**.
+- A button labelled **"Open a support ticket"**.
 
-# Get the current weather for a city.
-#
-# + city - City name, e.g., "San Francisco"
-# + return - Temperature, conditions, and humidity for the city
-@ai:AgentTool
-isolated function getWeather(string city) returns json|error {
-    return check weatherApi->get(string `/weather/${city}`);
-}
-```
+Each button has a tiny note next to it explaining what it does and what to write on the slip you hand back. Your friend reads the customer's email, decides which button(s) they need, scribbles the input on a slip, and slides it under the door. Someone on your side presses the button for real and slides the result back. Your friend uses that result to write the reply.
 
-When a user asks "What's the weather in Tokyo?", the AI Agent's LLM reads the tool description, decides to call `getWeather` with `city: "Tokyo"`, and the runtime executes the function and returns the result to the LLM for response generation.
+That, in essence, is how tools work:
 
-## Tool Categories
+- The **LLM never runs the tool itself.** It just says *"call `lookupCustomer` with `customerId = 'C-1234'`"*.
+- The **integration runtime** is the one that actually presses the button — calls your function, hits your API, runs your query.
+- The **result** is sent back to the LLM, which uses it to decide what to do next.
+
+This separation is important. It means the LLM can never accidentally execute arbitrary code: it can only ask for tools you explicitly handed it.
+
+## What the LLM Sees
+
+For each tool, the LLM sees three things:
+
+| What | Why it matters |
+|---|---|
+| **Name** | Lets the LLM refer to the tool. (`lookupCustomer`) |
+| **Description** | Tells the LLM *what the tool does* and *when to use it*. This is the most important part — it is essentially the "instruction sticker" on the button. |
+| **Parameter shape** | Tells the LLM what inputs the tool needs, and what type each one is. |
+
+The LLM does **not** see how the tool is implemented. It does not see your code. It only sees the description and the parameter shape — the public face of the tool. That is why writing a clear description for each tool is the single most impactful thing you can do for agent quality.
+
+> *"Looks up a customer record by their numeric customer ID. Use this any time the user mentions a specific customer."* — clear, decisive, easy to use.
+>
+> *"Customer endpoint."* — almost useless. The LLM has no idea when to call this.
+
+## What Tools Look Like Inside WSO2 Integrator
+
+In WSO2 Integrator, tools are not a special new concept — they are just **regular functions** that you mark as available to the agent. You write them the way you write any other function: receive some inputs, do some work, return a result. The runtime takes care of:
+
+- Building the description from your function's documentation comment.
+- Building the parameter schema from the function's signature.
+- Running the function safely when the agent decides to call it.
+- Handing the return value back to the agent.
+
+Most of the time, "adding a tool to my agent" means writing a normal function and adding it to the agent's tools list.
+
+## Three Common Kinds of Tools
+
+It helps to think of tools in three categories:
 
 | Category | Purpose | Example |
-|----------|---------|---------|
-| **Data retrieval** | Read information from external systems | Look up customer records, search products |
-| **Action tools** | Perform write operations or trigger workflows | Create tickets, send notifications |
-| **Connector tools** | Wrap existing WSO2 Integrator connectors | Query Salesforce, interact with databases |
+|---|---|---|
+| **Read tools** | Fetch information so the agent has facts to work with. | *Look up a customer*, *find recent orders*, *get current stock level*. |
+| **Action tools** | Make a change or trigger a workflow. | *Create a ticket*, *send an email*, *cancel an order*. |
+| **Connector tools** | Reuse an existing WSO2 Integrator connector (Salesforce, GitHub, Gmail, a database) by wrapping it as a tool. | *Send a Gmail message*, *create a JIRA issue*. |
 
-## Tool Design Principles
+Read tools are usually safe to call freely. Action tools deserve a bit more thought — for irreversible operations like deletions or payments, it is good practice to bake the *"please confirm with the user first"* rule into the tool's own description.
 
-1. **Clear doc comments** -- The function's doc comment becomes the tool description the LLM sees; make it specific about what the tool does and when to use it
-2. **Describe every parameter** -- Use `# + name - description` lines for each parameter so the LLM knows how to fill them in
-3. **Keep functions `isolated`** -- Every `@ai:AgentTool` must be an isolated function
-4. **Informative errors** -- Return descriptive error messages so the LLM can reason about failures
-5. **Limited output** -- Trim large responses to prevent exceeding context window limits
+## Designing Good Tools
 
-## Registering Tools with an Agent
+A tool that's hard for the agent to use will get used badly. Three rules cover most of the failure modes:
 
-Pass the annotated functions to the `tools` field when constructing the AI Agent.
+1. **One job per tool.** A tool that does too many things is hard for the LLM to choose. Prefer two clear tools over one mega-tool.
+2. **Describe in the language of the user.** If your users say *"order"*, your tool should say *"order"*, not *"transactionRecord"*.
+3. **Return small, useful results.** A tool that returns a 50-page document forces the LLM to wade through it. Trim to what's relevant — names, IDs, statuses, totals.
 
-```ballerina
-import ballerina/ai;
+If you are wondering how to design a particular tool, ask yourself: *"If I gave this description and this output to a sharp intern who didn't know my system, could they use it correctly?"* That is exactly the situation the LLM is in.
 
-final ai:Agent myAgent = check new (
-    systemPrompt = {
-        role: "Support Assistant",
-        instructions: string `You are a helpful customer support assistant.`
-    },
-    tools = [getCustomerDetails, searchOrders, createTicket],
-    model = check ai:getDefaultModelProvider()
-);
-```
+## Where Tools Come From
+
+Tools do not have to live inside your own codebase. Three sources are common:
+
+- **Your own functions** — the most common case. You write the tool right next to the rest of your integration.
+- **Existing WSO2 Integrator connectors** — wrap a Salesforce, Gmail, or database call as a tool with a couple of lines.
+- **MCP servers** — tools that someone else (or you) published over a standard protocol. The agent can use them without any custom code on your side. See [What is MCP?](what-is-mcp.md).
+
+Mix and match freely. An agent can use a function tool, an MCP-provided tool, and a connector-based tool all at the same time — it doesn't notice the difference.
 
 ## What's Next
 
-- [What is AI Agent Memory?](what-is-agent-memory.md) -- How AI Agents maintain context
-- [Adding Tools to an Agent](/docs/genai/develop/agents/adding-tools) -- Detailed tool patterns
-- [What is MCP?](what-is-mcp.md) -- Expose tools to external AI assistants
+- [What is AI Agent Memory?](what-is-agent-memory.md) — How an agent remembers context across turns.
+- [What is MCP?](what-is-mcp.md) — A protocol for sharing tools between agents and AI applications.
+- [Adding Tools to an Agent](/docs/genai/develop/agents/adding-tools) — Build tools in WSO2 Integrator.

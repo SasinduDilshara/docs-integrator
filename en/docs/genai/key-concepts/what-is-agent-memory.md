@@ -1,83 +1,90 @@
 ---
 sidebar_position: 5
 title: What is AI Agent Memory?
-description: Understand how AI agents retain conversation context across multiple interactions.
+description: A plain-English explanation of agent memory — how an AI agent remembers what was said earlier in a conversation.
 ---
 
 # What is AI Agent Memory?
 
-AI Agent memory controls how your AI Agent retains and manages conversation history. Without memory, every message is processed in isolation. With memory, the AI Agent remembers what was said earlier in the conversation, enabling multi-turn interactions like follow-up questions and contextual references.
+**Memory** is what lets an [AI agent](what-is-ai-agent.md) remember what was said earlier in the conversation. Without it, every message is treated as the very first one — the agent has amnesia between turns. With it, you can have a real back-and-forth conversation: ask a question, follow up, refine, correct.
 
-## Why Memory Matters
+## The Problem Memory Solves
 
-Consider this conversation:
+Compare these two conversations.
 
-```
-User: "What's the status of order ORD-001?"
-Agent: "ORD-001 has been shipped and arrives March 15."
+**Without memory:**
 
-User: "And ORD-002?"
-Agent: ???
-```
+> User: *"What's the status of order ORD-1042?"*
+> Agent: *"ORD-1042 has shipped and arrives Friday."*
+> User: *"And ORD-1043?"*
+> Agent: *"I don't have any context for that. What would you like to know about it?"*
 
-Without memory, the AI Agent has no context for "And ORD-002?" -- it does not know the user was previously asking about order status. With memory, the AI Agent understands this is a follow-up request for another order's status.
+**With memory:**
 
-## How Memory Works in WSO2 Integrator
+> User: *"What's the status of order ORD-1042?"*
+> Agent: *"ORD-1042 has shipped and arrives Friday."*
+> User: *"And ORD-1043?"*
+> Agent: *"ORD-1043 is still being packed and will ship tomorrow."*
 
-Conversation history is tracked per **session ID**. Each session is an independent thread of messages; different users or conversations never share context.
+The second agent understands that *"And ORD-1043?"* is a continuation. It knows the user is still asking about order status. The reason it knows is memory: each new turn comes with the previous turns attached.
 
-The recommended way to get memory is to expose your AI Agent over an `ai:Listener` chat service. The listener provides per-session memory automatically -- you do not need to allocate or wire up a memory instance yourself.
+## How Memory Works, Mechanically
 
-```ballerina
-import ballerina/ai;
+Under the hood, memory is just a list of messages. Each time the user says something:
 
-service /support on new ai:Listener(8080) {
-    resource function post chat(ai:ChatReqMessage request)
-            returns ai:ChatRespMessage|error {
-        // Conversation history for request.sessionId is retained automatically.
-        string response = check myAgent.run(request.message, request.sessionId);
-        return {message: response};
-    }
-}
-```
+1. The agent looks up the recent messages for the current conversation.
+2. It sends those messages, plus the new question, to the LLM.
+3. The LLM's reply is appended to the list.
+4. The list is saved so the next turn can read it back.
 
-For standalone AI Agents that are not served over `ai:Listener`, you can attach an `ai:ShortTermMemory` instance directly.
+That's it. There is no special "memory module" inside the LLM — the LLM is stateless. *Memory is just the integration replaying the conversation back at every turn.*
 
-```ballerina
-import ballerina/ai;
+This has one important consequence: every message the agent remembers takes up space inside the LLM's context window. A very long conversation costs more (in tokens and money), runs slower, and can eventually exceed the model's limit. That's why memory implementations usually keep only the **last N messages** or summarise older ones.
 
-final ai:Agent myAgent = check new (
-    systemPrompt = {
-        role: "Support Assistant",
-        instructions: string `You are a helpful assistant.`
-    },
-    tools = [lookupOrder, searchProducts],
-    memory = new ai:ShortTermMemory(),
-    model = check ai:getDefaultModelProvider()
-);
-```
+## Sessions: Keeping Conversations Apart
 
-## Session Isolation
+Memory only works if the agent knows *which* conversation it is in. If two users talk to the same agent at the same time, you do not want User B to see User A's conversation.
 
-Each session ID creates an independent conversation thread. Different users or conversations never share context.
+The fix is a **session ID** — a string that uniquely identifies one ongoing conversation. Every message the user sends comes tagged with their session ID, and the agent only remembers what was said in that session.
 
-```ballerina
-// Independent conversations -- each session has its own history.
-string r1 = check myAgent.run("Hello!", "user-alice");
-string r2 = check myAgent.run("Hello!", "user-bob");
-string r3 = check myAgent.run("Follow up", "user-alice");  // Only sees Alice's history
-```
+| Session A (Alice) | Session B (Bob) |
+|---|---|
+| *"What's my last order?"* | *"How do I reset my password?"* |
+| *"When will it arrive?"* | *"I forgot my username too."* |
 
-## Choosing the Right Memory Strategy
+The agent treats those as two completely separate conversations even though they're hitting the same service. Each session is its own little memory bucket.
 
-| Scenario | Recommended Approach |
-|----------|----------------------|
-| Chat service with per-session history | Use `ai:Listener` -- memory is automatic |
-| Standalone AI Agent with short conversations | `ai:ShortTermMemory` |
-| Single-turn task processing | No memory -- call `agent.run(input)` without a session ID |
+## How Long Should Memory Last?
+
+This is the main design choice. Three common options:
+
+| Approach | What it means | Good for |
+|---|---|---|
+| **No memory** | Every call is fresh. The agent has no idea what came before. | One-shot tasks: classify this email, summarise this document. |
+| **Short-term memory** | The agent remembers the last few messages of *this* session. When the program restarts, those messages are gone. | Most chat assistants. Lightweight, fast, no infrastructure. |
+| **Persistent memory** | Conversation history is saved to a database, so it survives restarts and can span days. | Long-running customer support, multi-day workflows, audit/compliance. |
+
+Many integrations start with no memory or short-term memory and only move to persistent memory when there is a real reason — typically because conversations span multiple sessions or because compliance requires a permanent record.
+
+## Memory vs. Context vs. Knowledge
+
+These three sound similar but solve different problems:
+
+- **Memory** is *"what we already said in this conversation"*. It's about continuity inside one session.
+- **Context** is *"facts I want to make sure the agent knows for this one turn"* — for example, attaching the user's profile to the message. It can be used once and not stored.
+- **Knowledge** is *"a bigger pool of information the agent can search when needed"* — typically through [RAG](what-is-rag.md). Knowledge isn't tied to a conversation; it's company-wide and reusable.
+
+A well-designed agent often uses all three: it remembers the conversation (memory), it knows the user's role on each request (context), and it can look up policies or documentation when relevant (knowledge).
+
+## Practical Tips
+
+- **Start without memory** if you can. Add it only when the user actually needs follow-ups.
+- **Keep memory short.** A short rolling window of recent messages is usually enough for natural conversation and avoids ballooning costs.
+- **Be careful with sensitive data.** Whatever ends up in memory is replayed back to the LLM on every turn — including any personal details the user mentioned. If you must store memory, treat the storage like any other personal-data system.
+- **One session per real conversation.** Don't reuse session IDs across different users or different topics, or memory will leak between them.
 
 ## What's Next
 
-- [What is MCP?](what-is-mcp.md) -- Model Context Protocol for external AI access
-- [What is RAG?](what-is-rag.md) -- Retrieval-augmented generation
-- [Adding Memory to an Agent](/docs/genai/develop/agents/adding-memory) -- Implementation guide
+- [What are Tools?](what-are-tools.md) — How an agent gets things done, not just remembers.
+- [What is RAG?](what-is-rag.md) — Giving an agent access to a body of knowledge beyond the conversation.
+- [Adding Memory to an Agent](/docs/genai/develop/agents/adding-memory) — Configure memory in WSO2 Integrator.
