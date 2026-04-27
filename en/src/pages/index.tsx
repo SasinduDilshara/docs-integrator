@@ -119,7 +119,7 @@ const sections: SectionCard[] = [
     iconColor: '#7C3AED',
   },
   {
-    title: 'GenAI',
+    title: 'AI Integrations',
     description: 'Build AI-powered integrations with agents, RAG, and MCP servers.',
     link: '/docs/genai/overview',
     icon: <IconGenAI />,
