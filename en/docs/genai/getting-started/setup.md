@@ -11,7 +11,7 @@ Before building AI integrations, make sure your development environment is ready
 ## Prerequisites
 
 - **WSO2 Integrator** installed — follow the [Install WSO2 Integrator](/docs/get-started/install) guide. The Ballerina runtime and the AI/MCP modules ship with the distribution, so no extra setup is required.
-- **WSO2 Integrator Copilot access** — Sign into WSO2 copilot using following steps.
+- **WSO2 Integrator Copilot access** — Sign into WSO2 copilot using the following steps.
 
 ## Sign in to WSO2 Integrator Copilot
 

@@ -62,6 +62,7 @@ After this, `ai:getDefaultModelProvider()` and `ai:getDefaultEmbeddingProvider()
 If you would rather use your own provider key, skip the configure command and define a `configurable` value plus a provider from `ballerinax/ai.openai` (or similar):
 
 ```ballerina
+import ballerina/ai;
 import ballerinax/ai.openai;
 
 configurable string openAiApiKey = ?;

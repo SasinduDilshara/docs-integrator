@@ -57,7 +57,7 @@ Most of the time, "adding a tool to my agent" means writing a normal function an
 
 ## Three Common Kinds of Tools
 
-It helps to think of tools in three categories:
+It helps to think of tools in three categories by purpose. This is complementary to the source-based grouping in the [Tools developer guide](/docs/genai/develop/agents/tools), which groups tools by *where they come from* (functions, connectors, MCP) rather than *what they do*.
 
 | Category | Purpose | Example |
 |---|---|---|

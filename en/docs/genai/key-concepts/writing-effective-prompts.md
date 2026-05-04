@@ -56,7 +56,7 @@ If the task is unusual, give the model one or two worked examples right before t
 > *Sentiment: mixed*
 >
 > *Now classify this one:*
-> *Review:* `${review}` *"*
+> *Review:* `${review}`
 
 ## What NOT to Put in the Prompt
 

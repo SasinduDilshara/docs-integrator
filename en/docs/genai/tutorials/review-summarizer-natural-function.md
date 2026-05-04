@@ -49,7 +49,7 @@ The **Create New Natural Function** form opens. Set:
 
 | Field | Value |
 |---|---|
-| **Name** | `analyzeCustomerReviewes` |
+| **Name** | `analyzeCustomerReviews` |
 
 ![Empty Create New Natural Function form with Name, Parameters (Add Parameter link), Return Type, and Create button.](/img/genai/develop/natural-functions/12-create-form-empty.png)
 
@@ -112,13 +112,13 @@ Click **Import**. BI infers and registers three types under the **Types** node i
 
 The form should now look like this:
 
-![Create New Natural Function form filled in: Name analyzeCustomerReviewes, parameter pill "string customerReview", Return Type ReviewResponse, Create button enabled.](/img/genai/develop/natural-functions/17-create-form-filled.png)
+![Create New Natural Function form filled in: Name analyzeCustomerReviews, parameter pill "string customerReview", Return Type ReviewResponse, Create button enabled.](/img/genai/develop/natural-functions/17-create-form-filled.png)
 
 Click **Create**. BI generates the Ballerina source and opens the function in the **Flow Designer**. The sidebar updates with three additions:
 
-- **Connections** — `_analyzeCustomerReviewesModel` (the model-provider connection BI created for this function).
+- **Connections** — `_analyzeCustomerReviewsModel` (the model-provider connection BI created for this function).
 - **Types** — `ReviewResponse`, `Topics`, `TopicsItem`.
-- **Natural Functions** — `analyzeCustomerReviewes`.
+- **Natural Functions** — `analyzeCustomerReviews`.
 
 The flow shows a single **Prompt** node between **Start** and the end of the function:
 
@@ -130,9 +130,9 @@ Hover the cog icon on the right of the Prompt node — the tooltip reads **Confi
 
 ![Prompt node with the cog icon highlighted on the right and a tooltip reading "Configure Model Provider".](/img/genai/develop/natural-functions/19-prompt-cog-tooltip.png)
 
-The **Configure Model Provider Connection** panel slides in. Pick the auto-created `_analyzeCustomerReviewesModel` connection and click **Save**.
+The **Configure Model Provider Connection** panel slides in. Pick the auto-created `_analyzeCustomerReviewsModel` connection and click **Save**.
 
-![Configure Model Provider Connection panel with Select Model Provider set to _analyzeCustomerReviewesModel, "+ Create New Model Provider" link, a hint about the Configure default WSO2 model provider command, and a Save button.](/img/genai/develop/natural-functions/20-configure-model-provider-panel.png)
+![Configure Model Provider Connection panel with Select Model Provider set to _analyzeCustomerReviewsModel, "+ Create New Model Provider" link, a hint about the Configure default WSO2 model provider command, and a Save button.](/img/genai/develop/natural-functions/20-configure-model-provider-panel.png)
 
 If you'd rather use OpenAI, Anthropic, Azure OpenAI, or any other provider, click **+ Create New Model Provider** and pick from the catalogue:
 
@@ -163,7 +163,7 @@ Close the expanded view and click **Save**. The Prompt node now shows the body i
 The natural function is complete. Behind the scenes, BI generated:
 
 ```ballerina
-function analyzeCustomerReviewes(string customerReview) returns ReviewResponse|error {
+function analyzeCustomerReviews(string customerReview) returns ReviewResponse|error {
     ReviewResponse|error result = natural {
         You are a **customer review analyzer**. For the review below, identify
         the overall sentiment, extract the key topics being discussed with their
@@ -235,15 +235,15 @@ Click the empty placeholder between **Start** and **Error Handler**. The **Add N
 
 ### Step 3.2 — Pick the Function
 
-The **Natural Functions** picker lists every natural function in the project. Pick `analyzeCustomerReviewes`.
+The **Natural Functions** picker lists every natural function in the project. Pick `analyzeCustomerReviews`.
 
-![Natural Functions picker with a Search box and a Current Integration section showing analyzeCustomerReviewes.](/img/genai/develop/natural-functions/33-natural-functions-picker.png)
+![Natural Functions picker with a Search box and a Current Integration section showing analyzeCustomerReviews.](/img/genai/develop/natural-functions/33-natural-functions-picker.png)
 
 ### Step 3.3 — Bind the Argument
 
 The configuration form opens. Each parameter on the function becomes a row; here you only have `CustomerReview`.
 
-![Configuration form for the analyzeCustomerReviewes call: empty CustomerReview field with Text/Expression toggle, Result name reviewResponse, Variable Type ReviewResponse (locked), Save button.](/img/genai/develop/natural-functions/34-call-config-empty.png)
+![Configuration form for the analyzeCustomerReviews call: empty CustomerReview field with Text/Expression toggle, Result name reviewResponse, Variable Type ReviewResponse (locked), Save button.](/img/genai/develop/natural-functions/34-call-config-empty.png)
 
 Bind **CustomerReview** to the inbound payload variable `review`. Leave **Result** (the variable name that will hold the typed return value, used by the next node) as `reviewResponse`, and **Variable Type** as the locked `ReviewResponse` (it always matches the function's declared return type).
 
@@ -255,7 +255,7 @@ Click **Save**. The natural-function node lands in the flow.
 
 Click the empty placeholder between the natural function call and **Error Handler**. In the Add Node panel, under **Control**, pick **Return**.
 
-![Resource flow with Start, the analyzeCustomerReviewes (reviewResponse) node, an empty placeholder, and Error Handler. The Add Node panel on the right has Return highlighted under Control.](/img/genai/develop/natural-functions/36-resource-flow-with-call.png)
+![Resource flow with Start, the analyzeCustomerReviews (reviewResponse) node, an empty placeholder, and Error Handler. The Add Node panel on the right has Return highlighted under Control.](/img/genai/develop/natural-functions/36-resource-flow-with-call.png)
 
 In the Return panel, set the **Expression / Return value** to `reviewResponse`.
 
@@ -263,7 +263,7 @@ In the Return panel, set the **Expression / Return value** to `reviewResponse`.
 
 The completed flow:
 
-![Final resource flow: Start → analyzeCustomerReviewes (reviewResponse) → Return reviewResponse → Error Handler.](/img/genai/develop/natural-functions/38-final-resource-flow.png)
+![Final resource flow: Start → analyzeCustomerReviews (reviewResponse) → Return reviewResponse → Error Handler.](/img/genai/develop/natural-functions/38-final-resource-flow.png)
 
 ---
 
@@ -277,7 +277,7 @@ From the **Overview** page click **Run**. BI applies the `--experimental` flag a
 
 The integrated terminal shows the build and run output:
 
-```
+```bash
 Executing task: ".../bal run --experimental"
 Resolving workspace dependencies
 Compiling source orgs/ai_sections:0.1.0

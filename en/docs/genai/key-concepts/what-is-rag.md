@@ -22,7 +22,7 @@ You could try fixing this by pasting all your documents into the prompt, but mos
 
 ## The Idea in One Picture
 
-```
+```bash
                     ┌──────────────────┐
    user's question  │                  │  the right
    ───────────────► │  Find the most   │ ─── few passages ───►  LLM  ───►  answer
@@ -62,7 +62,7 @@ A RAG pipeline has two phases. They happen at different times.
 
 You take your documents and prepare them for fast search:
 
-```
+```bash
 your documents  ─►  Chunking  ─►  Embedding  ─►  Vector Store
                     (split into     (turn each       (save the
                      smaller          chunk into      vectors so
@@ -77,7 +77,7 @@ You only do this once per document. If a document changes, you re-ingest it.
 
 ### Phase 2 — Querying (every time the user asks something)
 
-```
+```bash
 user's question  ─►  Embed the question  ─►  Vector search (top K matches)
                                                        │
                                                        ▼

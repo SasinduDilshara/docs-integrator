@@ -206,6 +206,9 @@ Notes:
 Tag your evaluation tests with a group so they can be run independently of regular unit tests:
 
 ```ballerina
+import ballerina/log;
+import ballerina/test;
+
 @test:Config {groups: ["agent-eval"]}
 function testAgentEvaluationSuite() returns error? {
     EvalResult[] results = check runEvaluation(supportAgent, evalDataset);

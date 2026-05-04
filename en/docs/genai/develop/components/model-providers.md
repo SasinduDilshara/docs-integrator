@@ -264,7 +264,7 @@ DeepSeek's chat and reasoning models. Official: [deepseek.com](https://www.deeps
 
 | Field | Default | Available values | What it controls |
 |---|---|---|---|
-| **Model Type** | `deepseek-chat` | `deepseek-chat`, `deepseek-reasoner` | Which DeepSeek model to use. |
+| **Model Type** | `deepseek-chat` (BI shows the constant `DEEPSEEK_CHAT`) | `deepseek-chat`, `deepseek-reasoner` | Which DeepSeek model to use. |
 | **Service URL** | `https://api.deepseek.com` | URL string | DeepSeek API base URL. |
 | **Maximum Tokens** | `512` | Any positive integer | Hard cap on response length. |
 | **Temperature** | `0.7` | `0.0`–`1.0` | Sampling temperature. |

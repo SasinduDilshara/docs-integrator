@@ -60,7 +60,7 @@ Local stores let you choose the metric. Hosted stores manage it themselves (you 
 |---|---|
 | `COSINE` | Cosine of the angle between vectors. Most common for semantic search. |
 | `EUCLIDEAN` | Straight-line distance between vector points. |
-| `DOT_PRODUCT` | Directional similarity, magnitude-sensitive. |
+| `DOT_PRODUCT` | Directional similarity, magnitude-sensitive. Not supported on pgvector. |
 | `MANHATTAN` | Sum of absolute differences (pgvector only). |
 
 ## Where To Find Vector Stores

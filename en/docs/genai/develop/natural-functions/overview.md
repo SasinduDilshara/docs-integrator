@@ -107,7 +107,7 @@ For most natural functions you want a **record** so each output field is named a
 
 The new type is selected automatically as the function's return type. With at least a name, one parameter, and a return type, click **Create**.
 
-![Create New Natural Function form filled in: Name analyzeCustomerReviewes, parameter pill "string customerReview", Return Type ReviewResponse, Create button enabled.](/img/genai/develop/natural-functions/17-create-form-filled.png)
+![Create New Natural Function form filled in: Name analyzeCustomerReviews, parameter pill "string customerReview", Return Type ReviewResponse, Create button enabled.](/img/genai/develop/natural-functions/17-create-form-filled.png)
 
 BI generates the source and opens the function in the **Flow Designer** with three additions in the sidebar: a `_<functionName>Model` connection, the type(s) under **Types**, and the function under **Natural Functions**. The flow itself is just a single **Prompt** node between **Start** and the end.
 
@@ -231,17 +231,17 @@ Once the function exists, calling it from a flow is one step.
 
 4. The **Natural Functions** picker lists every natural function in the current integration. Pick one.
 
-![Natural Functions picker showing a Search box and a Current Integration section with the analyzeCustomerReviewes natural function listed.](/img/genai/develop/natural-functions/33-natural-functions-picker.png)
+![Natural Functions picker showing a Search box and a Current Integration section with the analyzeCustomerReviews natural function listed.](/img/genai/develop/natural-functions/33-natural-functions-picker.png)
 
 5. The configuration form opens. Each parameter on the function becomes a row; bind it to an in-scope value. **Result** is the variable name that holds the typed return; **Variable Type** is locked to the function's declared return type.
 
-![Configuration form for the analyzeCustomerReviewes call: CustomerReview field with Text/Expression toggle, Result name reviewResponse, Variable Type ReviewResponse (locked), Save button.](/img/genai/develop/natural-functions/34-call-config-empty.png)
+![Configuration form for the analyzeCustomerReviews call: CustomerReview field with Text/Expression toggle, Result name reviewResponse, Variable Type ReviewResponse (locked), Save button.](/img/genai/develop/natural-functions/34-call-config-empty.png)
 
 ![Configuration form filled in: CustomerReview bound to the variable review (shown as a pill), Result reviewResponse, Variable Type ReviewResponse, Save button enabled.](/img/genai/develop/natural-functions/35-call-config-filled.png)
 
 6. Click **Save**. A new node appears in the flow, named after the bound result variable. Use that variable like any other typed value: return it from an HTTP resource (it becomes the JSON response), branch on a field with `Match`, transform it with `Map Data`, or pass it to another node.
 
-![Final resource flow: Start → analyzeCustomerReviewes (reviewResponse) → Return reviewResponse → Error Handler.](/img/genai/develop/natural-functions/38-final-resource-flow.png)
+![Final resource flow: Start → analyzeCustomerReviews (reviewResponse) → Return reviewResponse → Error Handler.](/img/genai/develop/natural-functions/38-final-resource-flow.png)
 
 ### Calling from Another Function or Agent
 

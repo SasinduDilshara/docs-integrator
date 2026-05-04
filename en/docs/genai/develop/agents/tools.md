@@ -68,7 +68,7 @@ Pick a function and BI:
 If a function lacks a doc comment, BI prompts you to add one — the LLM cannot use a tool with no description. The first sentence of the doc comment is what the LLM sees, so make it specific.
 
 > **Tip:** Natural functions make excellent tools. The agent's main LLM handles routing; the natural function uses (potentially) a different model with a tighter prompt and stricter return type for the actual subtask.
-
+>
 > **Security note:** Standard Library functions like `io:fileWriteString` give the agent the power to *write to the local filesystem*. Only attach utilities the agent genuinely needs.
 
 ## 3. Use MCP Server — Tools Over the Standard Protocol

@@ -51,6 +51,8 @@ MCP defines three kinds of things a server can expose:
 
 Most teams start with tools — they're the most useful and the easiest to wrap. Resources and prompts are powerful add-ons for richer integrations.
 
+> **What WSO2 Integrator supports today:** Tools are fully supported, both for [exposing your integration as an MCP server](/docs/genai/develop/mcp/exposing-as-mcp) and for [consuming MCP servers from an agent](/docs/genai/develop/mcp/consuming-mcp-from-agent). Resources and Prompts are part of the MCP specification but are not yet documented for use in WSO2 Integrator.
+
 ## How a Conversation Looks Over MCP
 
 The protocol itself is simple. Here is the rhythm of a typical interaction:

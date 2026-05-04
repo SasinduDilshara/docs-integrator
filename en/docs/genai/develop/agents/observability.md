@@ -40,7 +40,7 @@ Any OpenTelemetry-compatible backend works — Jaeger, Zipkin, Honeycomb, Grafan
 
 A single call to `agent.run(...)` produces a hierarchy of spans:
 
-```
+```bash
 agent.run
   ├── llm.call               (system prompt + user message)
   ├── tool.execute           (getCustomer)

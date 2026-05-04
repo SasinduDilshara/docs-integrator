@@ -16,7 +16,7 @@ If you have used something like a chatbot that can actually book a flight, look 
 
 An agent works in a small loop, sometimes called the **Reason → Act → Observe** loop:
 
-```
+```bash
        ┌──────────── User says something ────────────┐
        │                                              │
        ▼                                              │

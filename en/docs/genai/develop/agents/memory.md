@@ -125,7 +125,7 @@ Add explicit memory only when:
 
 Whichever store you pick, each session ID gets its own memory. If two users hit the same agent at the same time, their conversations stay separate.
 
-```
+```bash
 sessionId = "user-alice-1234"  ────►  Alice's history
 sessionId = "user-bob-5678"    ────►  Bob's history
 sessionId = "user-alice-9999"  ────►  Alice's *other* conversation
@@ -137,11 +137,13 @@ The session ID comes in on every chat request (`ai:ChatReqMessage.sessionId`). T
 
 For stores not in the picker, implement the `ai:Memory` interface in a class of your own. The interface has three methods:
 
+> Implementations live in your own module and import `ballerina/ai`, so reference the types using the `ai:` prefix (`ai:Memory`, `ai:ChatMessage`, `ai:MemoryError`) — shown unprefixed below for the contract itself.
+
 ```ballerina
 public type Memory distinct isolated object {
-    function get(string key) returns ChatMessage[]|MemoryError;
-    function update(string key, ChatMessage|ChatMessage[] message) returns MemoryError?;
-    function delete(string key) returns MemoryError?;
+    function get(string key) returns ai:ChatMessage[]|ai:MemoryError;
+    function update(string key, ai:ChatMessage|ai:ChatMessage[] message) returns ai:MemoryError?;
+    function delete(string key) returns ai:MemoryError?;
 };
 ```
 

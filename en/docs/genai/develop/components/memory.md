@@ -29,6 +29,8 @@ A "chat message" is one of:
 | `ASSISTANT` | An agent turn, including any tool calls it decided to make. |
 | `FUNCTION` | The result of a tool call returned to the agent. |
 
+> The roles above are the API-level enum names (uppercase). When the message is persisted by a backing store, the `MessageRole` column stores the lowercase serialised form (`'system'`, `'user'`, `'assistant'`, `'function'`) — see [Auto-created Schema](#auto-created-schema).
+
 ## Implementations at a Glance
 
 | Implementation | Status | Durability |
