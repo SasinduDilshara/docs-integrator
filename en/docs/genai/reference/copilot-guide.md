@@ -23,11 +23,11 @@ Ballerina Copilot assists you while you write code. For building AI-powered inte
 All Copilot actions are available from the VS Code command palette (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Windows and Linux).
 
 1. Open the command palette.
-2. Run **"WSO2 Copilot: Sign In"**.
+2. Run **"WSO2 Integrator Copilot: Sign In"**.
 3. A browser window opens — complete the sign-in with your WSO2 account.
 4. Once signed in, inline code completion and suggestions are enabled automatically.
 
-You can verify your status with **"WSO2 Copilot: Show Status"** and sign out at any time with **"WSO2 Copilot: Sign Out"**.
+You can verify your status with **"WSO2 Integrator Copilot: Show Status"** and sign out at any time with **"WSO2 Integrator Copilot: Sign Out"**.
 
 ## Key Commands
 
@@ -35,8 +35,8 @@ The following commands are the main entry points to Ballerina Copilot:
 
 | Command | What it does |
 |---|---|
-| **WSO2 Copilot: Sign In** | Authenticates your VS Code session with WSO2. |
-| **WSO2 Copilot: Generate Code** | Generates Ballerina code from a natural-language description. |
+| **WSO2 Integrator Copilot: Sign In** | Authenticates your VS Code session with WSO2. |
+| **WSO2 Integrator Copilot: Generate Code** | Generates Ballerina code from a natural-language description. |
 | **Configure default WSO2 Model Provider** | Writes a `[ballerina.ai]` block into your project's `Config.toml` so that `ai:getDefaultModelProvider()` works without your own API key. |
 
 ## Configuring the Default Model Provider
@@ -76,7 +76,7 @@ final ai:ModelProvider model = check new openai:ModelProvider(
 
 ## Generating Code from Natural Language
 
-Use **"WSO2 Copilot: Generate Code"** to describe what you want and let Copilot produce a complete Ballerina snippet. For example, if you describe:
+Use **"WSO2 Integrator Copilot: Generate Code"** to describe what you want and let Copilot produce a complete Ballerina snippet. For example, if you describe:
 
 > "Create an HTTP service that validates JSON payloads and stores them in a PostgreSQL database."
 
@@ -90,7 +90,7 @@ Copilot considers your current file, your imports, and your project structure as
 
 ## Privacy and Data Handling
 
-- Code context is sent to the WSO2 Copilot service for processing.
+- Code context is sent to the WSO2 Integrator Copilot service for processing.
 - No code is stored permanently on WSO2 servers.
 - You can disable inline suggestions in VS Code settings under the WSO2 Integrator extension.
 - For data-sensitive projects, use the WSO2 default provider so calls stay inside your WSO2 tenancy, or bring your own provider and configure a private endpoint.
@@ -99,10 +99,10 @@ Copilot considers your current file, your imports, and your project structure as
 
 | Issue | Solution |
 |---|---|
-| No suggestions appearing | Run **"WSO2 Copilot: Sign In"** from the command palette and confirm your session is active. |
+| No suggestions appearing | Run **"WSO2 Integrator Copilot: Sign In"** from the command palette and confirm your session is active. |
 | `ai:getDefaultModelProvider()` returns an error | Run **"Configure default WSO2 Model Provider"** or add a `[ballerina.ai]` block to `Config.toml` manually. |
 | Generated code uses unknown imports | Keep your Ballerina distribution up to date — the `ballerina/ai` and `ballerina/mcp` modules evolve quickly. |
-| Authentication errors | Sign out (**"WSO2 Copilot: Sign Out"**) and sign in again. |
+| Authentication errors | Sign out (**"WSO2 Integrator Copilot: Sign Out"**) and sign in again. |
 
 ## What's Next
 
