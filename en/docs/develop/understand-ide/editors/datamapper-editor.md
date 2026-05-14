@@ -89,7 +89,7 @@ The right side of the editor shows the data mapper's output type with each field
 
 ## What's next
 
-- [Data mapper](/docs/develop/integration-artifacts/supporting/data-mapper/data-mapper): end-to-end guide to creating and using data mappers.
+- [Data mapper](/docs/develop/integration-artifacts/supporting/data-mapper): end-to-end guide to creating and using data mappers.
 - [Expression editor](expression-editor.md): write a custom expression for a single mapping.
 - [Configure editor](configure-editor.md): change the data mapper's inputs, output, or visibility.
 - [Type editor](type-editor.md): define the record types the data mapper maps between.
