@@ -1,6 +1,6 @@
 ---
 sidebar_position: 9
-title: AI data mapping
+title: AI Data Mapping
 description: Generate complete, type-safe Ballerina transformation code between any two data structures using AI in WSO2 Integrator.
 keywords: [wso2 integrator, data mapper, ai data mapping, auto map, field mapping, transformation]
 ---
@@ -10,7 +10,7 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# AI data mapping
+# AI Data Mapping
 
 The AI Data Mapper generates complete, compilable Ballerina transformation code between any two data structures without manual field-by-field matching. Use it when schemas are large or complex, such as healthcare, insurance, or banking data structures with hundreds of fields, deeply nested records, or domain-specific formats.
 
@@ -140,10 +140,10 @@ The AI Data Mapper handles complex transformation scenarios:
 - **Type conversions**: Automatic conversion between primitive types such as `string` to `int` or `decimal` to `float`.
 - **Optional field handling**: Null-safety checks and proper optional field management.
 - **Nested record transformation**: Deep structure mapping with proper path resolution.
-- **Array-to-array mappings**: Element-wise transformations with appropriate iteration logic.
+- **Array-to-array mappings**: Member-wise transformations with appropriate iteration logic.
 - **Conditional logic**: Field presence validation and default value assignment.
 
-### Accuracy through supporting documentation
+### Supporting documentation to improve accuracy
 
 Upload reference materials to improve mapping accuracy. While schema-only analysis is supported, providing additional documentation helps the system understand field relationships and business rules.
 
@@ -154,7 +154,7 @@ Supported formats:
 - CSV files
 - Text files
 
-For complex mapping scenarios involving large schemas or domain-specific requirements, upload multiple documents simultaneously. The system analyzes the combined documentation to generate more accurate, context-aware transformations.
+For complex mapping scenarios involving large schemas or domain-specific requirements captured in multiple documents, upload all of them. The system analyzes the combined documentation to generate more accurate, context-aware transformations.
 
 ### Sub-mapping reuse
 
@@ -182,7 +182,7 @@ When generating new mappings that require the same full name transformation, the
 
 ### Function extraction for large schemas
 
-For mappings with extensive field counts (hundreds to thousands of fields), the system extracts helper functions to maintain code readability and comply with language server constraints. Complex transformations involving union types, deeply nested structures, and array-to-array operations are automatically decomposed into reusable functions.
+For mappings with a large number of fields (hundreds to thousands of fields), Copilot extracts helper functions to maintain code readability and comply with language server constraints. Complex transformations involving union types, deeply nested structures, and array-to-array operations are automatically decomposed into reusable functions.
 
 ### Code validation
 
