@@ -18,7 +18,7 @@ An automation runs your integration logic without an external request, on demand
 
 :::info Prerequisites
 
-- [WSO2 Integrator installed](install.md)
+- [WSO2 Integrator installed](setup/local-setup.md)
 - A project to work in. If you do not have one, select **Create New Integration** when WSO2 Integrator opens.
 :::
 
@@ -28,7 +28,7 @@ An automation runs your integration logic without an external request, on demand
 ## Step 1: Add an automation artifact
 
 1. Select your integration from the project panel.
-2. In the design view, select **Add Artifact**.
+2. Select **+ Add Artifact** in the design view, or **+** next to **Entry Points** in the sidebar.
 3. Select **Automation** under **Automation**.
 4. Select **Create**.
 
@@ -44,7 +44,7 @@ An automation runs your integration logic without an external request, on demand
 
 1. Select **+** after the **Start** node to open the node panel.
 2. Select **Call Function**.
-3. Select **Print** from the function list.
+3. Select **Print** under **io** from the function list.
 4. Select **Initialize Array** for the **Values** parameter.
 5. Set **Values** to `"Hello World"` and select **Save**.
 
@@ -108,4 +108,4 @@ Periodic invocation is configured in an external system once the automation is d
 - [Build an AI agent](build-ai-agent.md) — Build an intelligent agent
 - [Build an event-driven integration](build-event-driven-integration.md) — React to messages from brokers
 - [Build a file-driven integration](build-file-driven-integration.md) — Process files from FTP or local directories
-- [Automation](../develop/integration-artifacts/automation/automation.md) — Configure scheduling, manual execution, and integration logic
+- [Automation](../develop/integration-artifacts/automation.md) — Configure scheduling, manual execution, and integration logic

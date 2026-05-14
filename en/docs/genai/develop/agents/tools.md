@@ -3,6 +3,8 @@ sidebar_position: 3
 title: Tools
 description: Reference for adding tools to a WSO2 Integrator AI agent — connections, functions, MCP servers, and custom tools.
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Tools
 
@@ -143,14 +145,17 @@ The new tool appears in the agent’s right-side **Tools** panel and is included
 
 ![Database Connection](/img/genai/develop/shared/19-agent-with-tools.png)
 
-## Toolkits
+## Toolkit
 
-A **toolkit** is a class that bundles related tools. For example, a `TaskManagerToolkit` can expose `addTask` and `listTasks`. Toolkits are currently written in source view only (there is no dedicated UI yet). You create a single Ballerina class with tool methods and register the toolkit in the agent’s tool list. The agent treats toolkit methods exactly like individual tools.
+A **toolkit** is a class that bundles related tools. For example, a `TaskManagerToolkit` can expose `addTask` and `listTasks`. Toolkits are currently written in source view only (there is no dedicated UI yet). You create a single Ballerina class with tool methods and register the toolkit in the agent's tool list. The agent treats toolkit methods exactly like individual tools.
 
-Use toolkits when:
+Use a toolkit when:
 
 - A group of tools shares state, such as a connector, database client, or configuration value.
 - You want to enable or disable a set of related tools as a unit.
+
+<Tabs>
+<TabItem value="code" label="Ballerina Code">
 
 ```ballerina
 type Task record {|
@@ -194,8 +199,64 @@ public isolated class TaskManagerToolkit {
 }
 ```
 
+</TabItem>
+</Tabs>
+
+### Add the toolkit to the agent 
+
+Once you create the toolkit, open the agent in source view and add the toolkit to the tools configuration.
+
+<Tabs>
+<TabItem value="code" label="Ballerina Code">
+
+```ballerina
+import ballerina/ai;
+
+TaskManagerToolkit taskManager = new TaskManagerToolkit();
+
+final ai:Agent toolAgent = check new (
+    systemPrompt = {role: string `tool`, instructions: string ``}, model = wso2ModelProvider, tools = [taskManager]
+);
+```
+
+</TabItem>
+</Tabs>
+
+After adding the toolkit, the agent can invoke all tools exposed by the `TaskManagerToolkit`, including addTask and listTasks. Since the toolkit maintains shared state internally, all tool invocations operate on the same task collection managed by the toolkit instance.
+
+![Agent with toolkit.](/img/genai/develop/agents/30-toolkit.png)
+
+## Configure an attached tool
+
+Once a tool is attached, you can view, edit, or delete it by clicking the vertical ellipsis button of the attached tool.
+
+To configure a tool, click **Edit** and configure the following fields. 
+
+![Configure tool](/img/genai/develop/agents/31-tool-configuration.png)
+
+| Field | Required | Description |
+|---|---|---|
+| **Name** | Yes | The name or identifier of the agent tool. |
+| **Description** | No | A description of the agent tool. This helps AI agents understand when and how to use the tool. |
+| **Parameters** | No | Defines the input parameters used when invoking the tool. |
+| **Return Type** | Yes | Defines the type of value returned by the tool. |
+| **Return Description** | No | A description of the value returned by the tool. |
+| **Advanced Configuration** | No | Contains the agent authentication client configurations and additional security-related settings used to connect with external authorization servers. |
+
+### Advanced configuration
+
+| Field | Required | Description |
+|---|---|---|
+| **Authorization Server Base URL** | No | The base URL of the OAuth 2.0 Authorization Server used to resolve authorization and token endpoints. |
+| **Client ID** | No | The OAuth 2.0 client identifier issued for the application. |
+| **Client Secret** | No | The OAuth 2.0 client secret issued for the application. |
+| **Redirect URI** | No | The redirect URI registered for the OAuth client and used in the Authorization Code flow. |
+| **Required Scopes** | No | The OAuth scopes required to invoke the tool. |
+| **Enable PKCE** | No | Indicates whether PKCE (Proof Key for Code Exchange) is enabled for the Authorization Code flow. |
+| **Secure Socket** | No | SSL/TLS-related configuration used for secure communication. |
+
 ## What's next
 
 - **[Memory](memory.md)** — Make the agent’s tool calls remember earlier turns.
 - **[Observability](observability.md)** — See which tools the agent actually selects.
-- **[Evaluations](evaluations.md)** — Learn how to prevent regressions in AI agent quality.
+- **[Evaluations](evaluations/overview.md)** — Learn how to prevent regressions in AI agent quality.

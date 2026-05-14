@@ -1,11 +1,11 @@
 ---
-title: "Getting started"
+title: "Getting Started"
 description: Sign in to WSO2 Integrator Copilot.
 keywords: [wso2 integrator, copilot, getting started, sign in]
 slug: /develop/wso2-integrator-copilot/getting-started
 ---
 
-# Getting started
+# Getting Started
 
 ## Sign in to WSO2 Integrator Copilot
 

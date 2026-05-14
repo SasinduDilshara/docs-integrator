@@ -4,7 +4,7 @@ description: "Manage the lifecycle of integrations deployed to the WSO2 Cloud - 
 keywords: [wso2 integrator, integration lifecycle, wso2 cloud, redeploy, stop integration, schedule]
 ---
 
-# Integration lifecycle
+# Integration Lifecycle
 
 Lifecycle management options depend on the type of integration. You can manage each integration's lifecycle from its overview page in WSO2 Cloud.
 

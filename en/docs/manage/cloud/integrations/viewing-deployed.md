@@ -1,10 +1,10 @@
 ---
-title: "View integrations"
+title: "View Integrations"
 description: "View and inspect integrations deployed to the WSO2 Cloud - Integration Platform from the cloud console."
 keywords: [wso2 integrator, wso2 cloud, deployed integrations, view integrations]
 ---
 
-# View integrations
+# View Integrations
 
 After pushing your integrations to the WSO2 Cloud - Integration Platform, you can view and manage them from the cloud console. Each integration's build status, deployment status, and configuration are accessible from the integration overview page.
 

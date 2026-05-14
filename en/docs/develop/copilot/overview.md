@@ -1,11 +1,11 @@
 ---
-title: "Copilot capabilities"
+title: "Copilot Capabilities"
 description: "AI-powered tool that generates integration artifacts from natural language prompts or OpenAPI specifications."
 keywords: [wso2 integrator, copilot, ai, integration generation]
 slug: /develop/wso2-integrator-copilot/copilot-capabilities
 ---
 
-# Copilot capabilities
+# Copilot Capabilities
 
 WSO2 Integrator Copilot builds integrations from natural language prompts. It produces ready-to-use artifacts that drop straight into your project. Iterate through follow-up prompts to refine logic, add features, or modify behavior.
 

@@ -4,23 +4,13 @@ title: gRPC Tool
 description: Generate Ballerina service stubs and client connectors from Protocol Buffer definitions.
 ---
 
-# gRPC tool
+# gRPC Tool
 
 The `bal grpc` tool generates Ballerina code from Protocol Buffer (`.proto`) files. It creates service stubs with RPC method signatures, client connectors for calling gRPC services, and Ballerina record types that correspond to protobuf message definitions. This lets you integrate with gRPC-based microservices using idiomatic Ballerina code.
 
 :::note
 gRPC code generation is not available through the Visual Designer — **+ Add Artifact** does not include a gRPC option. Use the integrated terminal in your project to run `bal grpc` commands directly.
 :::
-
----
-
-## Prerequisites
-
-The gRPC tool is included with the Ballerina distribution. Verify it is available by running the following command in the terminal in the WSO2 Integrator:
-
-```bash
-bal grpc --help
-```
 
 ---
 

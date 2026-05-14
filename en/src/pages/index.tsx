@@ -111,7 +111,7 @@ const sections: SectionCard[] = [
   {
     title: 'Get started',
     description: 'Install, set up, and build your first integration in under 10 minutes.',
-    link: '/docs/get-started/overview-and-architecture',
+    link: '/docs/get-started/introduction',
     icon: <IconGetStarted />,
     iconBg: '#ECFDF5',
     iconBgDark: 'rgba(5, 150, 105, 0.15)',
@@ -128,7 +128,7 @@ const sections: SectionCard[] = [
   },
   {
     title: 'Connectors',
-    description: 'Browse 200+ pre-built connectors for SaaS, databases, messaging, and AI.',
+    description: 'Browse 400+ pre-built connectors for SaaS, databases, messaging, and AI.',
     link: '/docs/connectors/overview',
     icon: <IconConnectors />,
     iconBg: '#F0EDFF',
@@ -165,7 +165,7 @@ const sections: SectionCard[] = [
   {
     title: 'Manage',
     description: 'Centralized control and observability via the Integration Control Plane (ICP).',
-    link: '/docs/manage/icp/integration-control-plane',
+    link: '/docs/manage/overview',
     icon: <IconManage />,
     iconBg: '#EEF2FF',
     iconBgDark: 'rgba(79, 70, 229, 0.15)',

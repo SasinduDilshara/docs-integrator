@@ -7,7 +7,7 @@ description: Attach the debugger to integrations running on remote environments.
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Remote debugging
+# Remote Debugging
 
 Attach the WSO2 Integrator debugger to integrations running on remote servers, containers, or other environments. Remote debugging lets you investigate issues that only occur in specific environments without adding log statements and redeploying.
 

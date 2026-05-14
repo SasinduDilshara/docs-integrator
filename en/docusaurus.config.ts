@@ -96,7 +96,7 @@ const config: Config = {
       },
       items: [
         {
-          to: '/docs/get-started/overview-and-architecture',
+          to: '/docs/get-started/introduction',
           label: 'Get started',
           position: 'left',
           activeBaseRegex: '/docs/get-started(/|$)',
@@ -136,7 +136,7 @@ const config: Config = {
           activeBaseRegex: '/docs/(deploy|deploy-operate)(/|$)',
         },
         {
-          to: '/docs/manage/icp/integration-control-plane',
+          to: '/docs/manage/overview',
           label: 'Manage',
           position: 'left',
           activeBaseRegex: '/docs/manage(/|$)',
@@ -160,8 +160,8 @@ const config: Config = {
         {
           title: 'Get started',
           items: [
-            { label: 'Overview', to: '/docs/get-started/overview-and-architecture' },
-            { label: 'Install', to: '/docs/get-started/install' },
+            { label: 'Overview', to: '/docs/get-started/introduction' },
+            { label: 'Install', to: '/docs/get-started/setup/local-setup' },
             { label: 'Quick starts', to: '/docs/get-started/build-automation' },
           ],
         },
@@ -169,8 +169,8 @@ const config: Config = {
           title: 'Develop',
           items: [
             { label: 'Integration artifacts', to: '/docs/develop/integration-artifacts' },
-            { label: 'Transform', to: '/docs/develop/transform/data-mapper' },
-            { label: 'Test', to: '/docs/develop/test/try-it' },
+            { label: 'Transform', to: '/docs/develop/integration-artifacts/supporting/data-mapper/' },
+            { label: 'Test', to: '/docs/develop/test/built-in-try-it-tool' },
             { label: 'Connectors', to: '/docs/connectors/overview' },
             { label: 'AI Integrations', to: '/docs/genai/overview' },
           ],
@@ -178,7 +178,7 @@ const config: Config = {
         {
           title: 'Deploy',
           items: [
-            { label: 'Docker and Kubernetes', to: '/docs/deploy-operate/deploy/docker-kubernetes' },
+            { label: 'Docker and Kubernetes', to: '/docs/deploy/self-hosted/kubernetes' },
             { label: 'CI/CD', to: '/docs/deploy-operate/cicd/github-actions' },
             { label: 'Observe', to: '/docs/deploy-operate/observe/observability-overview' },
             { label: 'Secure', to: '/docs/deploy-operate/secure/authentication' },

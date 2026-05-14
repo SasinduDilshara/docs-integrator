@@ -1,10 +1,10 @@
 ---
-title: Import a project to WSO2 Cloud
+title: Import a Project to WSO2 Cloud
 description: Import an existing WSO2 Integrator project from a Git repository into WSO2 Cloud.
 keywords: [wso2 integrator, wso2 cloud, import, project, git, github, gitlab, azure devops, deploy]
 ---
 
-# Import a project
+# Import a Project
 
 If you have an existing project created with the WSO2 Integrator IDE in a Git repository, you can import it directly into WSO2 Cloud. During import, you configure each integration in the project and WSO2 Cloud creates them all at once.
 

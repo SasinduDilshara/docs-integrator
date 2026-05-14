@@ -7,17 +7,9 @@ description: Generate Ballerina GraphQL services and clients from GraphQL SDL sc
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# GraphQL tool
+# GraphQL Tool
 
 The `bal graphql` tool generates Ballerina service skeletons and client code from GraphQL Schema Definition Language (SDL) files. It creates type-safe resolver stubs, input/output types, and client operations that match your GraphQL schema, letting you focus on implementing business logic rather than writing boilerplate.
-
-## Prerequisites
-
-The GraphQL tool is included with the Ballerina distribution:
-
-```bash
-bal graphql --help
-```
 
 ## Generating a service from a GraphQL schema
 

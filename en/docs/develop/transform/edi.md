@@ -7,7 +7,7 @@ description: Parse, transform, and generate EDI documents.
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# EDI processing
+# EDI Processing
 
 Work with Electronic Data Interchange (EDI) formats used in supply chain, healthcare, and financial integrations. Ballerina provides the `ballerina/edi` module for parsing and serializing EDI data, and the `bal edi` CLI tool for generating type-safe code from standard EDI specs like EDIFACT and X12.
 
@@ -328,4 +328,4 @@ public function main() returns error? {
 
 ## What's next
 
-- [Type System & Records](type-system-records.md) — Define EDI record types
+- [Type System Reference](../../reference/language/type-system.md) — Define EDI record types

@@ -34,9 +34,9 @@
 
 ---
 
-## Page: Key Concepts
+## Page: Concepts
 
-**File:** `en/docs/get-started/key-concepts.md`
+**File:** `en/docs/get-started/concepts/concepts.md` (landing), `core-concepts.md`, `ipaas-concepts.md`
 **Status:** EXISTS — review against blueprint
 
 **What to cover:**

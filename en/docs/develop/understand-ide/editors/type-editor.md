@@ -1,11 +1,11 @@
 ---
 sidebar_position: 4
-title: Type editor
+title: Type Editor
 description: Define and edit records, enums, unions, arrays, and service classes used across your integration.
 keywords: [wso2 integrator, type editor, record, enum, union, array, service class, import json, import xml]
 ---
 
-# Type editor
+# Type Editor
 
 The Type editor is the side panel you open whenever you create or change a custom type in WSO2 Integrator. It gives you one form to define records, enums, unions, arrays, and service classes, configure each member or field, and toggle advanced options such as additional fields and read-only types. Every change you save in the editor updates the type's Ballerina source and the type card on the [Type Diagram editor](type-diagram-editor.md).
 

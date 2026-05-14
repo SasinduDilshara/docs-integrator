@@ -1,12 +1,12 @@
 ---
 sidebar_position: 2
-title: Service Design editor
+title: Service Design Editor
 description: Design HTTP, gRPC, and event-driven service entry points visually.
 ---
 
-# Service Design editor
+# Service Design Editor
 
-The Service Design editor, also known as the **service designer**, is the editor you open for any service entry point in WSO2 Integrator. It lists every resource or handler the service exposes and gives you one place to add, edit, remove, try out, and export them. For background on what a service is and how it relates to listeners, see [Services in the Key concepts](/docs/get-started/key-concepts#services).
+The Service Design editor, also known as the **service designer**, is the editor you open for any service entry point in WSO2 Integrator. It lists every resource or handler the service exposes and gives you one place to add, edit, remove, try out, and export them. For background on what a service is and how it relates to listeners, see [Services and listeners](/docs/get-started/concepts/core#services-and-listeners).
 
 ![Service Design editor for an HTTP service](/img/develop/understand-ide/editors/service-design-editor/overview.png)
 
@@ -52,7 +52,7 @@ Select **+ Resource** (HTTP) or **+ Handler** (event and file services) at the t
 
 Select the **settings** icon on the row you want to change. The editor reopens the side panel populated with the current configuration, so you can rename the path, adjust parameters, or change the return type.
 
-To edit the implementation (the flow that runs when the resource or handler is invoked), select the row itself. The editor opens the [Flow Diagram editor](flow-diagram-editor.md) for that resource or handler.
+To edit the implementation (the flow that runs when the resource or handler is invoked), select the row itself. The editor opens the [Flow Diagram editor](flow-diagram-editor/flow-diagram-editor.md) for that resource or handler.
 
 ### Delete a resource or handler
 
@@ -72,6 +72,6 @@ The **More** menu groups actions that are specific to the service type. For HTTP
 
 - [Integration artifacts](/docs/develop/integration-artifacts): browse the full set of services, automations, event handlers, and file processors you can build.
 - [Service artifacts](/docs/develop/integration-artifacts/service): configure HTTP, gRPC, and other service types in detail.
-- [Flow Diagram editor](flow-diagram-editor.md): edit the logic that runs when a resource or handler is invoked.
+- [Flow Diagram editor](flow-diagram-editor/flow-diagram-editor.md): edit the logic that runs when a resource or handler is invoked.
 - [Type editor](type-editor.md): define the request and response types used by the service.
-- [Services in the Key concepts](/docs/get-started/key-concepts#services): understand the listener and service model.
+- [Services and listeners](/docs/get-started/concepts/core#services-and-listeners): understand the listener and service model.

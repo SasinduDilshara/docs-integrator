@@ -24,16 +24,23 @@ const sidebars: SidebarsConfig = {
     // ─────────────────────────────────────────────
     {
       type: 'category',
-      label: 'Get started',
+      label: 'Get Started',
       collapsed: true,
-      link: { type: 'doc', id: 'get-started/overview-and-architecture' },
+      link: { type: 'doc', id: 'get-started/introduction' },
       items: [
-        'get-started/overview-and-architecture',
-        'get-started/why',
-        'get-started/key-concepts',
+        'get-started/introduction',
         {
           type: 'category',
-          label: 'Set up',
+          label: 'Concepts',
+          link: { type: 'doc', id: 'get-started/concepts/overview' },
+          items: [
+            'get-started/concepts/core',
+            'get-started/concepts/integration-cloud-concepts',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Set Up',
           link: { type: 'doc', id: 'get-started/setup/overview' },
           items: [
             'get-started/setup/local-setup',
@@ -43,7 +50,7 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: 'category',
-          label: 'Quick starts',
+          label: 'Quick Starts',
           items: [
             'get-started/build-automation',
             'get-started/build-ai-agent',
@@ -101,7 +108,7 @@ const sidebars: SidebarsConfig = {
               items: [
                 {
                   type: 'category',
-                  label: 'Flow Diagram editor',
+                  label: 'Flow Diagram Editor',
                   link: { type: 'doc', id: 'develop/understand-ide/editors/flow-diagram-editor/flow-diagram-editor' },
                   items: [
                     'develop/understand-ide/editors/flow-diagram-editor/connections',
@@ -128,7 +135,7 @@ const sidebars: SidebarsConfig = {
         // 6.3 Integration Artifacts
         {
           type: 'category',
-          label: 'Integration artifacts',
+          label: 'Integration Artifacts',
           link: { type: 'doc', id: 'develop/integration-artifacts/integration-artifacts' },
           items: [
             'develop/integration-artifacts/automation',
@@ -145,7 +152,7 @@ const sidebars: SidebarsConfig = {
               ],
             },
             {
-              type: 'category', label: 'Event-driven integration',
+              type: 'category', label: 'Event-Driven Integration',
               collapsed: true,
               items: [
                 'develop/integration-artifacts/event/kafka',
@@ -162,7 +169,7 @@ const sidebars: SidebarsConfig = {
               ],
             },
             {
-              type: 'category', label: 'File-driven integration',
+              type: 'category', label: 'File-Driven Integration',
               collapsed: true,
               items: [
                 {
@@ -180,7 +187,7 @@ const sidebars: SidebarsConfig = {
               ],
             },
             {
-              type: 'category', label: 'Other artifacts',
+              type: 'category', label: 'Other Artifacts',
               collapsed: true,
               items: [
                 'develop/integration-artifacts/supporting/types',
@@ -189,13 +196,13 @@ const sidebars: SidebarsConfig = {
                 'develop/integration-artifacts/supporting/functions',
                 {
                   type: 'category',
-                  label: 'Data mapper',
+                  label: 'Data Mapper',
                   collapsed: true,
                   link: { type: 'doc', id: 'develop/integration-artifacts/supporting/data-mapper/data-mapper' },
                   items: [
                     {
                       type: 'category',
-                      label: 'Access paths',
+                      label: 'Access Paths',
                       collapsed: true,
                       link: { type: 'doc', id: 'develop/integration-artifacts/supporting/data-mapper/access-paths/access-paths' },
                       items: [
@@ -206,7 +213,7 @@ const sidebars: SidebarsConfig = {
                     'develop/integration-artifacts/supporting/data-mapper/mapping-capabilities',
                     {
                       type: 'category',
-                      label: 'Array mappings',
+                      label: 'Array Mappings',
                       collapsed: true,
                       link: { type: 'doc', id: 'develop/integration-artifacts/supporting/data-mapper/array-mappings/array-mappings' },
                       items: [
@@ -222,24 +229,6 @@ const sidebars: SidebarsConfig = {
             },
           ],
         },
-        // 6.4 Design Integration Logic
-        {
-          type: 'category',
-          label: 'Design integration logic',
-          items: [
-            'develop/design-logic/design-logic',
-            'develop/design-logic/visual-flow-designer',
-            'develop/design-logic/managing-connections',
-            'develop/design-logic/control-flow',
-            'develop/design-logic/error-handling',
-            'develop/design-logic/expressions',
-            'develop/design-logic/query-expressions',
-            'develop/design-logic/configuration-management',
-            'develop/design-logic/functions',
-            'develop/design-logic/ballerina-pro-code',
-            'develop/design-logic/java-interoperability',
-          ],
-        },
         // 6.5 Transform (per blueprint)
         {
           type: 'category',
@@ -250,10 +239,7 @@ const sidebars: SidebarsConfig = {
             'develop/transform/csv-flat-file',
             'develop/transform/edi',
             'develop/transform/pdf',
-            'develop/transform/yaml-toml',
-            'develop/transform/type-system',
-            'develop/transform/query-expressions',
-            'develop/transform/expressions-functions',
+            'develop/transform/yaml-toml'
           ],
         },
         // Develop with Copilot
@@ -273,7 +259,7 @@ const sidebars: SidebarsConfig = {
           items: [
             {
               type: 'category',
-              label: 'Try-It tool',
+              label: 'Try-It Tool',
               link: { type: 'doc', id: 'develop/test/built-in-try-it-tool' },
               items: [
                 'develop/test/try-it-http',
@@ -375,7 +361,7 @@ const sidebars: SidebarsConfig = {
     // ── Connector Catalog ──
     {
       type: 'category',
-      label: 'Connector catalog',
+      label: 'Connector Catalog',
       collapsed: true,
       link: { type: 'doc', id: 'connectors/catalog/index' },
       items: [
@@ -642,7 +628,7 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: 'category',
-          label: 'Github',
+          label: 'GitHub',
           link: { type: 'doc', id: 'connectors/catalog/developer-tools/github/connector-overview' },
           items: [
             'connectors/catalog/developer-tools/github/setup-guide',
@@ -1729,7 +1715,7 @@ const sidebars: SidebarsConfig = {
     // ── Build Your Own ──
     {
       type: 'category',
-      label: 'Build your own',
+      label: 'Build Your Own',
       link: { type: 'doc', id: 'connectors/build-your-own/build-own' },
       items: [
         'connectors/build-your-own/create-from-openapi-spec',
@@ -1752,7 +1738,7 @@ const sidebars: SidebarsConfig = {
         // Getting Started
         {
           type: 'category',
-          label: 'Getting started',
+          label: 'Getting Started',
           items: [
             'genai/getting-started/build-a-sentiment-analyzer',
             'genai/getting-started/build-a-hotel-finder-agent',
@@ -1761,7 +1747,7 @@ const sidebars: SidebarsConfig = {
         // Develop AI Applications
         {
           type: 'category',
-          label: 'Develop AI applications',
+          label: 'Develop AI Applications',
           items: [
             // Direct LLM Calls (single page)
             'genai/develop/direct-llm/overview',
@@ -1848,7 +1834,7 @@ const sidebars: SidebarsConfig = {
       items: [
         {
           type: 'category',
-          label: 'Enterprise integration patterns',
+          label: 'Enterprise Integration Patterns',
           items: [
             'guides/patterns/message',
             'guides/patterns/message-filter',
@@ -1864,7 +1850,7 @@ const sidebars: SidebarsConfig = {
         // Migration Guides
         {
           type: 'category',
-          label: 'Migration guides',
+          label: 'Migration Guides',
           items: [
             'guides/migration/coming-from-mulesoft',
             'guides/migration/coming-from-tibco',
@@ -1900,7 +1886,7 @@ const sidebars: SidebarsConfig = {
         // they're migrated too.
         {
           type: 'category',
-          label: 'Self-hosted',
+          label: 'Self-Hosted',
           items: [
             'deploy/self-hosted/run-locally',
             'deploy/self-hosted/docker',
@@ -1935,20 +1921,24 @@ const sidebars: SidebarsConfig = {
             'deploy-operate/observe/observability-overview',
             'deploy-operate/observe/metrics-overview',
             'deploy-operate/observe/logging-overview',
-            'deploy-operate/observe/integration-control-plane-icp',
-            // 'deploy-operate/observe/metrics-prometheus-grafana',
-            'deploy-operate/observe/jaeger-distributed-tracing',
-            'deploy-operate/observe/zipkin-tracing',
-            // 'deploy-operate/observe/datadog-integration',
-            'deploy-operate/observe/new-relic-integration',
-            // 'deploy-operate/observe/elastic-stack-elk',
-            // 'deploy-operate/observe/opensearch-integration',
-            'deploy-operate/observe/moesif-api-analytics',
-            'deploy-operate/observe/recipe-datadog-setup',
-            // 'deploy-operate/observe/recipe-local-development',
-            // 'deploy-operate/observe/recipe-kubernetes-production',
-            // 'deploy-operate/observe/recipe-elk-stack',
-            // 'deploy-operate/observe/recipe-opensearch-setup',
+            {
+              type: 'category',
+              label: 'Distributed Tracing',
+              items: [
+                'deploy-operate/observe/jaeger-distributed-tracing',
+                'deploy-operate/observe/zipkin-tracing',
+              ],
+            },
+            {
+              type: 'category',
+              label: 'Supported Platforms',
+              items: [
+                'deploy-operate/observe/integration-control-plane-icp',
+                'deploy-operate/observe/recipe-datadog-setup',
+                'deploy-operate/observe/new-relic-integration',
+                'deploy-operate/observe/moesif-api-analytics',
+              ],
+            },
           ],
         },
         // Secure
@@ -1968,7 +1958,7 @@ const sidebars: SidebarsConfig = {
         // Capacity Planning
         {
           type: 'category',
-          label: 'Capacity planning',
+          label: 'Capacity Planning',
           items: [
             'deploy-operate/capacity-planning/overview',
             'deploy-operate/capacity-planning/performance-reports',
@@ -2051,7 +2041,7 @@ const sidebars: SidebarsConfig = {
             // Users and Access
             {
               type: 'category',
-              label: 'Users and access',
+              label: 'Users and Access',
               link: { type: 'doc', id: 'manage/cloud/users-and-access/overview' },
               items: [
                     'manage/cloud/users-and-access/access-control',
@@ -2069,7 +2059,7 @@ const sidebars: SidebarsConfig = {
             },
             {
               type: 'category',
-              label: 'Platform services',
+              label: 'Platform Services',
               items: [
                 'manage/cloud/platform-services/managed-databases',
               ],
@@ -2104,7 +2094,7 @@ const sidebars: SidebarsConfig = {
             // Private data plane
             {
               type: 'category',
-              label: 'Private data plane',
+              label: 'Private Data Plane',
               link: { type: 'doc', id: 'manage/cloud/private-date-plane/overview' },
               items: [
                 'manage/cloud/private-date-plane/management-models',
@@ -2120,12 +2110,14 @@ const sidebars: SidebarsConfig = {
           items: [
             'manage/icp/install-icp',
             'manage/icp/icp-console-overview',
+            'manage/icp/quick-start',
             'manage/icp/connect-runtime',
             'manage/icp/observability-setup',
             'manage/icp/manage-projects',
             'manage/icp/manage-environments',
             'manage/icp/manage-integrations',
             'manage/icp/manage-runtimes',
+            'manage/icp/reverse-proxy',
             'manage/icp/access-control',
             {
               type: 'category',
@@ -2207,7 +2199,7 @@ const sidebars: SidebarsConfig = {
         'reference/supported-protocols',
         {
           type: 'category',
-          label: 'Supported data formats',
+          label: 'Supported Data Formats',
           link: { type: 'doc', id: 'reference/data-formats/supported-data-formats' },
           items: [
             'reference/data-formats/avro',

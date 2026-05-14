@@ -1,9 +1,9 @@
 ---
-title: Reusable data mapper
+title: Reusable Data Mapper
 description: Create a reusable data mapper artifact from the Artifacts page or the project sidebar, configure its inputs and output, and open the mapping canvas.
 ---
 
-# Reusable data mapper
+# Reusable Data Mapper
 
 Create a reusable data mapper from the **Artifacts** page or the left sidebar. Configure the inputs and the output type, then open the data mapper view.
 

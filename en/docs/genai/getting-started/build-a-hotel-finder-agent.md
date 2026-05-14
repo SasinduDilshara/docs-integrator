@@ -16,7 +16,7 @@ import TabItem from '@theme/TabItem';
 
 :::info Prerequisites
 
-- [WSO2 Integrator installed](../../get-started/install.md)
+- [WSO2 Integrator installed](../../get-started/setup/local-setup.md)
 
 :::
 

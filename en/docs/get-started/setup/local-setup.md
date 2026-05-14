@@ -1,5 +1,5 @@
 ---
-title: Local setup
+title: Local Setup
 description: Download and install WSO2 Integrator IDE on Windows, macOS, or Linux to build integrations on your machine.
 keywords: [wso2 integrator, local setup, install, ide, windows, macos, linux]
 ---
@@ -36,6 +36,8 @@ After installation, launch the IDE:
 - **Windows**: Double-click the **WSO2 Integrator** icon on your desktop or start menu.
 - **macOS**: Open the **Applications** folder and double-click **WSO2 Integrator**.
 - **Linux**: Launch **WSO2 Integrator** from your applications menu (after a `.deb` or `.rpm` install), or run the binary from the extracted directory if you used the `.tar.gz` archive.
+
+![WSO2 Integrator IDE](/img/get-started/setup/wso2-integrator-ide.png)
 
 ## Next steps
 
