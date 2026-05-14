@@ -71,6 +71,5 @@ The **More** menu groups actions that are specific to the service type. For HTTP
 ## What's next
 
 - [Integration artifacts](/docs/develop/integration-artifacts): browse the full set of services, automations, event handlers, and file processors you can build.
-- [Service artifacts](/docs/develop/integration-artifacts/service): configure HTTP, gRPC, and other service types in detail.
 - [Flow Diagram editor](flow-diagram-editor/flow-diagram-editor.md): edit the logic that runs when a resource or handler is invoked.
 - [Type editor](type-editor.md): define the request and response types used by the service.

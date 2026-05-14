@@ -93,4 +93,4 @@ The right side of the editor shows the data mapper's output type with each field
 - [Expression editor](expression-editor.md): write a custom expression for a single mapping.
 - [Configure editor](configure-editor.md): change the data mapper's inputs, output, or visibility.
 - [Type editor](type-editor.md): define the record types the data mapper maps between.
-- [Integration artifacts](/docs/develop/integration-artifacts): see how data mappers fit into the wider artifact model.
+- [Flow Diagram editor](flow-diagram-editor/flow-diagram-editor.md): invoke the data mapper from a flow node.
