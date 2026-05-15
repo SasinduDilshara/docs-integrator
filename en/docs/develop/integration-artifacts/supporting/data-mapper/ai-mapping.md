@@ -121,7 +121,7 @@ function transform(Student student) returns PersonalProfile => {
 
 ### Automated mapping generation
 
-Upload input and output record definitions to generate complete mappings. The system analyzes:
+Upload input and output type definitions (Ballerina records, JSON, or XML) to generate complete mappings. The system analyzes:
 
 - Field names and naming conventions
 - Semantic relationships between fields
