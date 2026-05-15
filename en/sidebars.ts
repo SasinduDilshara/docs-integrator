@@ -300,12 +300,12 @@ const sidebars: SidebarsConfig = {
           type: 'category',
           label: 'Troubleshooting',
           items: [
-            'develop/troubleshooting/ide-troubleshooting',
             'develop/troubleshooting/errors-and-stack-traces',
-            'develop/troubleshooting/deployment',
             'develop/troubleshooting/logging',
-            'develop/troubleshooting/profiling',
+            'develop/troubleshooting/deployment',
             'develop/troubleshooting/strand-dump-analysis',
+            'develop/troubleshooting/profiling',
+            'develop/troubleshooting/ide-troubleshooting',
           ],
         },
         // 6.9 Tools

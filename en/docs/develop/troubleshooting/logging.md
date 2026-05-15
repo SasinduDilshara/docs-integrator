@@ -11,7 +11,7 @@ import TabItem from '@theme/TabItem';
 
 Logs are the everyday tool for tracing what an integration did and diagnosing what went wrong. Reach for them when you want a persistent record across runs, when the issue only reproduces in a long-running deployment, or when [editor debugging](../debugging/editor.md) is too heavyweight for the question you have.
 
-WSO2 Integrator exposes the four standard severities (**Info**, **Warn**, **Error**, and **Debug**) both as nodes in the visual designer and as `log:print*` functions in the Ballerina `log` library. This page covers both authoring paths. For the field-by-field reference of the Log nodes, see [Logging in the flow diagram editor](../understand-ide/editors/flow-diagram-editor/logging.md). For runtime configuration (log level, output format, file rotation, aggregation), see [Logging & structured logs](/docs/deploy-operate/observe/logging-overview).
+WSO2 Integrator supports the four standard severities: **Info**, **Warn**, **Error**, and **Debug**. For the field-by-field reference of the Log nodes, see [Logging in the flow diagram editor](../understand-ide/editors/flow-diagram-editor/logging.md). For runtime configuration (log level, output format, file rotation, aggregation), see [Logging & structured logs](/docs/deploy-operate/observe/logging-overview).
 
 ## Add a log statement
 
@@ -90,6 +90,8 @@ When you catch an error, log it with the error value attached so the stack trace
 1. Add a **Log Error** node inside the **On Failure** branch of an `ErrorHandler`, or after a checked call that returned an error.
 2. In **Advanced Configurations**, attach the caught error to the log entry and enable the stack trace option.
 
+![Log Info form with Msg field](/img/develop/troubleshooting/logging/log-error.png)
+
 </TabItem>
 <TabItem value="code" label="Ballerina Code">
 
@@ -118,12 +120,27 @@ Use the severity that matches the audience and noise budget for the message:
 - `WARN`. Unexpected but recoverable conditions, such as a retry or a fallback path.
 - `ERROR`. Failures that the integration handled or escalated.
 
-To see `DEBUG` messages locally, set the level in `Config.toml` before running the integration:
+<Tabs>
+<TabItem value="visual" label="Visual Designer" default>
+
+Open **Configurations** from the project explorer and select **ballerina/log** under **Imported libraries**. Set the **level** field (and any of the other root logger options) without leaving the editor.
+
+![Configurable Variables panel showing the ballerina/log options](/img/develop/troubleshooting/logging/configurable-variables.png)
+
+For the meaning of each option (`format`, `level`, `modules`, `keyValues`, `destinations`, `enableSensitiveDataMasking`), see [Ballerina by Example](/docs/reference/ballerina-by-example).
+
+</TabItem>
+<TabItem value="code" label="Ballerina Code">
+
+Set the level in `Config.toml` before running the integration:
 
 ```toml
 [ballerina.log]
 level = "DEBUG"
 ```
+
+</TabItem>
+</Tabs>
 
 For module-specific levels, file rotation, and the JSON output format, see [Logging & structured logs](/docs/deploy-operate/observe/logging-overview).
 
@@ -132,11 +149,9 @@ For module-specific levels, file rotation, and the JSON output format, see [Logg
 When the same fields (such as a request ID) need to appear on every log entry inside a code path, create a child logger that carries the context, and call it instead of repeating the fields on every call.
 
 ```ballerina
-log:Logger requestLog = log:createLogger("orders", requestId = requestId);
-
-requestLog.printInfo("Validating order");
-requestLog.printInfo("Reserving inventory");
-requestLog.printInfo("Order accepted");
+log:Logger rootLogger = log:root();
+log:Logger requestLogger = check rootLogger.withContext(userId = userId, requestId = requestId);
+requestLogger.printInfo("User permissions validated successfully");
 ```
 
 Each entry includes `requestId` automatically. The visual designer reaches the same functions through the **Show more functions** entry on the node panel. See [Show more functions](../understand-ide/editors/flow-diagram-editor/show-more-functions.md).
@@ -146,15 +161,45 @@ Each entry includes `requestId` automatically. The visual designer reaches the s
 For a module or area that should log under its own name (or with its own defaults), create a named logger once and reuse it.
 
 ```ballerina
-final log:Logger paymentLog = log:createLogger("payment-client");
+import ballerina/log;
 
-public function charge(string orderId, decimal amount) returns error? {
-    paymentLog.printInfo("Charging card", orderId = orderId, amount = amount);
-    // ...
+// Custom logger implementation that implements the Logger type
+public isolated class ApplicationLogger {
+    *log:Logger;
+
+    private final string applicationName;
+    private final string version;
+    private final readonly & log:KeyValues context;
+
+    public isolated function init(string applicationName, string version, log:KeyValues context = {}) {
+    }
+
+    public isolated function printInfo(string|log:PrintableRawTemplate msg, error? 'error = (),
+            error:StackFrame[]? stackTrace = (), *log:KeyValues keyValues) {
+    }
+
+    public isolated function printWarn(string|log:PrintableRawTemplate msg, error? 'error = (),
+            error:StackFrame[]? stackTrace = (), *log:KeyValues keyValues) {
+    }
+
+    public isolated function printError(string|log:PrintableRawTemplate msg, error? 'error = (),
+            error:StackFrame[]? stackTrace = (), *log:KeyValues keyValues) {
+    }
+
+    public isolated function printDebug(string|log:PrintableRawTemplate msg, error? 'error = (),
+            error:StackFrame[]? stackTrace = (), *log:KeyValues keyValues) {
+    }
+
+    public isolated function withContext(*log:KeyValues keyValues) returns log:Logger|error {
+    }
+
+    public isolated function getLevel() returns log:Level{
+    }
+
+    public isolated function setLevel(log:Level level) returns error?{
+    }
 }
 ```
-
-For variations, including loggers built from configuration, see the Ballerina by-example pages on [custom logger](https://ballerina.io/learn/by-example/custom-logger/) and [logger from configuration](https://ballerina.io/learn/by-example/logger-from-config/).
 
 ## Avoid logging sensitive data
 
