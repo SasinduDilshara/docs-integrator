@@ -24,10 +24,10 @@ You will:
 3. Configure required environment variables and secrets.
 4. Test the agent using the built-in chat UI or the service API.
 
-### Step 1: create an AI agent
+### Step 1: Create an AI agent
 Follow the tutorials on creating an [AI Agent](../../../genai/develop/agents/creating-an-agent.md) or import your own AI agent in WSO2 Cloud.
 
-### Step 2: deploy the agent
+### Step 2: Deploy the agent
 
 Follow the WSO2 deployment guides for step-by-step instructions covering publishing, granting repository access, and deploying from the Cloud editor or from your IDE.
 
@@ -36,7 +36,7 @@ Follow the WSO2 deployment guides for step-by-step instructions covering publish
 
 ![Deploy the agent](/img/manage/cloud/rag-ingestion/deploy-agent.png)
 
-### Step 3: configure environment variables and secrets
+### Step 3: Configure environment variables and secrets
 
 1. After the initial build, open the integration **Overview** page in WSO2 Cloud.
 2. Click **Configure** and add API keys and any required secrets.
@@ -45,7 +45,7 @@ Follow the WSO2 deployment guides for step-by-step instructions covering publish
 
 ![Configure secrets and environment variables](/img/manage/cloud/rag-ingestion/configure-agent.png)
 
-### Step 4: test and query the agent
+### Step 4: Test and query the agent
 
 There are two common ways to query the deployed agent:
 

@@ -17,7 +17,7 @@ To retrieve chunks that have already been ingested, open your organization from 
 
 ## Set up retrieval
 
-### Step 1: initialize the vector store
+### Step 1: Initialize the vector store
 
 1. Select `Pinecone` as the vector database.
 2. Enter the key in **API Key**.
@@ -29,7 +29,7 @@ To create a key, see the [Pinecone API key documentation](https://docs.pinecone.
 3. Enter the **Collection name** to retrieve from.
 4. Click **Next**.
 
-### Step 2: configure the embedding model
+### Step 2: Configure the embedding model
 
 1. Select `text-embedding-ada-002` from the **OpenAI** provider list.
 2. Enter the key in **Embedding model API key**.
@@ -40,7 +40,7 @@ To create a key, see the [OpenAI embeddings documentation](https://platform.open
 
 3. Click **Next**.
 
-### Step 3: query and retrieve chunks
+### Step 3: Query and retrieve chunks
 
 1. Enter a query that matches the content of ingested files.
 2. Review **Maximum chunks to retrieve** and **Minimum similarity threshold**. Update if needed.
@@ -58,7 +58,7 @@ WSO2 Cloud - Integration Platform's retrieval process can apply reranking models
 
 ![Retrieve relevant chunks from the vector store](/img/manage/cloud/rag-ingestion/rag-retrieval-light.gif)
 
-### Step 4: enable reranking (optional)
+### Step 4: Enable reranking (optional)
 
 Reranking reorders retrieved chunks by contextual relevance, improving the quality of results passed to your LLM. WSO2 Cloud supports reranking with Cohere.
 

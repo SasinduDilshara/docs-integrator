@@ -20,7 +20,7 @@ Navigate to your organization using the **Organization** dropdown in the console
 
 ## Set up scheduled ingestion
 
-### Step 1: initialize the vector store
+### Step 1: Initialize the vector store
 
 LLMs receive context as numerical vectors (embeddings). A vector store keeps these embeddings for efficient retrieval.
 
@@ -34,7 +34,7 @@ To create a key, see the [Pinecone API key documentation](https://docs.pinecone.
 3. Enter **Collection Name**. The collection is created automatically if it does not exist.
 4. Click **Next**.
 
-### Step 2: configure the embedding model
+### Step 2: Configure the embedding model
 
 1. Select `text-embedding-ada-002` from the **OpenAI** provider list.
 2. Enter the key in **Embedding model API key**.
@@ -45,7 +45,7 @@ To create a key, see the [OpenAI embeddings documentation](https://platform.open
 
 3. Click **Next**.
 
-### Step 3: configure chunking
+### Step 3: Configure chunking
 
 Chunking splits large documents into smaller segments that the ingestion pipeline can process efficiently.
 
@@ -59,7 +59,7 @@ Chunking splits large documents into smaller segments that the ingestion pipelin
 - **Max overlap size** sets how many tokens overlap between consecutive chunks.
 :::
 
-### Step 4: create the automation
+### Step 4: Create the automation
 
 Fill in the automation details:
 
@@ -70,7 +70,7 @@ Fill in the automation details:
 | **Name** | `sample-automation` |
 | **Description** (optional) | `My sample automation description` |
 
-### Step 5: configure the data source
+### Step 5: Configure the data source
 
 The data source defines where files are read from. WSO2 Cloud supports Google Drive folders and Amazon S3 buckets.
 
@@ -100,7 +100,7 @@ You can find the folder ID in the Google Drive URL, after `/folders/`.
 
 ![RAG ingestion configuration form](/img/manage/cloud/rag-ingestion/rag-configure-light.gif)
 
-### Step 6: schedule ingestion
+### Step 6: Schedule ingestion
 
 After creation, the automation is deployed to the development environment with your saved configuration.
 
@@ -113,8 +113,6 @@ After creation, the automation is deployed to the development environment with y
 You can run ingestion at intervals such as minutely, hourly, daily, monthly, or yearly. In each run, the system detects new files in the data source and ingests them into the vector store.
 
 ![Schedule recurring ingestion](/img/manage/cloud/rag-ingestion/rag-schedule-light.gif)
-
-
 
 ## What's next
 
