@@ -1,7 +1,7 @@
 ---
 sidebar_position: 9
 title: AI Data Mapping
-description: Generate complete, type-safe Ballerina transformation code between any two data structures using AI in WSO2 Integrator.
+description: Generate transformation code between data structures with AI-powered field mapping.
 keywords: [wso2 integrator, data mapper, ai data mapping, auto map, field mapping, transformation]
 ---
 
@@ -126,7 +126,6 @@ The AI Data Mapper handles complex transformation scenarios:
 - **Optional field handling**: Handling fields that may or may not be present.
 - **Nested record transformation**: Deep structure mapping with proper path navigation.
 - **Array-to-array mappings**: Member-wise transformations with appropriate iteration logic.
-- **Conditional logic**: Field presence validation and default value assignment.
 
 ### Supporting documentation to improve accuracy
 
@@ -143,7 +142,7 @@ For complex mapping scenarios involving large schemas or domain-specific require
 
 ### Sub-mapping reuse
 
-The AI Data Mapper detects existing mapping expressions in your codebase and reuses them where applicable. This reduces code duplication, ensures consistent transformation logic, and keeps the codebase compact.
+The AI Data Mapper detects existing data mappers in your codebase and reuses them where applicable. This reduces code duplication, ensures consistent transformation logic, and keeps the codebase compact.
 
 ### Function extraction for large schemas
 
