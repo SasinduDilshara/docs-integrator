@@ -12,7 +12,7 @@ import TabItem from '@theme/TabItem';
 
 # AI Data Mapping
 
-The AI Data Mapper generates complete transformation code between any two data structures without manual field-by-field matching. It is especially useful for large or complex schemas with hundreds of fields, deeply nested records, or domain-specific formats.
+The AI Data Mapper uses AI to generate mappings between data structures, without manual field-by-field matching. It is especially useful for large or complex schemas with hundreds of fields, deeply nested records, or domain-specific formats.
 
 For the Data Mapper editor and manual mapping, see [Data Mapper editor](../../../understand-ide/editors/datamapper-editor.md).
 
@@ -32,7 +32,7 @@ For the Data Mapper editor and manual mapping, see [Data Mapper editor](../../..
         }}
     />
 
-2. In the top-right corner of the canvas, select **Auto Map**. The WSO2 Integrator Copilot panel opens alongside the canvas with a `/datamap` command preloaded.
+2. In the top-right corner of the canvas, select **Auto Map**. The WSO2 Integrator Copilot panel opens alongside the canvas with the `/datamap` command preloaded.
 
     <ThemedImage
         alt="WSO2 Integrator Copilot panel open alongside the Data Mapper canvas with the /datamap command preloaded in the input field"
@@ -97,7 +97,7 @@ type Accommodation record {
 
 <h2>Define the data mapper function</h2>
 
-Define the `transform` function stub in `datamappings.bal`:
+Define the `transform` function stub in `data_mappings.bal`:
 
 ```ballerina
 function transform(Student student) returns PersonalProfile => {};
@@ -121,7 +121,7 @@ function transform(Student student) returns PersonalProfile => {
 
 ### Automated mapping generation
 
-Upload input and output type definitions (Ballerina records, JSON, or XML) to generate complete mappings. The system analyzes:
+Mapping generation takes into account:
 
 - Field names and naming conventions
 - Semantic relationships between fields
@@ -134,8 +134,8 @@ Upload input and output type definitions (Ballerina records, JSON, or XML) to ge
 
 The AI Data Mapper handles complex transformation scenarios:
 
-- **Parsing and conversion**: Parsing values such as `string` to `int`, and converting between primitive types such as `decimal` to `float`.
-- **Optional field handling**: Proper handling of optional fields.
+- **Parsing and conversion**: Parsing such as parsing a string as an integer, and converting a value of one type to another.
+- **Optional field handling**: Handling fields that may or may not be present.
 - **Nested record transformation**: Deep structure mapping with proper path navigation.
 - **Array-to-array mappings**: Member-wise transformations with appropriate iteration logic.
 - **Conditional logic**: Field presence validation and default value assignment.
@@ -151,7 +151,7 @@ Supported formats:
 - CSV files
 - Text files
 
-For complex mapping scenarios involving large schemas or domain-specific requirements captured in multiple documents, upload all of them. The system analyzes the combined documentation to generate more accurate, context-aware transformations.
+For complex mapping scenarios involving large schemas or domain-specific requirements captured in multiple documents, upload all of them. The system analyzes all the documentation to generate accurate, context-aware transformations.
 
 ### Sub-mapping reuse
 

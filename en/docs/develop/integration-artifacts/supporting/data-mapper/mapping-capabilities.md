@@ -56,4 +56,4 @@ For a full walkthrough with code examples, see [AI data mapping](./ai-mapping.md
 - [Array mappings](./array-mappings/array-mappings.md) — Map between arrays using iteration, joins, and aggregation.
 - [Generic type mappings](./generic-type-mappings.md) — Generate types from a sample JSON or XML payload.
 - [Sub Mappings](./submappings.md) — Reuse mapping logic across multiple output fields.
-- [AI data mapping](./ai-mapping.md) — Generate complete, type-safe transformation code for large or complex schemas.
+- [AI data mapping](./ai-mapping.md) — Generate type-safe transformation code for large or complex schemas.
