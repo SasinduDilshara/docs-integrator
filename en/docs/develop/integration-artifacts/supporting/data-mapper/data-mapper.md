@@ -28,7 +28,7 @@ The data mapper transforms data between different record types using a visual ca
 |---|---|
 | Transform a payload at the boundary of an integration | Reusable data mapper artifact |
 | Shape a value within a flow (for example, on a **Declare Variable** node) | Inline data mapper |
-| Bootstrap a complex mapping quickly | **Auto Map** in the data mapper view ([Map with AI](./mapping-capabilities.md#map-with-ai)) or [AI data mapping](./ai-data-mapper.md) for large schemas |
+| Bootstrap a complex mapping quickly | **Auto Map** in the data mapper view ([Map with AI](./mapping-capabilities.md#map-with-ai)) or [AI data mapping](./ai-mapping.md) for large schemas |
 | Reuse the same field-grouping logic in multiple outputs | Sub mapping |
 
 ## What's next

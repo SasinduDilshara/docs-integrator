@@ -53,7 +53,7 @@ Adds a data mapper call that transforms data from one record shape to another. U
 
 ![Map Data button in the Statement section](/img/develop/flow-design-elements/map-data-node.png)
 
-The picker lists every data mapper in the project under **Within Project**. Select an existing mapper to invoke it from the flow, or select **Create Data Mapper** to define a new one. New and existing mappers open in the [Data Mapper editor](../datamapper-editor.md), where you draw connections between source and target fields, write inline expressions, or use [**Auto Map**](/docs/develop/integration-artifacts/supporting/data-mapper/ai-data-mapper).
+The picker lists every data mapper in the project under **Within Project**. Select an existing mapper to invoke it from the flow, or select **Create Data Mapper** to define a new one. New and existing mappers open in the [Data Mapper editor](../datamapper-editor.md), where you draw connections between source and target fields, write inline expressions, or use [**Auto Map**](/docs/develop/integration-artifacts/supporting/data-mapper/ai-mapping).
 
 ![Data Mappers picker with Create Data Mapper action and existing mappers](/img/develop/flow-design-elements/map-data-view.png)
 

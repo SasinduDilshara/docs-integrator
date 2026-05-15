@@ -75,7 +75,7 @@ The mapping area is the central region between the input and output sides. Links
 
 **Auto Map** in the header attempts to wire every output field from the available inputs in one action. It matches fields by name and compatible type, and falls back to an AI-assisted suggestion when no exact match is found. Review the generated mappings on the canvas before saving, because **Auto Map** can produce best-effort suggestions that may need adjustment.
 
-For AI-assisted data mapping, see [AI data mapping](/docs/develop/integration-artifacts/supporting/data-mapper/ai-data-mapper).
+For AI-assisted data mapping, see [AI data mapping](/docs/develop/integration-artifacts/supporting/data-mapper/ai-mapping).
 
 {/* ![Auto Map suggestions on the mapping canvas](/img/develop/understand-ide/editors/datamapper-editor/auto-map.png) */}
 
