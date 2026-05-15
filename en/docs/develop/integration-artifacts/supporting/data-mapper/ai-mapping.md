@@ -5,8 +5,6 @@ description: Generate complete, type-safe Ballerina transformation code between 
 keywords: [wso2 integrator, data mapper, ai data mapping, auto map, field mapping, transformation]
 ---
 
-import ThemedImage from '@theme/ThemedImage';
-import useBaseUrl from '@docusaurus/useBaseUrl';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
@@ -22,35 +20,25 @@ For the Data Mapper editor and manual mapping, see [Data Mapper editor](../../..
 <Tabs>
 <TabItem value="ui" label="Visual designer" default>
 
-1. In the **Data Mappers** section of the sidebar, click the data mapper to open it in the Data Mapper editor. The canvas loads the input schema on the left and the output schema on the right.
+1. Define the input and output record types in the **Types** panel. Define inner records first, then compose them into the parent input and output records. For details on creating records, see [Type editor](../../../understand-ide/editors/type-editor.md).
 
-    <ThemedImage
-        alt="Data Mapper canvas with the input schema on the left and the output schema on the right with no mappings"
-        sources={{
-            light: useBaseUrl('/img/develop/integration-artifacts/supporting/data-mapper/ai-data-mapper-canvas.png'),
-            dark: useBaseUrl('/img/develop/integration-artifacts/supporting/data-mapper/ai-data-mapper-canvas.png'),
-        }}
-    />
+    ![Types canvas with child record cards visible, and the New Type panel open for defining a parent record that references them](/img/develop/integration-artifacts/supporting/data-mapper/ai-data-mapper-define-personal-profile.png)
 
-2. In the top-right corner of the canvas, select **Auto Map**. The WSO2 Integrator Copilot panel opens alongside the canvas with the `/datamap` command preloaded.
+2. Create the data mapper. Under **Data Mappers** in the project explorer, select **+**. Set a name, add the input type with a parameter name, set the output type, and select **Create**.
 
-    <ThemedImage
-        alt="WSO2 Integrator Copilot panel open alongside the Data Mapper canvas with the /datamap command preloaded in the input field"
-        sources={{
-            light: useBaseUrl('/img/develop/integration-artifacts/supporting/data-mapper/ai-data-mapper-copilot-command.png'),
-            dark: useBaseUrl('/img/develop/integration-artifacts/supporting/data-mapper/ai-data-mapper-copilot-command.png'),
-        }}
-    />
+    ![Create New Data Mapper form with fields for data mapper name, input type with parameter name, and output type](/img/develop/integration-artifacts/supporting/data-mapper/ai-data-mapper-create-form.png)
 
-3. Submit the command. The Copilot reads the project files, generates field mappings based on the input and output types, and integrates them into your workspace. When complete, mapping lines appear between the matched fields on the canvas.
+3. The Data Mapper editor opens with the input schema on the left and the output schema on the right.
 
-    <ThemedImage
-        alt="Data Mapper canvas with generated field mapping lines connecting the input and output fields, with the completion message in the Copilot panel"
-        sources={{
-            light: useBaseUrl('/img/develop/integration-artifacts/supporting/data-mapper/ai-data-mapper-result.png'),
-            dark: useBaseUrl('/img/develop/integration-artifacts/supporting/data-mapper/ai-data-mapper-result.png'),
-        }}
-    />
+    ![Data Mapper canvas with the input schema on the left and the output schema on the right with no mappings](/img/develop/integration-artifacts/supporting/data-mapper/ai-data-mapper-canvas.png)
+
+4. In the top-right corner of the canvas, select **Auto Map**. The WSO2 Integrator Copilot panel opens alongside the canvas with the `/datamap` command preloaded.
+
+    ![WSO2 Integrator Copilot panel open alongside the Data Mapper canvas with the /datamap command preloaded in the input field](/img/develop/integration-artifacts/supporting/data-mapper/ai-data-mapper-copilot-command.png)
+
+5. Submit the command. The Copilot reads the project files, generates field mappings based on the input and output types, and integrates them into your workspace. When complete, mapping lines appear between the matched fields on the canvas.
+
+    ![Data Mapper canvas with generated field mapping lines connecting the input and output fields, with the completion message in the Copilot panel](/img/develop/integration-artifacts/supporting/data-mapper/ai-data-mapper-result.png)
 
 </TabItem>
 <TabItem value="code" label="Ballerina code">
