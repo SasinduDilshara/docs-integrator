@@ -12,21 +12,20 @@ import TabItem from '@theme/TabItem';
 
 # AI Data Mapping
 
-The AI Data Mapper generates complete, compilable Ballerina transformation code between any two data structures without manual field-by-field matching. Use it when schemas are large or complex, such as healthcare, insurance, or banking data structures with hundreds of fields, deeply nested records, or domain-specific formats.
+The AI Data Mapper generates complete transformation code between any two data structures without manual field-by-field matching. It is especially useful for large or complex schemas with hundreds of fields, deeply nested records, or domain-specific formats.
 
 For the Data Mapper editor and manual mapping, see [Data Mapper editor](../../../understand-ide/editors/datamapper-editor.md).
 
-## How it works
+## How to use
 
-The following example maps a `Student` record to a `PersonalProfile` record.
 
 <Tabs>
 <TabItem value="ui" label="Visual designer" default>
 
-1. In the **Data Mappers** section of the sidebar, click **transform** to open it in the Data Mapper editor. The canvas loads the `Student` input schema on the left and the `PersonalProfile` output schema on the right.
+1. In the **Data Mappers** section of the sidebar, click the data mapper to open it in the Data Mapper editor. The canvas loads the input schema on the left and the output schema on the right.
 
     <ThemedImage
-        alt="Data Mapper canvas showing the Student input schema on the left and the PersonalProfile output schema on the right with no mappings"
+        alt="Data Mapper canvas with the input schema on the left and the output schema on the right with no mappings"
         sources={{
             light: useBaseUrl('/img/develop/integration-artifacts/supporting/data-mapper/ai-data-mapper-canvas.png'),
             dark: useBaseUrl('/img/develop/integration-artifacts/supporting/data-mapper/ai-data-mapper-canvas.png'),
@@ -43,10 +42,10 @@ The following example maps a `Student` record to a `PersonalProfile` record.
         }}
     />
 
-3. Submit the command. The Copilot reads the project files, generates field mappings based on the input and output types, repairs the generated code, and integrates it into your workspace. When complete, mapping lines appear between the matched fields on the canvas.
+3. Submit the command. The Copilot reads the project files, generates field mappings based on the input and output types, and integrates them into your workspace. When complete, mapping lines appear between the matched fields on the canvas.
 
     <ThemedImage
-        alt="Data Mapper canvas showing generated field mapping lines connecting the Student fields to the PersonalProfile fields, with the completion message in the Copilot panel"
+        alt="Data Mapper canvas with generated field mapping lines connecting the input and output fields, with the completion message in the Copilot panel"
         sources={{
             light: useBaseUrl('/img/develop/integration-artifacts/supporting/data-mapper/ai-data-mapper-result.png'),
             dark: useBaseUrl('/img/develop/integration-artifacts/supporting/data-mapper/ai-data-mapper-result.png'),
@@ -58,7 +57,7 @@ The following example maps a `Student` record to a `PersonalProfile` record.
 
 <h2>Define data types</h2>
 
-Create a file named `types.bal` to define the input and output record types:
+Define the input and output record types in `types.bal`:
 
 ```ballerina
 type Student record {
@@ -124,22 +123,20 @@ function transform(Student student) returns PersonalProfile => {
 
 Upload input and output record definitions to generate complete mappings. The system analyzes:
 
-- Field names and naming conventions.
-- Semantic relationships between fields.
-- Nested data structures.
-- Array types and cardinality.
-- Optional and nullable fields.
-- Domain-specific patterns such as those common in healthcare contexts.
-
-The generated mapping code is produced in seconds and follows established engineering practices.
+- Field names and naming conventions
+- Semantic relationships between fields
+- Nested data structures
+- Array types and cardinality
+- Optional and nullable fields
+- Domain-specific patterns such as those common in healthcare contexts
 
 ### Advanced expression generation
 
 The AI Data Mapper handles complex transformation scenarios:
 
-- **Type conversions**: Automatic conversion between primitive types such as `string` to `int` or `decimal` to `float`.
-- **Optional field handling**: Null-safety checks and proper optional field management.
-- **Nested record transformation**: Deep structure mapping with proper path resolution.
+- **Parsing and conversion**: Parsing values such as `string` to `int`, and converting between primitive types such as `decimal` to `float`.
+- **Optional field handling**: Proper handling of optional fields.
+- **Nested record transformation**: Deep structure mapping with proper path navigation.
 - **Array-to-array mappings**: Member-wise transformations with appropriate iteration logic.
 - **Conditional logic**: Field presence validation and default value assignment.
 
@@ -160,40 +157,9 @@ For complex mapping scenarios involving large schemas or domain-specific require
 
 The AI Data Mapper detects existing mapping expressions in your codebase and reuses them where applicable. This reduces code duplication, ensures consistent transformation logic, and keeps the codebase compact.
 
-For example, if a function already maps `firstName` and `lastName` to a `fullName` field:
-
-```ballerina
-type Person record {|
-    string firstName;
-    string lastName;
-|};
-
-type Student record {|
-    string fullName;
-|};
-
-function transform(Person person) returns Student =>
-    let string fullNameOfPerson = person.firstName + " " + person.lastName in {
-        fullName: fullNameOfPerson
-    };
-```
-
-When generating new mappings that require the same full name transformation, the system reuses the existing `fullNameOfPerson` expression rather than regenerating `firstName + " " + lastName` inline. This ensures consistency and reduces redundant code across your transformations.
-
 ### Function extraction for large schemas
 
 For mappings with a large number of fields (hundreds to thousands of fields), Copilot extracts helper functions to maintain code readability and comply with language server constraints. Complex transformations involving union types, deeply nested structures, and array-to-array operations are automatically decomposed into reusable functions.
-
-### Code validation
-
-All generated mappings are validated by the Ballerina Language Server before output, ensuring:
-
-- Syntactic correctness.
-- Type safety compliance.
-- Proper import statements.
-- Correct handling of reserved keywords.
-
-The output is guaranteed to be compilable code.
 
 ## Responsible use
 
