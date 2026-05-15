@@ -41,25 +41,9 @@ The dump is written to the process's standard output. If you started the integra
 bal run . > output.log 2>&1
 ```
 
-### Docker
-
-```bash
-docker kill --signal=SIGTRAP <container_id>
-docker logs <container_id> 2>&1 | grep -A 100 "strand dump"
-```
-
-### Kubernetes
-
-```bash
-kubectl exec <pod_name> -- kill -SIGTRAP 1
-kubectl logs <pod_name> | grep -A 100 "strand dump"
-```
-
-PID `1` works because the Ballerina process is typically the container's entrypoint.
-
 ## Read a strand dump
 
-<!-- TODO: example dump -->
+![Annotated strand dump output format](/img/develop/troubleshooting/strand-dump-analysis/strand-dump-output-format.svg)
 
 ### Header
 
