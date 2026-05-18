@@ -6,17 +6,17 @@ description: Map fields between source and target types visually, without writin
 
 # Data Mapper editor
 
-The Data Mapper editor is the visual surface you open for any data mapper in WSO2 Integrator. It shows the source types on the left, the target type on the right, and the mapping canvas between them, so you can map fields by creating links or filling expressions instead of writing the conversion function manually. The data mapper is either a typed function with one or more inputs and a single output, or a variable declaration with a [Record type](/docs/reference/language/type-system#records). Every change you make in the editor is reflected in the underlying source.
+The Data Mapper editor is the visual surface you open for any data mapper in WSO2 Integrator. It shows the source types on the left, the target type on the right, and the mapping area between them, so you can map fields by creating links or filling expressions instead of writing the conversion function manually. The data mapper is either a typed function with one or more inputs and a single output, or a variable declaration with a [Record type](/docs/reference/language/type-system#records). Every change you make in the editor is reflected in the underlying source.
 
-For end-to-end usage, including how to create a data mapper, work with arrays and nested records, and apply transformations, see [Data mapper](/docs/develop/integration-artifacts/supporting/data-mapper).
+For end-to-end usage, including how to create a data mapper, work with arrays and nested records, and apply transformations, see [Data Mapper](/docs/develop/integration-artifacts/supporting/data-mapper).
 
 ![Data Mapper editor for the transform data mapper](/img/develop/understand-ide/editors/datamapper-editor/overview.png)
 
 ## Open the editor
 
-Select a data mapper under **Data Mappers** in the project explorer, or select the data mapper node from a flow in the [Flow Diagram editor](flow-diagram-editor.md). The editor opens with the data mapper's inputs on the left, the output on the right, and the mapping canvas between them.
+Select a data mapper under **Data Mappers** in the project explorer, or use the **View** option of the data mapper node from a flow in the [Flow Diagram editor](flow-diagram-editor.md). To open the data mapper for a [declare variable](/docs/develop/understand-ide/editors/flow-diagram-editor/statement/#declare-variable) node, use the **Open in Data Mapper** button in the side panel.
 
-To create a new data mapper before opening the editor, see [Data mapper](/docs/develop/integration-artifacts/supporting/data-mapper/data-mapper).
+To create a new data mapper before opening the editor, see [Data Mapper](/docs/develop/integration-artifacts/supporting/data-mapper).
 
 ## Header
 
@@ -37,7 +37,7 @@ The header runs along the top of the editor and combines the breadcrumb, the dat
 
 ## Expression bar
 
-Below the header, the Expression bar shows the field you are currently working with and provides an editor to write inline expressions when an output field is selected. See [Expression Bar](/docs/develop/integration-artifacts/supporting/data-mapper/mapping-capabilities#expression-bar).
+Below the header, the Expression bar shows the field you are currently working with and provides an completions supported editor to write inline expressions when an output field is selected. See [Expression Bar](/docs/develop/integration-artifacts/supporting/data-mapper/mapping-capabilities#expression-bar).
 
 ## Inputs side
 
