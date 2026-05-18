@@ -1,11 +1,11 @@
 ---
 title: Data Mapper
-description: Transform data between record types visually using the WSO2 Integrator data mapper, with support for inline and AI-assisted mapping, array operations, generic JSON/XML payloads, and reusable submappings.
+description: Transform data between record types visually using the WSO2 Integrator data mapper, with support for inline and AI-assisted mapping, array operations, generic JSON/XML payloads, and reusable sub mappings.
 ---
 
 # Data Mapper
 
-The data mapper transforms data between different record types using a visual canvas. Map fields, write inline expressions, iterate over arrays, aggregate values, and reuse common mappings as submappings, all without leaving the integration flow.
+The data mapper transforms data between different record types using a visual canvas. Map fields, write inline expressions, iterate over arrays, aggregate values, and reuse common mappings as sub mappings, all without leaving the integration flow.
 
 :::info Prerequisites
 - WSO2 Integrator installed ([Install guide](../../../../get-started/setup/local-setup.md))
