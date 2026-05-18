@@ -14,7 +14,7 @@ For end-to-end usage, including how to create a data mapper, work with arrays an
 
 ## Open the editor
 
-Select a data mapper under **Data Mappers** in the project explorer, or use the **View** option of the data mapper node from a flow in the [Flow Diagram editor](flow-diagram-editor/flow-diagram-editor.md). To open the data mapper for a [declare variable](flow-diagram-editor/statement.md#declare-variable) node, use the **Open in Data Mapper** button in the side panel.
+Select a data mapper under **Data Mappers** in the project explorer, or select the **View** option of the data mapper node from a flow in the [Flow Diagram editor](flow-diagram-editor/flow-diagram-editor.md). To open the data mapper for a [declare variable](flow-diagram-editor/statement.md#declare-variable) node, select the **Open in Data Mapper** button in the side panel.
 
 To create a new data mapper before opening the editor, see [Data Mapper](../../integration-artifacts/supporting/data-mapper/data-mapper.md).
 
