@@ -98,7 +98,7 @@ my-integration/
 
 ### Step 2: Open the terminal at the project root
 
-In VS Code open the integrated terminal (`` Ctrl+` ``) and confirm you are in the project root, the directory that contains `Ballerina.toml`:
+In the IDE, open the integrated terminal (`` Ctrl+` ``) and confirm you are in the project root, the directory that contains `Ballerina.toml`:
 
 ```bash
 ls Ballerina.toml
