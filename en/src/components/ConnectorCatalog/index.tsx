@@ -110,7 +110,7 @@ export default function ConnectorCatalog({ connectors, categories }: Props) {
       {resultCount > 0 ? (
         <div className={styles.grid}>
           {filtered.map((c) => (
-            <a key={c.name + c.link} href={c.link} className={styles.card}>
+            <a key={c.name + c.link} href={c.link.endsWith('/') ? c.link : `${c.link}/`} className={styles.card}>
               <div className={styles.cardHeader}>
                 {c.icon ? (
                   <img
