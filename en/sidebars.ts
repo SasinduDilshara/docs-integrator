@@ -2226,7 +2226,6 @@ const sidebars: SidebarsConfig = {
           type: 'category',
           label: 'Appendix',
           items: [
-            'reference/appendix/system-requirements',
             'reference/error-code',
             'reference/glossary',
             'reference/faq',
