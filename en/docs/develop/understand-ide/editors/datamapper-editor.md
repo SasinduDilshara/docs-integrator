@@ -35,9 +35,9 @@ The header runs along the top of the editor and combines the breadcrumb, the dat
 | **Configure** | Opens the [Configure editor](configure-editor.md) for the data mapper. Use it to rename the data mapper, toggle **Public**, or change its inputs and output. |
 | **Close** | Closes the data mapper and returns to the previous view. |
 
-## Expression editor
+## Expression bar
 
-Below the header, the Expression editor shows the field you are currently working with and provides an completions supported editor to write inline expressions when an output field is selected. See [Expression editor](../../integration-artifacts/supporting/data-mapper/mapping-capabilities.md#expression-editor).
+Below the header, the Expression bar shows the field you are currently working with and provides an editor with completion support to write inline expressions when an output field is selected. See [Expression editor](../../integration-artifacts/supporting/data-mapper/mapping-capabilities.md#expression-editor).
 
 ## Inputs side
 
@@ -59,17 +59,17 @@ A sub mapping is a named intermediate mapping computed once inside the data mapp
 
 The right side of the editor shows the data mapper's output type with each field rendered as a row. Every required field is marked with a red asterisk. Use the `⋮` menu on a field to access available field options.
 
-{/* ![Output panel showing the target record](/img/develop/understand-ide/editors/datamapper-editor/output-panel.png) */}
+{/* ![Output side showing the target record](/img/develop/understand-ide/editors/datamapper-editor/output-panel.png) */}
 
 ## Mapping area
 
-The mapping area is the central area between the input and output sides. Links on the canvas represent mapping connections.
+The mapping area is the central region between the input and output sides. Links on this area represent mapping connections.
 
 - Select an input field, then select the desired output field to create a mapping. See [Mapping capabilities](../../integration-artifacts/supporting/data-mapper/mapping-capabilities.md).
 - Select an existing link to see available options for that mapping.
 - When there is an issue with a created mapping, the corresponding link shows a diagnostic so you can fix it using the available code actions or the expression bar.
 
-{/* ![Mapping canvas with field-to-field links](/img/develop/understand-ide/editors/datamapper-editor/mapping-canvas.png) */}
+{/* ![Mapping area with field-to-field links](/img/develop/understand-ide/editors/datamapper-editor/mapping-canvas.png) */}
 
 ## Auto Map
 
