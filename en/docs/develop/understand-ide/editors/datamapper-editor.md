@@ -6,7 +6,7 @@ description: Map fields between source and target types visually, without writin
 
 # Data Mapper editor
 
-The Data Mapper editor is the visual surface you open for any data mapper in WSO2 Integrator. It shows the source types on the left, the target type on the right, and the mapping canvas between them, so you can map fields by creating links or filling expressions instead of hand-writing the conversion function. The data mapper is either a typed function with one or more inputs and a single output, or a variable declaration with a [Record type](/docs/reference/language/type-system#records). Every change you make in the editor is reflected in the underlying source.
+The Data Mapper editor is the visual surface you open for any data mapper in WSO2 Integrator. It shows the source types on the left, the target type on the right, and the mapping canvas between them, so you can map fields by creating links or filling expressions instead of writing the conversion function manually. The data mapper is either a typed function with one or more inputs and a single output, or a variable declaration with a [Record type](/docs/reference/language/type-system#records). Every change you make in the editor is reflected in the underlying source.
 
 For end-to-end usage, including how to create a data mapper, work with arrays and nested records, and apply transformations, see [Data mapper](/docs/develop/integration-artifacts/supporting/data-mapper).
 
@@ -25,13 +25,13 @@ The header runs along the top of the editor and combines the breadcrumb, the dat
 | Control | Description |
 |---|---|
 | **Breadcrumb** | Shows the path from the parent artifact (for example, `Commons > transform`). Select a segment to return to it. |
-| **Back** | Returns to the previous view|
+| **Back** | Returns to the previous view. |
 | **Title** | Displays the `fx` icon followed by the data mapper name (for example, `transform`). |
 | **Undo** / **Redo** | Reverses or reapplies recent mapping changes. |
-| **Clear all** | Deletes all mappings |
+| **Clear all** | Deletes all mappings. |
 | **Refresh** | Reloads the editor to pick up changes made to the underlying types. |
 | **Filter input and output fields** | Filters fields whose names match the search term, useful for large records. |
-| **Auto Map** | Runs the AI based automatic mapping action described below. |
+| **Auto Map** | Runs the AI-based automatic mapping action described below. |
 | **Configure** | Opens the [Configure editor](configure-editor.md) for the data mapper. Use it to rename the data mapper, toggle **Public**, or change its inputs and output. |
 | **Close** | Closes the data mapper and returns to the previous view. |
 
@@ -47,7 +47,7 @@ The left side of the editor lists every input the data mapper receives. Each inp
 
 ### Global Inputs
 
-The **Global Inputs** section at the top of the panel exposes values that are reachable from anywhere in the integration, such as configurable variables. Use this section when a target field should be filled from global values.
+The **Global Inputs** section at the top of the inputs side exposes values that are reachable from anywhere in the integration, such as configurable variables. Use this section when a target field should be mapped from global values.
 
 ### Sub Mappings
 
