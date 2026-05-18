@@ -2,7 +2,7 @@
 title: "Copilot Capabilities"
 description: "Write, test, debug, and fix integrations with WSO2 Integrator Copilot."
 keywords: [wso2 integrator, copilot, ai, integration generation]
-slug: /develop/wso2-integrator-copilot/copilot-capabilities
+slug: /develop/copilot/copilot-capabilities
 ---
 
 # Copilot Capabilities

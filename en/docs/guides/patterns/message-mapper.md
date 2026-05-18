@@ -17,16 +17,16 @@ The pattern is implemented between the message boundary and the domain processin
 
 ## Record-to-record mapping
 
-Use record-to-record mapping when both the domain value and the channel payload can be represented as typed records. Create separate record types for the domain model and the message format, then keep the mapping in a [reusable data mapper](/develop/integration-artifacts/supporting/data-mapper/access-paths/reusable) or a dedicated mapper function. Use [mapping capabilities](/develop/integration-artifacts/supporting/data-mapper/mapping-capabilities) for field connections, expressions, and custom transformation logic.
+Use record-to-record mapping when both the domain value and the channel payload can be represented as typed records. Create separate record types for the domain model and the message format, then keep the mapping in a [reusable data mapper](../../develop/integration-artifacts/supporting/data-mapper/access-paths/reusable.md) or a dedicated mapper function. Use [mapping capabilities](../../develop/integration-artifacts/supporting/data-mapper/mapping-capabilities.md) for field connections, expressions, and custom transformation logic.
 
 <PatternImplementationTabs>
 <TabItem value="ui" label="Visual Designer" default>
 
-1. Define separate record types for the domain value and the channel message. See [Types](/develop/integration-artifacts/supporting/types).
-2. Create a [reusable data mapper](/develop/integration-artifacts/supporting/data-mapper/access-paths/reusable) with the domain record as the input and the message record as the output.
+1. Define separate record types for the domain value and the channel message. See [Types](../../develop/integration-artifacts/supporting/types.md).
+2. Create a [reusable data mapper](../../develop/integration-artifacts/supporting/data-mapper/access-paths/reusable.md) with the domain record as the input and the message record as the output.
 3. Open the data mapper canvas and connect matching fields, such as `id` to `orderId`.
-4. Use the expression editor for transformed fields, such as combining names or calculating a total. See [Expression editor](/develop/integration-artifacts/supporting/data-mapper/mapping-capabilities#expression-editor).
-5. Use [array mappings](/develop/integration-artifacts/supporting/data-mapper/array-mappings/) when the mapper must convert item collections.
+4. Use the expression editor for transformed fields, such as combining names or calculating a total. See [Expression editor](../../develop/integration-artifacts/supporting/data-mapper/mapping-capabilities.md#expression-editor).
+5. Use [array mappings](../../develop/integration-artifacts/supporting/data-mapper/array-mappings/array-mappings.md) when the mapper must convert item collections.
 6. Add a **Map Data** step in the flow and pass the mapped record to the next service, resource function, or connector call.
 
 </TabItem>
@@ -89,7 +89,7 @@ function toDomain(OrderMessage message) returns Order {
 
 ## Data-format boundary mapping
 
-Use data-format boundary mapping when the channel sends or receives raw JSON, XML, CSV, or another serialized format. Keep parsing and serialization at the boundary, then call the typed mapper so the main flow works with records instead of raw payloads. For JSON payloads, use [type-safe JSON conversion](/develop/transform/json#convert-a-json-value-to-a-typed-record). For XML and CSV payloads, use the corresponding [XML processing](/develop/transform/xml) or [CSV and flat file processing](/develop/transform/csv-flat-file) guide.
+Use data-format boundary mapping when the channel sends or receives raw JSON, XML, CSV, or another serialized format. Keep parsing and serialization at the boundary, then call the typed mapper so the main flow works with records instead of raw payloads. For JSON payloads, use [type-safe JSON conversion](../../develop/transform/json.md#convert-a-json-value-to-a-typed-record). For XML and CSV payloads, use the corresponding [XML processing](../../develop/transform/xml.md) or [CSV and flat file processing](../../develop/transform/csv-flat-file.md) guide.
 
 <PatternImplementationTabs>
 <TabItem value="ui" label="Visual Designer" default>

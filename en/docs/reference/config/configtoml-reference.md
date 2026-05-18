@@ -9,7 +9,7 @@ keywords: [wso2 integrator, ballerina, config.toml, configurable, runtime config
 `Config.toml` provides runtime values for `configurable` variables declared in Ballerina source code. Place it in the project root (alongside `Ballerina.toml`), or specify one or more config files via the `BAL_CONFIG_FILES` environment variable. Ballerina uses TOML syntax with module-qualified keys to map configuration values to their corresponding `configurable` declarations.
 
 :::note
-This page is the TOML encoding reference for `Config.toml`. For the basics of using configurable variables, see [Configurations](/docs/develop/integration-artifacts/supporting/configurations). For the complete configuration reference, see [Configuration management](/docs/reference/config/configuration-management).
+This page is the TOML encoding reference for `Config.toml`. For the basics of using configurable variables, see [Configurations](../../develop/integration-artifacts/supporting/configurations.md). For the complete configuration reference, see [Configuration management](./configuration-management.md).
 :::
 
 ## Module-qualified names
@@ -253,5 +253,5 @@ department = "Marketing"
 
 ## What's next
 
-- [Configuration management](/docs/reference/config/configuration-management) — the broader runtime-config story: value sources, precedence, environment variables, and per-environment files.
-- [Cloud.toml reference](/docs/reference/project/cloudtoml-reference) — mount Config.toml into deployments via `[[cloud.config.files]]`.
+- [Configuration management](./configuration-management.md) — the broader runtime-config story: value sources, precedence, environment variables, and per-environment files.
+- [Cloud.toml reference](../project/cloudtoml-reference.md) — mount Config.toml into deployments via `[[cloud.config.files]]`.

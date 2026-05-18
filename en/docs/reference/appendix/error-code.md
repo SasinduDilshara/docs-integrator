@@ -114,5 +114,4 @@ function callApi() returns json|error {
 
 ## What's Next
 
-- [Error Handling Guide](/docs/develop/understand-ide/editors/flow-diagram-editor/error-handling) -- Error handling patterns and best practices
-- [Troubleshooting](/docs/develop/debugging/troubleshooting) -- Resolve common development issues
+- [Error Handling Guide](../../develop/understand-ide/editors/flow-diagram-editor/error-handling.md) -- Error handling patterns and best practices

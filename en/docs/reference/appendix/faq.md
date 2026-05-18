@@ -71,7 +71,7 @@ WSO2 Integrator supports standard breakpoint-based debugging. Set breakpoints in
 
 ### Where can I find troubleshooting help for common issues?
 
-See [Errors and Stack Traces](/docs/develop/troubleshooting/errors-and-stack-traces) for symptom-to-fix recipes covering IDE issues, build errors, runtime errors, and diagnostic tools. Focused pages cover [logging](/docs/develop/troubleshooting/logging), [deployment issues](/docs/develop/troubleshooting/deployment), and [performance tuning](/docs/develop/troubleshooting/profiling).
+Refer to errors and stack traces for symptom-to-fix recipes covering IDE issues, build errors, runtime errors, and diagnostic tools. Dedicated guidance is also available for logging, deployment issues, and performance tuning.
 
 ### Can I write tests for my integrations?
 
@@ -90,11 +90,11 @@ Run tests with `bal test` and generate reports with `bal test --test-report --co
 
 ### Does WSO2 Integrator support building AI agents and RAG?
 
-Yes. WSO2 Integrator includes first-class support for AI agents, retrieval-augmented generation (RAG), Model Context Protocol (MCP) servers, and direct LLM calls. See [AI Integrations](/docs/genai/overview) for the full set of building blocks.
+Yes. WSO2 Integrator includes first-class support for AI agents, retrieval-augmented generation (RAG), Model Context Protocol (MCP) servers, and direct LLM calls. See [AI Integrations](../../genai/overview.md) for the full set of building blocks.
 
 ### Which LLM and vector store providers are supported?
 
-WSO2 Integrator ships connectors for major LLM providers and vector stores. See the [Connectors catalog](/docs/connectors/catalog/) for the current list.
+WSO2 Integrator ships connectors for major LLM providers and vector stores. See the [Connectors catalog](../../connectors/catalog/index.mdx) for the current list.
 
 ## Deploy and operate
 
@@ -109,7 +109,7 @@ WSO2 Integrator supports multiple deployment targets:
 - **GraalVM native:** Build native executables with `bal build --graalvm` for fast startup
 - **Serverless:** Deploy to AWS Lambda or Azure Functions
 
-See [Deploy and Operate](/docs/deploy/self-hosted/kubernetes) for detailed deployment guides.
+See [Deploy and Operate](../../deploy/self-hosted/kubernetes.md) for detailed deployment guides.
 
 ### How do I configure my application for different environments?
 
@@ -125,7 +125,7 @@ This allows you to use the same built artifact across development, staging, and 
 
 ### How do I handle secrets and sensitive configuration?
 
-WSO2 Integrator uses `Config.toml` files for runtime configuration. For secrets, keep them in a separate `Config.toml` (or another file referenced via the `BAL_CONFIG_FILES` environment variable) that is not checked into version control. Never commit secret values to git, whether they sit in `Config.toml` or anywhere else. In Kubernetes, mount the secret file from a `Secret`, or inject individual values as environment variables using `BAL_CONFIG_VAR_*` prefixes. See [Secrets and encryption](/docs/deploy-operate/secure/secrets-encryption) for the full pattern and [Configuration management](/docs/reference/config/configuration-management) for the underlying environment-variable reference.
+WSO2 Integrator uses `Config.toml` files for runtime configuration. For secrets, keep them in a separate `Config.toml` (or another file referenced via the `BAL_CONFIG_FILES` environment variable) that is not checked into version control. Never commit secret values to git, whether they sit in `Config.toml` or anywhere else. In Kubernetes, mount the secret file from a `Secret`, or inject individual values as environment variables using `BAL_CONFIG_VAR_*` prefixes. See [Secrets and encryption](../../deploy-operate/secure/secrets-encryption.md) for the full pattern and [Configuration management](../config/configuration-management.md) for the underlying environment-variable reference.
 
 ### Does WSO2 Integrator support horizontal scaling?
 
@@ -151,7 +151,7 @@ The ICP is a monitoring and management dashboard for deployed integrations. It p
 - Artifact discovery (services, listeners, connectors)
 - Integration lifecycle management (activate, deactivate, restart)
 
-See the [ICP API Reference](/docs/reference/api/icp) for programmatic access.
+See the [ICP API Reference](../api/icp.md) for programmatic access.
 
 ## Migration
 
@@ -159,15 +159,14 @@ See the [ICP API Reference](/docs/reference/api/icp) for programmatic access.
 
 ### Can I migrate from MuleSoft or TIBCO?
 
-Yes. WSO2 provides migration guides and tooling to help transition from other integration platforms. See [Coming from MuleSoft](/docs/guides/migration/coming-from-mulesoft) and [Coming from TIBCO](/docs/guides/migration/coming-from-tibco) for platform-specific guidance. For migrating third-party integrations programmatically, see [Migrate third-party integrations](/docs/develop/create-integrations/migrate-third-party-integrations).
+Yes. WSO2 provides migration guides and tooling to help transition from other integration platforms. See [Coming from MuleSoft](../../guides/migration/coming-from-mulesoft.md) and [Coming from TIBCO](../../guides/migration/coming-from-tibco.md) for platform-specific guidance. For migrating third-party integrations programmatically, see [Migrate third-party integrations](../../develop/create-integrations/migrate-third-party-integrations.md).
 
 ### Can I run WSO2 MI and WSO2 Integrator side by side?
 
-Yes. The two products use different runtimes and can coexist in the same environment. This allows you to adopt WSO2 Integrator for new projects while continuing to run your existing MI deployments. You can also migrate MI integrations incrementally using [Migrate third-party integrations](/docs/develop/create-integrations/migrate-third-party-integrations). For MI-specific guidance, refer to the [MI documentation](https://mi.docs.wso2.com).
+Yes. The two products use different runtimes and can coexist in the same environment. This allows you to adopt WSO2 Integrator for new projects while continuing to run your existing MI deployments. You can also migrate MI integrations incrementally using [Migrate third-party integrations](../../develop/create-integrations/migrate-third-party-integrations.md). For MI-specific guidance, refer to the [MI documentation](https://mi.docs.wso2.com).
 
 ## See also
 
-- [Get Started](/docs/get-started/setup/local-setup) — Install and set up WSO2 Integrator
-- [Build an API Integration](/docs/get-started/build-api-integration) — Build your first integration
-- [Errors and Stack Traces](/docs/develop/troubleshooting/errors-and-stack-traces) — Diagnose and fix common build, runtime, IDE, and deployment issues
+- [Get Started](../../get-started/setup/local-setup.md) — Install and set up WSO2 Integrator
+- [Build an API Integration](../../get-started/build-api-integration.md) — Build your first integration
 - [Glossary](./glossary.md) — Definitions of key terms

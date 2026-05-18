@@ -2,7 +2,7 @@
 title: "Getting Started"
 description: Sign in to WSO2 Integrator Copilot with your WSO2 Cloud account or your own AI provider credentials.
 keywords: [wso2 integrator, copilot, getting started, sign in]
-slug: /develop/wso2-integrator-copilot/getting-started
+slug: /develop/copilot/getting-started
 ---
 
 # Getting Started

@@ -23,8 +23,8 @@ Use a typed message envelope when the integration needs a stable application-lev
 <TabItem value="ui" label="Visual Designer" default>
 
 1. Create a new integration in WSO2 Integrator.
-2. Add the header, body, and envelope records in [Types](/develop/integration-artifacts/supporting/types).
-3. Open the flow and [add a step](/develop/understand-ide/editors/flow-diagram-editor/#anatomy-of-the-editor).
+2. Add the header, body, and envelope records in [Types](../../develop/integration-artifacts/supporting/types.md).
+3. Open the flow and [add a step](../../develop/understand-ide/editors/flow-diagram-editor/flow-diagram-editor.md#anatomy-of-the-editor).
 4. Add a **Declare Variable** or **Map Data** step to construct the envelope.
 5. Pass the envelope to the connector call, return it from the resource function, or map it into another boundary-specific message.
 
@@ -71,8 +71,8 @@ Use channel boundary binding when the message arrives through, or leaves through
 <PatternImplementationTabs>
 <TabItem value="ui" label="Visual Designer" default>
 
-1. Add and configure the required connector under **Connections**. For brokered messages, select the relevant connector, such as the [NATS connector](/connectors/catalog/messaging/nats/connector-overview), from the [messaging connector catalog](/connectors/catalog/).
-2. Add the listener or entry point for the inbound channel. For HTTP, start by [creating an HTTP service](/develop/integration-artifacts/service/http#creating-an-http-service).
+1. Add and configure the required connector under **Connections**. For brokered messages, select the relevant connector, such as the [NATS connector](../../connectors/catalog/messaging/nats/connector-overview.md), from the [messaging connector catalog](../../connectors/catalog/index.mdx).
+2. Add the listener or entry point for the inbound channel. For HTTP, start by [creating an HTTP service](../../develop/integration-artifacts/service/http.md#creating-an-http-service).
 3. Bind the request payload as the body and bind transport metadata, such as headers, as message headers.
 4. Add a **Map Data** step to create the typed message envelope from the inbound payload and metadata.
 5. Publish the envelope through the connector, forward it to another channel, or return it from the resource function.
