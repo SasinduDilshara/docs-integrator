@@ -21,7 +21,7 @@ Combine multiple input fields into a single output field. Connect each input to 
 
 ## Expression bar
 
-For outputs that need custom logic, select the output field to focus the expression bar. The editor provides completion support. Start typing a field reference or function name, and use the suggestions to compose the expression. While interacting with the editor, select input fields to insert them into the current cursor position.
+For outputs that need custom logic, select the output field to focus the expression bar. The editor provides completion support. Start typing a field reference or function name, and use the suggestions to compose the expression. While interacting with the editor, select input fields to insert them at the current cursor position.
 
 The `</>` button navigates to the selected output field's position in the source file.
 

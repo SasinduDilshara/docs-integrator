@@ -39,7 +39,7 @@ To iterate a second array on each iteration of an outer array, first map the out
 
 ## Join with condition
 
-To join two arrays on a condition, first map the first array with **Map Each Element**. When inside the focused view, select the second array and map it to the target. Then the data mapper offers **Join with Condition** option. Define the join condition in the side panel.
+To join two arrays on a condition, first map the first array with **Map Each Element**. When inside the focused view, select the second array and map it to the target. Then the data mapper offers the **Join with Condition** option. Define the join condition in the side panel.
 
 ![Join with Condition prompt and side panel for defining the join expression](/img/develop/integration-artifacts/supporting/data-mapper/join-with-condition.gif)
 
