@@ -16,7 +16,6 @@ Documentation source for WSO2 Integrator, built with Docusaurus.
 ## Quick Start
 
 ```bash
-cd en
 npm install
 npm run start
 ```
@@ -25,7 +24,7 @@ Then open the local URL printed in the terminal (usually `http://localhost:3000`
 
 ## Common Commands
 
-Run these from `en`:
+Run these from `docs-integrator/` (the npm project root):
 
 ```bash
 npm run start      # local dev server (hot reload)
@@ -55,7 +54,6 @@ Typical files:
 ### 3) Validate Locally
 
 ```bash
-cd en
 npm run typecheck
 npm run build
 ```
