@@ -22,6 +22,6 @@ Generic type mapping is only available in the reusable data mapper. Inline data 
 
 ## What's next
 
-- [Submappings](./submappings.md) — Reuse mapping logic across multiple output fields.
+- [Sub Mappings](./submappings.md) — Reuse mapping logic across multiple output fields.
 - [Mapping capabilities](./mapping-capabilities.md) — Connect fields, write expressions, and use AI-assisted mapping.
 - [Array mappings](./array-mappings/array-mappings.md) — Map between arrays using iteration, joins, and aggregation.

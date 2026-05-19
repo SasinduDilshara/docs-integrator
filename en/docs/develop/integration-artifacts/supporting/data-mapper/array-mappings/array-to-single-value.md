@@ -23,4 +23,4 @@ To compute a single value from each element of an array (for example, sum, avera
 
 - [Array to array](./array-to-array.md) — Map between two arrays with iteration, joins, and nesting.
 - [Generic type mappings](../generic-type-mappings.md) — Generate types from a sample JSON or XML payload.
-- [Submappings](../submappings.md) — Reuse mapping logic across multiple output fields.
+- [Sub Mappings](../submappings.md) — Reuse mapping logic across multiple output fields.

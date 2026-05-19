@@ -59,4 +59,4 @@ The Copilot panel opens with a `/datamap` command preloaded. Submit it to genera
 
 - [Array mappings](./array-mappings/array-mappings.md) — Map between arrays using iteration, joins, and aggregation.
 - [Generic type mappings](./generic-type-mappings.md) — Generate types from a sample JSON or XML payload.
-- [Submappings](./submappings.md) — Reuse mapping logic across multiple output fields.
+- [Sub Mappings](./submappings.md) — Reuse mapping logic across multiple output fields.

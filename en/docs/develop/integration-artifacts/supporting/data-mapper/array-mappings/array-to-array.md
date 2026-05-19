@@ -47,4 +47,4 @@ To join two arrays on a condition, first map the first array with **Map Each Ele
 
 - [Array to single value](./array-to-single-value.md) — Reduce an array to a single value.
 - [Generic type mappings](../generic-type-mappings.md) — Generate types from a sample JSON or XML payload.
-- [Submappings](../submappings.md) — Reuse mapping logic across multiple output fields.
+- [Sub Mappings](../submappings.md) — Reuse mapping logic across multiple output fields.
