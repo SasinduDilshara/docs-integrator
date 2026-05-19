@@ -1409,6 +1409,16 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: 'category',
+          label: 'SAP JCo',
+          link: { type: 'doc', id: 'connectors/catalog/erp-business/sap.jco/overview' },
+          items: [
+            'connectors/catalog/erp-business/sap.jco/setup-guide',
+            'connectors/catalog/erp-business/sap.jco/action-reference',
+            'connectors/catalog/erp-business/sap.jco/trigger-reference',
+          ],
+        },
+        {
+          type: 'category',
           label: 'SAP Sales Area',
           link: { type: 'doc', id: 'connectors/catalog/erp-business/sap.s4hana.salesarea_0001/sap-sales-area-connector-overview' },
           items: [
