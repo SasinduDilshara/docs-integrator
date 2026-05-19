@@ -61,7 +61,7 @@ jco:Client sapClient = check new (config, destinationId = "MY_DEST");
 
 ### Operations
 
-#### RFC Execution
+#### RFC execution
 
 <details>
 <summary>execute</summary>
@@ -195,7 +195,7 @@ ReadTableResponse result = check sapClient->execute("RFC_READ_TABLE", {
 </div>
 </details>
 
-#### IDoc Sending
+#### IDoc sending
 
 <details>
 <summary>sendIDoc</summary>
@@ -262,7 +262,7 @@ check sapClient->sendIDoc(iDoc, jco:VERSION_3, tid = "A1B2C3D4E5F6789012345678")
 </div>
 </details>
 
-#### Connection Lifecycle
+#### Connection lifecycle
 
 <details>
 <summary>close</summary>
