@@ -16,7 +16,7 @@ const config: Config = {
 
   organizationName: 'wso2',
   projectName: 'docs-integrator',
-  trailingSlash: true,
+  trailingSlash: false,
 
   onBrokenLinks: 'warn',
 
