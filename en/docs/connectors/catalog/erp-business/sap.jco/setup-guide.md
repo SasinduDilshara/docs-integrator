@@ -54,10 +54,10 @@ To receive IDocs from SAP, configure a partner profile and port that routes outb
 
 ## Install SAP JCo libraries
 
-The SAP JCo native libraries must be available on the machine running your Ballerina application.
+The SAP JCo libraries must be available on the machine running your Ballerina application.
 
 1. Download the SAP JCo package for your platform from the [SAP Support Portal](https://support.sap.com/en/product/connectors/jco.html)
-2. Extract the archive and place `sapjco3.jar` and the native library (e.g., `libsapjco3.so` on Linux, `sapjco3.dll` on Windows, `libsapjco3.jnilib` on macOS) in a directory accessible to the JVM
+2. Extract the archive and place both `sapjco3.jar` and `sapidoc3.jar`, along with the platform-specific native library (e.g., `libsapjco3.so` on Linux, `sapjco3.dll` on Windows, `libsapjco3.jnilib` on macOS), in a directory accessible to the JVM
 3. Ensure the native library directory is on the system library path (`LD_LIBRARY_PATH`, `PATH`, or `DYLD_LIBRARY_PATH` respectively)
 
 ## Configure Ballerina.toml with JAR paths
