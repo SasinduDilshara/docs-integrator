@@ -273,9 +273,7 @@ Releases the JCo destination registered for this client. Call this when the clie
 
 **Parameters:**
 
-| Name | Type | Required | Description |
-|------|------|----------|-------------|
-| — | — | — | No parameters |
+No parameters
 
 **Returns:** `Error?`
 

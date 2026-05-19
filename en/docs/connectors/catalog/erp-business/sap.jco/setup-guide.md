@@ -60,6 +60,32 @@ The SAP JCo native libraries must be available on the machine running your Balle
 2. Extract the archive and place `sapjco3.jar` and the native library (e.g., `libsapjco3.so` on Linux, `sapjco3.dll` on Windows, `libsapjco3.jnilib` on macOS) in a directory accessible to the JVM
 3. Ensure the native library directory is on the system library path (`LD_LIBRARY_PATH`, `PATH`, or `DYLD_LIBRARY_PATH` respectively)
 
+## Configure Ballerina.toml with JAR paths
+
+After placing the SAP JCo libraries, add them to your Ballerina project's `Ballerina.toml` so they are available during compilation.
+
+```toml
+[[platform.java21.dependency]]
+path = "<path-to-sapidoc3.jar>"
+groupId = "com.sap"
+artifactId = "com.sap.conn.idoc"
+version = "3.1.*"
+scope = "provided"
+
+[[platform.java21.dependency]]
+path = "<path-to-sapjco3.jar>"
+groupId = "com.sap"
+artifactId = "com.sap.conn.jco"
+version = "3.1.*"
+scope = "provided"
+```
+
+Replace `<path-to-sapidoc3.jar>` and `<path-to-sapjco3.jar>` with the absolute or relative paths to the respective JAR files on your machine.
+
+:::note
+The `scope = "provided"` setting ensures the JARs are available at compile time but are not bundled into the final artifact, since they must be present at runtime on the target machine.
+:::
+
 ## Next steps
 
 - [Action Reference](action-reference.md) - Available operations
