@@ -160,7 +160,7 @@ service jco:RfcService on creditCheckListener {
 The listener starts asynchronously — a successful `start()` means the server has been submitted to JCo's scheduler, not that the gateway handshake is complete. If the gateway is unreachable, JCo retries automatically and delivers failures through the `onError` callback.
 :::
 
-## Supporting Types
+## Supporting types
 
 ### DestinationConfig
 
