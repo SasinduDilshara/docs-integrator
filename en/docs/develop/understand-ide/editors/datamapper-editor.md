@@ -6,7 +6,7 @@ description: Map fields between source and target types visually, without writin
 
 # Data Mapper Editor
 
-The Data Mapper editor is the visual surface you open for any data mapper in WSO2 Integrator. It shows the source types on the left, the target type on the right, and the mapping area between them, so you can map fields by creating links or filling expressions instead of writing the conversion function manually. The data mapper is either a typed function with one or more inputs and a single output, or a variable declaration with a [Record type](../../../reference/language/type-system.md#records). Every change you make in the editor is reflected in the underlying source.
+The Data Mapper editor is the visual surface you open for any data mapper in WSO2 Integrator. It shows the source types on the left, the target type on the right, and the mapping area between them, so you can map fields by creating links or filling expressions instead of writing the conversion function manually. The data mapper is either a typed function with one or more inputs and a single output, or a variable declaration with a supported type. Every change you make in the editor is reflected in the underlying source.
 
 For end-to-end usage, including how to create a data mapper, work with arrays and nested records, and apply transformations, see [Data Mapper](../../integration-artifacts/supporting/data-mapper/data-mapper.md).
 
