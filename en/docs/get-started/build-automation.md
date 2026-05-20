@@ -127,7 +127,7 @@ Periodic invocation is configured in an external system once the automation is d
 
 ## What's next
 
-- [Build an API integration](build-api-integration.md) — Build an HTTP service
+- [Build an Integration as API](build-integration-as-api.md) — Build an HTTP service
 - [Build an AI agent](build-ai-agent.md) — Build an intelligent agent
 - [Build an event-driven integration](build-event-driven-integration.md) — React to messages from brokers
 - [Build a file-driven integration](build-file-driven-integration.md) — Process files from FTP or local directories

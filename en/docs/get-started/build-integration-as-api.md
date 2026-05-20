@@ -1,6 +1,6 @@
 ---
 sidebar_position: 7
-title: "Build an API Integration"
+title: "Build an Integration as API"
 description: Build an HTTP service in WSO2 Integrator that calls an external API and returns the response to the caller.
 keywords: [wso2 integrator, http service, api integration, rest api, quick start, ballerina http]
 ---
@@ -10,7 +10,7 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Build an API Integration
+# Build an Integration as API
 
 **Time:** Under 10 minutes | **What you'll build:** An HTTP service that listens on `/hello/greeting`, calls an external API, and returns the response to the caller.
 
