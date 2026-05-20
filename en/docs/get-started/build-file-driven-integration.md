@@ -48,7 +48,7 @@ File integrations are ideal for batch uploads, scheduled file processing, and ET
 
 ## Step 1: Create the integration
 
-*On cloud editor, the project is already created. Skip to Step 2.*
+*When using the cloud editor, the project is already created. Skip to Step 2.*
 
 1. Open WSO2 Integrator.
 2. Select the **Create New Integration** card.
