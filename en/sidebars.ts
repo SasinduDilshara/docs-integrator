@@ -53,7 +53,7 @@ const sidebars: SidebarsConfig = {
           items: [
             'get-started/build-automation',
             'get-started/build-ai-agent',
-            'get-started/build-integration-as-api',
+            'get-started/build-integration-api',
             'get-started/build-event-driven-integration',
             'get-started/build-file-driven-integration',
           ],
