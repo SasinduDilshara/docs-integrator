@@ -1954,7 +1954,7 @@ const sidebars: SidebarsConfig = {
           label: 'Capacity Planning',
           items: [
             'deploy-operate/capacity-planning/overview',
-            'deploy-operate/capacity-planning/performance-reports',
+            'deploy-operate/capacity-planning/performance-benchmarks',
           ],
         },
       ],
