@@ -116,15 +116,6 @@ Save this as `automation.bal`, then click the **Run** button in the top toolbar.
 </TabItem>
 </Tabs>
 
-## Scheduling automations
-
-Periodic invocation is configured in an external system once the automation is deployed. Available options include:
-
-- **Cron job**: schedule the automation from a `cron` entry on a Unix or Linux host.
-- **Kubernetes**: define a `CronJob` resource to run the automation on a recurring schedule.
-- **VM**: use a host scheduler such as Windows Task Scheduler or `systemd` timers.
-- **WSO2 Integration Platform**: configure the schedule in the WSO2 Integration Platform when the integration is pushed to the cloud.
-
 ## Step 5: Deploy to WSO2 Cloud
 
 Deploy your integration to WSO2 Cloud - Integration Platform in any of the following ways:
@@ -136,6 +127,15 @@ Deploy your integration to WSO2 Cloud - Integration Platform in any of the follo
     <a href="https://console.devant.dev/new?gh=wso2/integration-samples/tree/main/integrator-default-profile/quickstart/automation" target="_blank">
         <img src="https://openindevant.choreoapps.dev/images/DeployDevant.svg" alt="Deploy to WSO2 Cloud" />
     </a>
+
+## Scheduling automations
+
+Periodic invocation is configured in an external system once the automation is deployed. Available options include:
+
+- **Cron job**: schedule the automation from a `cron` entry on a Unix or Linux host.
+- **Kubernetes**: define a `CronJob` resource to run the automation on a recurring schedule.
+- **VM**: use a host scheduler such as Windows Task Scheduler or `systemd` timers.
+- **WSO2 Integration Platform**: configure the schedule in the WSO2 Integration Platform when the integration is pushed to the cloud.
 
 ## What's next
 

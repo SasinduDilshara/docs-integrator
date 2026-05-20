@@ -178,7 +178,7 @@ Confirm the response shows `200 OK` with a `Hello World` body.
 </TabItem>
 </Tabs>
 
-## Step 5: Deploy to WSO2 Cloud
+## Step 8: Deploy to WSO2 Cloud
 
 Deploy your integration to WSO2 Cloud - Integration Platform in any of the following ways:
 

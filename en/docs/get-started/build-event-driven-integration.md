@@ -139,18 +139,7 @@ Save this as `main.bal`, then click the **Run** button in the top toolbar. Once 
 </TabItem>
 </Tabs>
 
-## Supported event sources
-
-| Broker | Ballerina Package |
-|---|---|
-| **Apache Kafka** | `ballerinax/kafka` |
-| **RabbitMQ** | `ballerinax/rabbitmq` |
-| **MQTT** | `ballerinax/mqtt` |
-| **Azure Service Bus** | `ballerinax/azure.servicebus` |
-| **Salesforce** | `ballerinax/salesforce` |
-| **GitHub Webhooks** | `ballerinax/github` |
-
-## Step 5: Deploy to WSO2 Cloud
+## Step 6: Deploy to WSO2 Cloud
 
 Deploy your integration to WSO2 Cloud - Integration Platform in any of the following ways:
 
@@ -161,6 +150,17 @@ Deploy your integration to WSO2 Cloud - Integration Platform in any of the follo
     <a href="https://console.devant.dev/new?gh=wso2/integration-samples/tree/main/integrator-default-profile/quickstart/orderprocessor" target="_blank">
         <img src="https://openindevant.choreoapps.dev/images/DeployDevant.svg" alt="Deploy to WSO2 Cloud" />
     </a>
+
+## Supported event sources
+
+| Broker | Ballerina Package |
+|---|---|
+| **Apache Kafka** | `ballerinax/kafka` |
+| **RabbitMQ** | `ballerinax/rabbitmq` |
+| **MQTT** | `ballerinax/mqtt` |
+| **Azure Service Bus** | `ballerinax/azure.servicebus` |
+| **Salesforce** | `ballerinax/salesforce` |
+| **GitHub Webhooks** | `ballerinax/github` |
 
 ## What's next
 
