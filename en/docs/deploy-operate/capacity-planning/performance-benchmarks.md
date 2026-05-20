@@ -95,7 +95,7 @@ The table below maps throughput targets and payload sizes to the recommended res
 | 1 MB payloads | Maximum achievable throughput is 100 RPS; not achievable at 200 RPS+ |
 | 250 KB payloads | Maximum achievable throughput is 200 RPS |
 | High throughput (≥1000 RPS) | Only small payloads (≤50 KB) with high concurrency (≥100–500 connections) |
-| Low concurrency (<50 connections) | Cannot achieve throughput above 100–200 RPS regardless of resources |
+| Low concurrency (&lt;50 connections) | Cannot achieve throughput above 100–200 RPS regardless of resources |
 | Network latency as bottleneck | When N/A results occur, CPU and memory are not saturated — network round-trip latency is the limiting factor |
 
 ## What's next
