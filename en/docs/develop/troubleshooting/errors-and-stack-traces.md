@@ -116,10 +116,10 @@ java.lang.ClassCastException: class org.wso2.ballerinalang.compiler.tree.BLangFu
 
 | Exception | Common cause |
 |---|---|
-| `ClassCastException` | Compiler or plugin bug. An AST node is cast to the wrong type. |
+| `ClassCastException` | Compiler or plugin bug. |
 | `ClassNotFoundException` / `NoClassDefFoundError` | Dependency version mismatch. A class was renamed or removed in a newer or older library version still referenced by another library. |
 | `NoSuchMethodError` | Similar. A method signature changed between library versions. |
-| `NullPointerException` | Compiler or plugin bug. An AST node is unexpectedly `null`. |
+| `NullPointerException` | Compiler or plugin bug. |
 | `StackOverflowError` | Compiler bug. Typically infinite recursion in type resolution. |
 
 To work through one of these:
@@ -147,16 +147,14 @@ Once compilation succeeds and the program is running, failures arrive as one of 
 
 ### Read an error message
 
-A Ballerina error message has three parts:
+At runtime, an error is printed as:
 
 ```
-error: {ballerina/http}ClientRequestError Connection refused: localhost/127.0.0.1:8080
-       └── origin ───┘└── error type ───┘ └────────── message ──────────────────────┘
+error: <message> [<detail>]
 ```
 
-- **Origin.** The `{org/module}` prefix tells you which library emitted the error.
-- **Error type.** The named type (often a subtype of `error`).
-- **Message.** Free-text detail.
+- **Message.** For typed errors, the message starts with a qualified type prefix such as `{ballerina}TypeCastError` or `{ballerina/io}FileSystemError`. Generic errors created with `error("...")` have no such prefix.
+- **Detail** *(optional)*. A record of extra fields, printed as JSON (for example, `{"message":"...","cause":...}`). Libraries that define typed errors usually attach a detail record; ad-hoc errors often don't.
 
 ### Identify the source library
 
