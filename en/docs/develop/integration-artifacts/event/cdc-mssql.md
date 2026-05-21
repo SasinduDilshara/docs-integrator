@@ -1,6 +1,6 @@
 ---
 title: CDC for Microsoft SQL Server
-description: Capture real-time data changes from Microsoft SQL Server tables using Change Data Capture, with handlers for insert, update, delete, and read events.
+description: Capture real-time data changes from Microsoft SQL Server tables using Change Data Capture, with handlers for insert, update, delete, read, and error events.
 keywords: [wso2 integrator, cdc, microsoft sql server, mssql, change data capture, event integration, debezium]
 ---
 
@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # CDC for Microsoft SQL Server
 
-Microsoft SQL Server CDC integrations capture row-level changes from SQL Server tables in real time using Debezium-based Change Data Capture. Use them for data synchronization, audit logging, and event-driven workflows that must react to database inserts, updates, and deletes without polling. This page covers creating the integration, configuring the service and listener, and adding event handlers for insert, update, delete, and read events.
+Microsoft SQL Server CDC integrations capture row-level changes from SQL Server tables in real time using Debezium-based Change Data Capture. Use them for data synchronization, audit logging, and event-driven workflows that must react to database inserts, updates, and deletes without polling. This page covers creating the integration, configuring the service and listener, and adding event handlers for insert, update, delete, read, and error events.
 
 :::info Prerequisites
 

@@ -1,6 +1,6 @@
 ---
 title: CDC for PostgreSQL
-description: Capture real-time data changes from PostgreSQL tables using Change Data Capture, with handlers for insert, update, delete, truncate, and read events.
+description: Capture real-time data changes from PostgreSQL tables using Change Data Capture, with handlers for insert, update, delete, truncate, read, and error events.
 keywords: [wso2 integrator, cdc, postgresql, change data capture, event integration, debezium, logical replication]
 ---
 
@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # CDC for PostgreSQL
 
-PostgreSQL CDC integrations capture row-level changes from PostgreSQL tables in real time using Debezium-based Change Data Capture. Use them for data synchronization, audit logging, and event-driven workflows that must react to database inserts, updates, deletes, and truncates without polling. This page covers creating the integration, configuring the service and listener, and adding event handlers for insert, update, delete, truncate, and read events.
+PostgreSQL CDC integrations capture row-level changes from PostgreSQL tables in real time using Debezium-based Change Data Capture. Use them for data synchronization, audit logging, and event-driven workflows that must react to database inserts, updates, deletes, and truncates without polling. This page covers creating the integration, configuring the service and listener, and adding event handlers for insert, update, delete, truncate, read, and error events.
 
 :::info Prerequisites
 
