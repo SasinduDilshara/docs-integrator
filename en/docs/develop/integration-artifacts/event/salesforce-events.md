@@ -37,7 +37,7 @@ Salesforce event integrations subscribe to Change Data Capture (CDC) channels an
 
    ![Service Designer showing the Salesforce Events service canvas](/img/develop/integration-artifacts/event/salesforce-events/step-service-designer.png)
 
-   The four event handlers — `onCreate`, `onUpdate`, `onDelete`, and `onRestore` — are added automatically when the service is created. Click any handler to open it in the flow diagram view and implement the logic.
+   The four event handlers - `onCreate`, `onUpdate`, `onDelete`, and `onRestore` - are added automatically when the service is created. Click any handler to open it in the flow diagram view and implement the logic.
 
 </TabItem>
 <TabItem value="code" label="Ballerina Code">
@@ -90,7 +90,7 @@ service salesforce:CdcService on salesforceListener {
 <Tabs>
 <TabItem value="ui" label="Visual Designer" default>
 
-In the **Configure** panel, set **Auth** to a record expression with `username` and `password` fields, then expand **Optional fields** to set any of the values above. Click **Save Changes** to apply.
+In the **Configure** panel, set **Auth** to a record expression with relevant fields with optional values to set any of the values below. Click **Save Changes** to apply.
 
    ![Salesforce Configiration](/img/develop/integration-artifacts/event/salesforce-events/salesforce-configuration.png)
 
@@ -108,8 +108,6 @@ listener salesforce:Listener salesforceListener = new ({
 
 </TabItem>
 </Tabs>
-
-In the **Service Designer**, click the **Configure** icon in the header to open the **Salesforce Event Integration Configuration** panel. Select **salesforceListener** under **Attached Listeners** to configure the listener.
 
 The listener supports two authentication modes: **SOAP-based** (username and password) and **REST-based** (OAuth 2.0). The same fields apply whether you configure the listener through the visual designer or directly in Ballerina code.
 
@@ -129,10 +127,6 @@ The listener supports two authentication modes: **SOAP-based** (username and pas
 | `sessionTimeout` | `int` | `900` | Session timeout in seconds. |
 | `proxyConfig` | `ProxyConfig` | `()` | Optional HTTP proxy configuration. |
 
-:::note
-Salesforce treats the SOAP login `password` field as `<password><securityToken>` with no separator. Reset or copy the security token from **Setup → My Personal Information → Reset My Security Token** in Salesforce.
-:::
-
 
 ### REST-based authentication
 
@@ -141,7 +135,7 @@ Salesforce treats the SOAP login `password` field as `<password><securityToken>`
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `baseUrl` | `string` | Required | Salesforce instance URL |
-| `auth` | `OAuth2Config` | Required | OAuth 2.0 configuration. Pick one of `BearerTokenConfig`, `OAuth2PasswordGrantConfig`, `OAuth2RefreshTokenGrantConfig`, or `OAuth2ClientCredentialsGrantConfig` — see [OAuth 2.0 auth variants](#oauth-20-auth-variants) below. |
+| `auth` | `OAuth2Config` | Required | OAuth 2.0 configuration. Pick one of `BearerTokenConfig`, `OAuth2PasswordGrantConfig`, `OAuth2RefreshTokenGrantConfig`, or `OAuth2ClientCredentialsGrantConfig` - see [OAuth 2.0 auth variants](#oauth-20-auth-variants) below. |
 | `tokenStore` | `TokenStore` | `InMemoryTokenStore` | Token store for coordinating refresh token rotation across replicas. Use a distributed implementation (e.g., Redis-backed) for multi-replica deployments. |
 
 `tokenStore` and Refresh Token Rotation (RTR) only apply when using `OAuth2RefreshTokenGrantConfig`. The other grant types bypass the `TokenManager` entirely.
@@ -162,31 +156,6 @@ All three grant configs additionally accept these optional fields: `scopes`, `de
 :::note
 These are the standard `ballerina/http` OAuth 2.0 grant types. For the full optional-field reference, see the [`ballerina/http` package documentation](https://central.ballerina.io/ballerina/http/latest).
 :::
-
-<Tabs>
-<TabItem value="ui" label="Visual Designer" default>
-
-In the **Configure** panel, select the grant type from the **Auth** drop-down, then fill in its required fields and any optional ones. Click **Save Changes** to apply.
-
-</TabItem>
-<TabItem value="code" label="Ballerina Code">
-
-Example using `OAuth2RefreshTokenGrantConfig`:
-
-```ballerina
-listener salesforce:Listener salesforceListener = new ({
-    baseUrl: baseUrl,
-    auth: {
-        clientId: clientId,
-        clientSecret: clientSecret,
-        refreshToken: refreshToken,
-        refreshUrl: "https://login.salesforce.com/services/oauth2/token"
-    }
-});
-```
-
-</TabItem>
-</Tabs>
 
 ## Event handlers
 
@@ -241,7 +210,7 @@ The CDC channel the service subscribes to is determined by the service path in B
 
 ## What's next
 
-- [Kafka](kafka.md) — consume messages from Apache Kafka topics
-- [Azure Service Bus](azure-service-bus.md) — consume messages from Azure Service Bus queues
-- [Connections](../supporting/connections.md) — reuse Salesforce credentials across services
-- [Salesforce connector reference](../../../connectors/catalog/crm-sales/salesforce/connector-overview.md) — full connector API reference and trigger reference
+- [Kafka](kafka.md) - consume messages from Apache Kafka topics
+- [Azure Service Bus](azure-service-bus.md) - consume messages from Azure Service Bus queues
+- [Connections](../supporting/connections.md) - reuse Salesforce credentials across services
+- [Salesforce connector reference](../../../connectors/catalog/crm-sales/salesforce/connector-overview.md) - full connector API reference and trigger reference
