@@ -1910,7 +1910,6 @@ const sidebars: SidebarsConfig = {
             'deploy/self-hosted/openshift',
             'deploy-operate/deploy/vm-based-deployment',
             'deploy-operate/deploy/serverless-deployment',
-            'deploy-operate/deploy/devant-ipaas',
             'deploy-operate/deploy/aws-azure-gcp',
             'deploy-operate/deploy/graalvm-native-images',
             'deploy-operate/deploy/environments',
