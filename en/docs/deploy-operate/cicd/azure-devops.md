@@ -9,7 +9,7 @@ Automate build and test of your WSO2 Integrator projects using Azure DevOps Pipe
 
 ## Overview
 
-Azure DevOps Pipelines provides a fully managed CI/CD service that integrates with Git repositories. For WSO2 Integrator projects built on Ballerina, a pipeline runs tests and builds the package using the official `ballerina/ballerina` Docker image — no installation steps required.
+Azure DevOps Pipelines provides a fully managed CI/CD service that integrates with Git repositories. For WSO2 Integrator projects built on Ballerina, a pipeline runs tests and builds the package using the official `ballerina/ballerina` Docker image with no manual installation steps required.
 
 ## Prerequisites
 
