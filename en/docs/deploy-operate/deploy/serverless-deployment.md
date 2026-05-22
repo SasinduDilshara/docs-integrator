@@ -13,7 +13,6 @@ WSO2 Integrator projects can be deployed as serverless functions, enabling event
 | Feature | AWS Lambda | Azure Functions |
 |---------|-----------|-----------------|
 | Trigger Types | HTTP (API Gateway), S3, SQS, DynamoDB Streams, SES | HTTP, Timer, Blob Storage, Queue, CosmosDB |
-| Cold Start | ~2-5s (JVM), under 100ms (GraalVM) | ~2-5s (JVM), under 100ms (GraalVM) |
 | Max Execution | 15 minutes | 10 minutes (Consumption plan) |
 | Memory | 128 MB - 10 GB | 128 MB - 14 GB |
 | Runtime | Custom runtime (provided) | Java 21, Windows hosting |
