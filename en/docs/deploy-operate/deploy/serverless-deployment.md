@@ -29,7 +29,7 @@ Create an Azure Function App with the following settings before deploying:
 
 Install the [Azure Functions Core Tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local) (`func` CLI) for local development and deployment.
 
-### Step 1 -- write the Azure function
+### Step 1: Write the Azure function
 
 Ballerina uses a service-based model for Azure Functions. Attach a listener to a service to define the trigger type. The resource function behaves like a standard `ballerina/http` resource and supports `http:Payload` and `http:Header` annotations.
 
@@ -70,7 +70,7 @@ service "mycontainer/{name}" on new af:BlobListener({path: "mycontainer/{name}"}
 }
 ```
 
-### Step 2 -- build
+### Step 2: Build
 
 ```bash
 bal build
@@ -98,13 +98,13 @@ The build output lists the functions and prints the commands to run locally and 
     $ func azure functionapp publish <function_app_name> --script-root target/azure_functions
 ```
 
-### Step 3 -- run locally
+### Step 3: Run locally
 
 ```bash
 func start --script-root target/azure_functions --java
 ```
 
-### Step 4 -- deploy to Azure
+### Step 4: Deploy to Azure
 
 First create the required Azure resources:
 
@@ -148,7 +148,7 @@ az functionapp config appsettings set \
 
 ## AWS Lambda
 
-### Step 1 -- write the Lambda function
+### Step 1: Write the Lambda function
 
 Write a Ballerina function annotated with `@lambda:Function`. The function receives a `lambda:Context` and a `json` (or typed event) input and returns `json|error`.
 
@@ -196,7 +196,7 @@ public function processDynamoDB(lambda:Context ctx,
 }
 ```
 
-### Step 2 -- build
+### Step 2: Build
 
 ```bash
 bal build
@@ -229,7 +229,7 @@ The build output lists the functions and prints the exact deploy commands to use
       --zip-file fileb://aws-ballerina-lambda-functions.zip
 ```
 
-### Step 3 -- deploy with the AWS CLI
+### Step 3: Deploy with the AWS CLI
 
 Use the commands printed by the build output, substituting your values. For example:
 
@@ -253,7 +253,7 @@ aws lambda update-function-code \
   --zip-file fileb://target/aws_lambda/aws-ballerina-lambda-functions.zip
 ```
 
-### Step 4 -- add an API Gateway trigger
+### Step 4: Add an API Gateway trigger
 
 ```bash
 aws apigatewayv2 create-api \
