@@ -18,9 +18,137 @@ WSO2 Integrator projects can be deployed as serverless functions, enabling event
 | Memory | 128 MB - 10 GB | 128 MB - 14 GB |
 | Runtime | Custom runtime (provided) | Java 21, Windows hosting |
 
+## Azure Functions
+
+### Prerequisites
+
+Create an Azure Function App with the following settings before deploying:
+
+- **Runtime stack**: Java 21
+- **Hosting OS**: Windows (Linux is not supported for Ballerina custom handlers)
+
+Install the [Azure Functions Core Tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local) (`func` CLI) for local development and deployment.
+
+### Step 1 -- write the Azure function
+
+Ballerina uses a service-based model for Azure Functions. Attach a listener to a service to define the trigger type. The resource function behaves like a standard `ballerina/http` resource and supports `http:Payload` and `http:Header` annotations.
+
+```ballerina
+import ballerinax/azure.functions as af;
+
+service / on new af:HttpListener() {
+    resource function get hello(string name) returns string {
+        return "Hello, " + name + "!";
+    }
+}
+```
+
+Other trigger types use their corresponding listeners:
+
+```ballerina
+import ballerinax/azure.functions as af;
+
+// Queue trigger
+service "myqueue" on new af:QueueListener({queueName: "myqueue"}) {
+    remote function onMessage(string message) returns error? {
+        // process queue message
+    }
+}
+
+// Timer trigger (runs every minute)
+service "timer" on new af:TimerListener({schedule: "0 */1 * * * *"}) {
+    remote function onTrigger() returns error? {
+        // scheduled work
+    }
+}
+
+// Blob trigger
+service "mycontainer/{name}" on new af:BlobListener({path: "mycontainer/{name}"}) {
+    remote function onUpdated(byte[] content) returns error? {
+        // process blob
+    }
+}
+```
+
+### Step 2 -- build
+
+```bash
+bal build
+```
+
+The compiler extension generates the function artifacts automatically:
+
+```
+target/
+  azure_functions/
+    <function-name>/
+      function.json
+    host.json
+```
+
+The build output lists the functions and prints the commands to run locally and deploy:
+
+```
+@azure.functions:Function: get-hello
+
+    Execute the command below to deploy the function locally:
+    $ func start --script-root target/azure_functions --java
+
+    Execute the command below to deploy Ballerina Azure Functions:
+    $ func azure functionapp publish <function_app_name> --script-root target/azure_functions
+```
+
+### Step 3 -- run locally
+
+```bash
+func start --script-root target/azure_functions --java
+```
+
+### Step 4 -- deploy to Azure
+
+First create the required Azure resources:
+
+```bash
+az group create --name integration-rg --location eastus
+
+az storage account create \
+  --name integrationstorage \
+  --location eastus \
+  --resource-group integration-rg \
+  --sku Standard_LRS
+
+az functionapp create \
+  --resource-group integration-rg \
+  --consumption-plan-location eastus \
+  --runtime java \
+  --runtime-version 21 \
+  --functions-version 4 \
+  --name my-integration-func \
+  --storage-account integrationstorage \
+  --os-type Windows
+```
+
+Then deploy using the Azure Functions Core Tools:
+
+```bash
+func azure functionapp publish my-integration-func \
+  --script-root target/azure_functions
+```
+
+### Azure configuration
+
+Set application settings for environment-specific configuration:
+
+```bash
+az functionapp config appsettings set \
+  --name my-integration-func \
+  --resource-group integration-rg \
+  --settings "DB_HOST=db.internal.example.com" "DB_PORT=5432"
+```
+
 ## AWS Lambda
 
-### Step 1 — write the Lambda function
+### Step 1 -- write the Lambda function
 
 Write a Ballerina function annotated with `@lambda:Function`. The function receives a `lambda:Context` and a `json` (or typed event) input and returns `json|error`.
 
@@ -68,7 +196,7 @@ public function processDynamoDB(lambda:Context ctx,
 }
 ```
 
-### Step 2 — build
+### Step 2 -- build
 
 ```bash
 bal build
@@ -101,7 +229,7 @@ The build output lists the functions and prints the exact deploy commands to use
       --zip-file fileb://aws-ballerina-lambda-functions.zip
 ```
 
-### Step 3 — deploy with the AWS CLI
+### Step 3 -- deploy with the AWS CLI
 
 Use the commands printed by the build output, substituting your values. For example:
 
@@ -125,7 +253,7 @@ aws lambda update-function-code \
   --zip-file fileb://target/aws_lambda/aws-ballerina-lambda-functions.zip
 ```
 
-### Step 4 — add an API Gateway trigger
+### Step 4 -- add an API Gateway trigger
 
 ```bash
 aws apigatewayv2 create-api \
@@ -145,134 +273,6 @@ aws lambda update-function-configuration \
 ```
 
 For secrets, reference AWS Secrets Manager from your application code rather than embedding values in environment variables.
-
-## Azure Functions
-
-### Prerequisites
-
-Create an Azure Function App with the following settings before deploying:
-
-- **Runtime stack**: Java 21
-- **Hosting OS**: Windows (Linux is not supported for Ballerina custom handlers)
-
-Install the [Azure Functions Core Tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local) (`func` CLI) for local development and deployment.
-
-### Step 1 — write the Azure function
-
-Ballerina uses a service-based model for Azure Functions. Attach a listener to a service to define the trigger type. The resource function behaves like a standard `ballerina/http` resource and supports `http:Payload` and `http:Header` annotations.
-
-```ballerina
-import ballerinax/azure.functions as af;
-
-service / on new af:HttpListener() {
-    resource function get hello(string name) returns string {
-        return "Hello, " + name + "!";
-    }
-}
-```
-
-Other trigger types use their corresponding listeners:
-
-```ballerina
-import ballerinax/azure.functions as af;
-
-// Queue trigger
-service "myqueue" on new af:QueueListener({queueName: "myqueue"}) {
-    remote function onMessage(string message) returns error? {
-        // process queue message
-    }
-}
-
-// Timer trigger (runs every minute)
-service "timer" on new af:TimerListener({schedule: "0 */1 * * * *"}) {
-    remote function onTrigger() returns error? {
-        // scheduled work
-    }
-}
-
-// Blob trigger
-service "mycontainer/{name}" on new af:BlobListener({path: "mycontainer/{name}"}) {
-    remote function onUpdated(byte[] content) returns error? {
-        // process blob
-    }
-}
-```
-
-### Step 2 — build
-
-```bash
-bal build
-```
-
-The compiler extension generates the function artifacts automatically:
-
-```
-target/
-  azure_functions/
-    <function-name>/
-      function.json
-    host.json
-```
-
-The build output lists the functions and prints the commands to run locally and deploy:
-
-```
-@azure.functions:Function: get-hello
-
-    Execute the command below to deploy the function locally:
-    $ func start --script-root target/azure_functions --java
-
-    Execute the command below to deploy Ballerina Azure Functions:
-    $ func azure functionapp publish <function_app_name> --script-root target/azure_functions
-```
-
-### Step 3 — run locally
-
-```bash
-func start --script-root target/azure_functions --java
-```
-
-### Step 4 — deploy to Azure
-
-First create the required Azure resources:
-
-```bash
-az group create --name integration-rg --location eastus
-
-az storage account create \
-  --name integrationstorage \
-  --location eastus \
-  --resource-group integration-rg \
-  --sku Standard_LRS
-
-az functionapp create \
-  --resource-group integration-rg \
-  --consumption-plan-location eastus \
-  --runtime java \
-  --runtime-version 21 \
-  --functions-version 4 \
-  --name my-integration-func \
-  --storage-account integrationstorage \
-  --os-type Windows
-```
-
-Then deploy using the Azure Functions Core Tools:
-
-```bash
-func azure functionapp publish my-integration-func \
-  --script-root target/azure_functions
-```
-
-### Azure configuration
-
-Set application settings for environment-specific configuration:
-
-```bash
-az functionapp config appsettings set \
-  --name my-integration-func \
-  --resource-group integration-rg \
-  --settings "DB_HOST=db.internal.example.com" "DB_PORT=5432"
-```
 
 ## Reducing cold start times
 
