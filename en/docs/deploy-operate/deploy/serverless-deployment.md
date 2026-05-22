@@ -86,7 +86,7 @@ target/
 
 The build output lists the functions and prints the commands to run locally and deploy:
 
-```
+```text
 @azure.functions:Function: get-hello
 
     Execute the command below to deploy the function locally:
