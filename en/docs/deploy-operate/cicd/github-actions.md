@@ -45,9 +45,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Ballerina
-        uses: ballerina-platform/setup-ballerina@v1
+        uses: ballerina-platform/setup-ballerina@v1.1.4
         with:
-          version: "2201.12.3"
+          version: "2201.13.4"
 
       - name: Build
         run: bal build
@@ -74,9 +74,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Ballerina
-        uses: ballerina-platform/setup-ballerina@v1
+        uses: ballerina-platform/setup-ballerina@v1.1.4
         with:
-          version: "2201.12.3"
+          version: "2201.13.4"
 
       - name: Build project
         run: bal build
@@ -161,9 +161,9 @@ Tests run against the compiled project. The `setup-ballerina` action ensures the
 
 ```yaml
 - name: Set up Ballerina
-  uses: ballerina-platform/setup-ballerina@v1
+  uses: ballerina-platform/setup-ballerina@v1.1.4
   with:
-    version: "2201.12.3"
+    version: "2201.13.4"
 
 - name: Run tests
   run: bal test
@@ -231,14 +231,14 @@ on:
       bal-version:
         required: false
         type: string
-        default: "2201.12.3"
+        default: "2201.13.4"
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ballerina-platform/setup-ballerina@v1
+      - uses: ballerina-platform/setup-ballerina@v1.1.4
         with:
           version: ${{ inputs.bal-version }}
       - run: bal build
@@ -252,7 +252,7 @@ jobs:
   ci:
     uses: my-org/.github/.github/workflows/ballerina-ci.yml@main
     with:
-      bal-version: "2201.12.3"
+      bal-version: "2201.13.4"
 ```
 
 ## What's next
