@@ -98,35 +98,10 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
-  deploy-staging:
-    name: Deploy to Staging
+  deploy:
+    name: Deploy
     runs-on: ubuntu-latest
     needs: docker
-    environment: staging
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
-
-      - name: Configure kubeconfig
-        run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
-
-      - name: Deploy to staging
-        run: |
-          kubectl set image deployment/wso2-integrator-app \
-            app=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-            -n staging
-          kubectl rollout status deployment/wso2-integrator-app \
-            -n staging --timeout=300s
-
-  deploy-production:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
-    needs: deploy-staging
     environment: production
     steps:
       - name: Checkout code
@@ -140,13 +115,11 @@ jobs:
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
 
-      - name: Deploy to production
+      - name: Deploy
         run: |
           kubectl set image deployment/wso2-integrator-app \
-            app=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-            -n production
-          kubectl rollout status deployment/wso2-integrator-app \
-            -n production --timeout=300s
+            app=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          kubectl rollout status deployment/wso2-integrator-app --timeout=300s
 ```
 
 ## Build step details
@@ -183,9 +156,7 @@ To display test results directly in pull request checks, add a test reporting ac
 
 ## Deploy step details
 
-The workflow uses GitHub Environments to manage deployment approvals. Configure the `production` environment under **Settings > Environments** with required reviewers to enforce manual approval before production deployments.
-
-Each environment can have its own set of secrets, allowing different `Config.toml` values per target.
+The deploy job runs after a successful Docker push and uses `kubectl` to roll out the new image. Configure the `production` environment under **Settings > Environments** to add optional approval gates before the deploy runs.
 
 ## Secrets management
 
@@ -197,15 +168,6 @@ Configure repository and environment secrets under **Settings > Secrets and vari
 | `KUBE_CONFIG` | Environment | Base64-encoded kubeconfig file |
 | `DB_PASSWORD` | Environment | Database connection password |
 | `API_KEY` | Environment | External service API key |
-
-Use environment-specific secrets to maintain different credentials per deployment target:
-
-```yaml
-deploy-staging:
-  environment: staging  # Uses staging secrets
-deploy-production:
-  environment: production  # Uses production secrets
-```
 
 ## Pull request workflow
 
