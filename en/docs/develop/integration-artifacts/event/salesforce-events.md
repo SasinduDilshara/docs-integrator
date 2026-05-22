@@ -52,7 +52,7 @@ configurable string password = ?;
 listener salesforce:Listener salesforceListener = new ({
     auth: {
         username: username,
-        password: password, // password concatenated with security token
+        password: password // password concatenated with security token
     }
 });
 
@@ -101,7 +101,7 @@ In the **Configure** panel, set **Auth** to a record expression with relevant fi
 listener salesforce:Listener salesforceListener = new ({
     auth: {
         username: username,
-        password: password,    // password concatenated with security token
+        password: password    // password concatenated with security token
     }
 });
 ```
@@ -119,14 +119,6 @@ The listener supports two authentication modes: **SOAP-based** (username and pas
 |---|---|---|---|
 | `auth` | `CredentialsConfig` | Required | Authentication credentials. Contains `username` (Salesforce username / email) and `password`. The `password` value must be the user password concatenated with the user's security token (`<password><securityToken>`, no separator). |
 | `isSandBox` | `boolean` | `false` | Set to `true` if connecting to a Salesforce sandbox environment. |
-| `replayFrom` | `int` \| `ReplayOptions` | `REPLAY_FROM_TIP` | Replay option: `REPLAY_FROM_TIP`, `REPLAY_FROM_EARLIEST`, or a specific replay ID. |
-| `connectionTimeout` | `decimal` | `30` | Connection timeout in seconds. |
-| `readTimeout` | `decimal` | `30` | Read timeout in seconds. |
-| `keepAliveInterval` | `decimal` | `120` | Keep-alive interval in seconds. |
-| `apiVersion` | `string` | `"43.0"` | Salesforce Streaming API version. |
-| `sessionTimeout` | `int` | `900` | Session timeout in seconds. |
-| `proxyConfig` | `ProxyConfig` | `()` | Optional HTTP proxy configuration. |
-
 
 ### REST-based authentication
 
@@ -134,11 +126,27 @@ The listener supports two authentication modes: **SOAP-based** (username and pas
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `baseUrl` | `string` | Required | Salesforce instance URL |
+| `baseUrl` | `string` | Required | Salesforce instance URL. |
 | `auth` | `OAuth2Config` | Required | OAuth 2.0 configuration. Pick one of `BearerTokenConfig`, `OAuth2PasswordGrantConfig`, `OAuth2RefreshTokenGrantConfig`, or `OAuth2ClientCredentialsGrantConfig` - see [OAuth 2.0 auth variants](#oauth-20-auth-variants) below. |
 | `tokenStore` | `TokenStore` | `InMemoryTokenStore` | Token store for coordinating refresh token rotation across replicas. Use a distributed implementation (e.g., Redis-backed) for multi-replica deployments. |
 
+:::note
 `tokenStore` and Refresh Token Rotation (RTR) only apply when using `OAuth2RefreshTokenGrantConfig`. The other grant types bypass the `TokenManager` entirely.
+:::
+
+### Common optional fields
+
+These fields apply to both SOAP- and REST-based listener configurations:
+
+| Field | Type | Description |
+|---|---|---|
+| `replayFrom` | `int` \| `ReplayOptions` | Replay option: `REPLAY_FROM_TIP`, `REPLAY_FROM_EARLIEST`, or a specific replay ID. |
+| `connectionTimeout` | `decimal` | Connection timeout in seconds. |
+| `readTimeout` | `decimal` | Read timeout in seconds. |
+| `keepAliveInterval` | `decimal` | Keep-alive interval in seconds. |
+| `apiVersion` | `string` | Salesforce Streaming API version. |
+| `sessionTimeout` | `int` | Session timeout in seconds. |
+| `proxyConfig` | `ProxyConfig` | Optional HTTP proxy configuration. |
 
 #### OAuth 2.0 auth variants
 
@@ -152,10 +160,6 @@ The Record Configuration panel's `auth` drop-down (and the corresponding Balleri
 | `OAuth2ClientCredentialsGrantConfig` | `tokenUrl`, `clientId`, `clientSecret` | The Connected App authenticates as itself (machine-to-machine), without a user context. |
 
 All three grant configs additionally accept these optional fields: `scopes`, `defaultTokenExpTime`, `clockSkew`, `optionalParams`, `credentialBearer`, `clientConfig`. `OAuth2PasswordGrantConfig` also accepts `clientId`, `clientSecret`, and `refreshConfig` as optional.
-
-:::note
-These are the standard `ballerina/http` OAuth 2.0 grant types. For the full optional-field reference, see the [`ballerina/http` package documentation](https://central.ballerina.io/ballerina/http/latest).
-:::
 
 ## Event handlers
 
