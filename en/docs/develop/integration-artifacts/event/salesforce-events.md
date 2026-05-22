@@ -131,7 +131,7 @@ The listener supports two authentication modes: **SOAP-based** (username and pas
 | `tokenStore` | `TokenStore` | `InMemoryTokenStore` | Token store for coordinating refresh token rotation (RTR) across replicas. The default InMemoryTokenStore handles RTR automatically for single-replica deployments. For multi-replica deployments (e.g., multiple Kubernetes pods), provide a distributed implementation (e.g., Redis-backed) to prevent token replay conflicts.|
 
 :::note
-`tokenStore` and Refresh Token Rotation (RTR) only apply when using `OAuth2RefreshTokenGrantConfig`. The other grant types bypass the `TokenManager` entirely.
+Token Store and Refresh Token Rotation(RTR) only apply when using OAuth2RefreshTokenGrantConfig. RTR must also be enabled on the Salesforce side, in your Connected App settings, enable Refresh Token Rotation under OAuth policies. The other grant types bypass the TokenManager entirely.
 :::
 
 ### Common optional fields
