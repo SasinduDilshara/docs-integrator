@@ -128,7 +128,7 @@ The listener supports two authentication modes: **SOAP-based** (username and pas
 |---|---|---|---|
 | `baseUrl` | `string` | Required | Salesforce instance URL. |
 | `auth` | `OAuth2Config` | Required | OAuth 2.0 configuration. Pick one of `BearerTokenConfig`, `OAuth2PasswordGrantConfig`, `OAuth2RefreshTokenGrantConfig`, or `OAuth2ClientCredentialsGrantConfig` - see [OAuth 2.0 auth variants](#oauth-20-auth-variants) below. |
-| `tokenStore` | `TokenStore` | `InMemoryTokenStore` | Token store for coordinating refresh token rotation across replicas. Use a distributed implementation (e.g., Redis-backed) for multi-replica deployments. |
+| `tokenStore` | `TokenStore` | `InMemoryTokenStore` | Token store for coordinating refresh token rotation (RTR) across replicas. The default InMemoryTokenStore handles RTR automatically for single-replica deployments. For multi-replica deployments (e.g., multiple Kubernetes pods), provide a distributed implementation (e.g., Redis-backed) to prevent token replay conflicts.|
 
 :::note
 `tokenStore` and Refresh Token Rotation (RTR) only apply when using `OAuth2RefreshTokenGrantConfig`. The other grant types bypass the `TokenManager` entirely.
