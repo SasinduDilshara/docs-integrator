@@ -14,7 +14,6 @@ WSO2 Integrator projects can be deployed as serverless functions, enabling event
 |---------|-----------|-----------------|
 | Trigger Types | HTTP (API Gateway), S3, SQS, DynamoDB Streams, SES | HTTP, Timer, Blob Storage, Queue, CosmosDB |
 | Max Execution | 15 minutes | 10 minutes (Consumption plan) |
-| Memory | 128 MB - 10 GB | 128 MB - 14 GB |
 | Runtime | Custom runtime (provided) | Java 21, Windows hosting |
 
 ## Azure Functions
@@ -277,7 +276,7 @@ For secrets, reference AWS Secrets Manager from your application code rather tha
 
 ### Use GraalVM native images
 
-Compile to a native binary to dramatically reduce cold start times.
+Compile to a native binary to reduce startup time.
 
 For AWS Lambda:
 
@@ -290,8 +289,6 @@ For Azure Functions:
 ```bash
 bal build --graalvm --cloud="azure_functions"
 ```
-
-Native binaries start in under 100ms compared to 2–5 seconds for JVM-based deployments.
 
 ### Provisioned concurrency (AWS)
 
