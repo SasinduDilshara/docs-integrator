@@ -98,7 +98,7 @@ See the [EDI tool](../tools/integration-tools/edi-tool.md#bal-edi-convertx12sche
 Once the schema is converted, run `codegen` exactly as in the EDIFACT walkthrough to produce typed records and parser functions:
 
 ```bash
-bal edi codegen -i schema/x12-output.json -o x12.bal
+bal edi codegen -i schema/schema.json -o x12.bal
 ```
 
 ## Generating types from an ESL schema
@@ -399,5 +399,5 @@ public function main() returns error? {
 
 ## What's next
 
-- [EDI tool reference](../tools/integration-tools/edi-tool.md) — full CLI command and flag reference for `bal edi`
-- [Type System Reference](../../reference/language/type-system.md) — define EDI record types
+- [EDI tool reference](../tools/integration-tools/edi-tool.md) — Full CLI command and flag reference for `bal edi`
+- [Type System Reference](../../reference/language/type-system.md) — Define EDI record types
