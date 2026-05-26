@@ -129,7 +129,7 @@ Carol,Engineering,110000.00,8`;
 
 ## Reading CSV from files and streams
 
-Use `csv:parseBytes()` for byte arrays or `csv:parseStream()` for streaming large CSV files without loading them entirely into memory. Both APIs accept the same record target type as `csv:parseString()`, so the column-to-field mapping behaviour from [Mapping CSV columns to records](#mapping-csv-columns-to-records) applies unchanged.
+Use `csv:parseBytes()` for byte arrays or `csv:parseStream()` for streaming large CSV files without loading them entirely into memory. Both APIs accept the same record target type as `csv:parseString()`, so the column-to-field mapping behavior from [Mapping CSV columns to records](#mapping-csv-columns-to-records) applies unchanged.
 
 <Tabs>
 <TabItem value="ui" label="Visual Designer" default>
@@ -256,22 +256,25 @@ Click the **Options** field to open the **Record Configuration** helper. Tick th
 
 ### Available options
 
+The fields below match the `ParseOptions` record in the `ballerina/data.csv` module. `ParseOptions` includes (`*Options;`) the shared `Options` record, so the table also covers `allowDataProjection`, `skipLines`, `enableConstraintValidation`, `outputWithHeaders`, and `failSafe`.
+
 | Option | Type | Description |
 |---|---|---|
-| `delimiter` | `string:Char` | Character that separates columns. Default `,`. Use `"\t"` for TSV, `"\|"` for pipe-delimited input. See [Custom delimiters and options](#custom-delimiters-and-options). |
-| `encoding` | `string` | Character encoding of the input data. Default `UTF-8`. |
-| `locale` | `string` | Locale used to parse locale-sensitive values such as numbers and dates. |
-| `textEnclosure` | `string:Char` | Character used to enclose quoted fields. Default `"`. |
-| `escapeChar` | `string:Char` | Character that escapes special characters inside enclosed text. |
-| `lineTerminator` | `string` | Sequence that ends each row (for example `"\n"` or `"\r\n"`). |
-| `nilValue` | `string` | Token treated as nil during parsing (for example `"NULL"` or `""`). |
-| `comment` | `string:Char` | Lines beginning with this character are skipped. |
-| `header` | `int?` | Row index of the header row (default `0`). Set to `null` for input with no header row. See [Headerless CSV](#headerless-csv). |
-| `customHeadersIfHeadersAbsent` | `string[]` | Header names to use when the input has no header row. |
-| `allowDataProjection` | `record` | Controls projection behavior when the target record covers only a subset of CSV columns. |
-| `skipLines` | `int[]` | Row indices (0-based) to skip during parsing, useful for banners or notes above the data. |
-| `enableConstraintValidation` | `boolean` | When `true`, parsed values are validated against any constraints declared on the record type. |
-| `failSafe` | `record` | Skips and logs invalid rows instead of aborting the parse. See [Fail-safe processing](#fail-safe-processing). |
+| `delimiter` | `string:Char` | Character that separates columns. Default `","`. For example, set to `"\t"` for TSV. See [Custom delimiters and options](#custom-delimiters-and-options) for pipe-delimited and other non-standard formats. |
+| `encoding` | `string` | Character encoding of the input data. Default `"UTF-8"`. |
+| `locale` | `string` | Locale used to parse locale-sensitive values such as numbers and dates. Default `"en_US"`. |
+| `textEnclosure` | `string:Char` | Character used to enclose quoted fields. Default `"\""`. |
+| `escapeChar` | `string:Char` | Character that escapes special characters inside enclosed text. Default `"\\"`. |
+| `lineTerminator` | `LineTerminator\|LineTerminator[]` | Row terminator, or set of terminators to accept. `LineTerminator` is an enum with members `LF` (`"\n"`) and `CRLF` (`"\r\n"`). Default `[LF, CRLF]`. |
+| `nilValue` | `NilValue?` | Token treated as nil during parsing. `NilValue` is an enum with members `NULL` (`"null"`), `NOT_APPLICABLE` (`"N/A"`), `EMPTY_STRING` (`""`), and `NIL` (`"()"`). Default `()`. |
+| `comment` | `string:Char` | Lines beginning with this character are skipped. Default `"#"`. |
+| `header` | `int:Unsigned32?` | Row index of the header row. Default `0`. Set to `()` for input with no header row. See [Headerless CSV](#headerless-csv). |
+| `customHeadersIfHeadersAbsent` | `string[]?` | Header names to use when the input has no header row. Default `()`. |
+| `allowDataProjection` | `record\|false` | Controls projection when the target record covers only a subset of CSV columns. Set to `false` to require an exact match. The record form has `nilAsOptionalField` and `absentAsNilableType` boolean fields, both defaulting to `false`. Default `{}`. |
+| `skipLines` | `int[]\|string` | Lines to skip, given as an integer array (for example, `[1, 3]`) or as a range expression string (for example, `"2-4,7"`). Default `[]`. |
+| `enableConstraintValidation` | `boolean` | When `true`, parsed values are validated against any constraints declared on the record type. Default `true`. |
+| `outputWithHeaders` | `boolean` | When the parsed result is a list (`anydata[][]`), include the header row as the first inner array. Default `false`. |
+| `failSafe` | `FailSafeOptions?` | Skips and logs invalid rows instead of aborting the parse. See [Fail-safe processing](#fail-safe-processing). |
 
 In Ballerina code, options are passed as the second argument to the parser function:
 
@@ -279,13 +282,13 @@ In Ballerina code, options are passed as the second argument to the parser funct
 T[] result = check csv:parseString(csvData, {
     delimiter: "\t",
     skipLines: [0, 1],
-    nilValue: "NULL"
+    nilValue: csv:NULL
 });
 ```
 
 ## Custom delimiters and options
 
-Configure parsing behavior for TSV (tab-separated values, a CSV-like format that uses tab characters as the column separator instead of commas), pipe-delimited, or other non-standard file formats. Column-to-field matching still follows the rule from [Mapping CSV columns to records](#mapping-csv-columns-to-records); only the [`delimiter`](#available-options) option changes.
+Configure parsing behavior for TSV (tab-separated values, a CSV-like format that uses tab characters as the column separator instead of commas), pipe-delimited, or other non-standard file formats. Set the [`delimiter`](#available-options) option to the separator character your input uses, for example `"\t"` for TSV or `"|"` for pipe-delimited. Column-to-field matching still follows the rule from [Mapping CSV columns to records](#mapping-csv-columns-to-records); only the delimiter changes.
 
 <Tabs>
 <TabItem value="ui" label="Visual Designer" default>
@@ -338,7 +341,10 @@ public function main() returns error? {
 
 At its most general, a CSV file is just a grid of strings, and the universal representation of that grid is a 2D string array (`string[][]`): one inner array per row, one string per cell. WSO2 Integrator supports this raw form directly, but the preferred Ballerina representation is `record[]`, which gives you typed fields and named columns instead of positional indexing.
 
-When a file has no header row, there are no column names to match against record fields, so parse it into `string[][]` using the [`header`](#available-options) option set to `null` and access cells by index.
+When a file has no header row, you have two options:
+
+- **Parse into `string[][]`** by setting the [`header`](#available-options) option to `()` (Ballerina's nil literal) and access cells by index. Use this when you don't have a fixed schema or the column order is unreliable.
+- **Parse into a typed `record[]`** by combining `header: ()` with [`customHeadersIfHeadersAbsent`](#available-options), which supplies the column names the parser would otherwise read from the first row. Use this when you know the column layout and want the same typed-field ergonomics as a CSV with headers.
 
 <Tabs>
 <TabItem value="ui" label="Visual Designer" default>
@@ -351,7 +357,9 @@ When a file has no header row, there are no column names to match against record
    - **T***: `string[][]`
 
    Under **Advanced Configurations** → **Options** (see [Parser options](#parser-options)), set:
-   - `header`: `null`
+   - `header`: `()`
+
+   To parse into a typed `record[]` instead, set the target type (`T`) to your record array (for example, `Employee[]`) and also set `customHeadersIfHeadersAbsent` to the list of column names in the order they appear in the file.
 
    ![Flow designer showing headerless CSV parsing into string arrays](/img/develop/transform/csv-flat-file/csv-headerless-flow.png)
 
@@ -362,12 +370,25 @@ When a file has no header row, there are no column names to match against record
 ```ballerina
 import ballerina/data.csv;
 
+type Employee record {|
+    string name;
+    string department;
+    int salary;
+|};
+
 public function main() returns error? {
     string csvData = string `Alice,Engineering,95000
 Bob,Sales,72000`;
 
+    // Option 1: parse as a raw grid of strings, accessed by index.
     string[][] rows = check csv:parseString(csvData, {
-        header: null
+        header: ()
+    });
+
+    // Option 2: supply column names so the parser can build typed records.
+    Employee[] employees = check csv:parseString(csvData, {
+        header: (),
+        customHeadersIfHeadersAbsent: ["name", "department", "salary"]
     });
 }
 ```
