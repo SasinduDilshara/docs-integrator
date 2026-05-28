@@ -127,7 +127,7 @@ Click **Save Changes** to apply updates.
 </TabItem>
 <TabItem value="code" label="Ballerina Code">
 
-The listener is declared at module level and takes a `ListenerConfig` value plus a port. `webhookSecret` is used to validate the HMAC signature on incoming GitHub webhook requests. Use `configurable` so the secret can be supplied via `Config.toml` or an environment variable without changing source code.
+The listener is declared at the module level and takes a `ListenerConfig` value plus a port. `webhookSecret` is used to validate the HMAC signature on incoming GitHub webhook requests. Use `configurable` so the secret can be supplied via `Config.toml` or an environment variable without changing source code.
 
 ```ballerina
 listener github:Listener githubListener = new (
