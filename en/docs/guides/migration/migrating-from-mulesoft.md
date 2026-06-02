@@ -1,9 +1,9 @@
 ---
-title: Coming from MuleSoft
+title: Migrating from MuleSoft
 description: Migration guide for developers moving from MuleSoft to WSO2 Integrator.
 ---
 
-# Coming from MuleSoft
+# Migrating from MuleSoft
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
