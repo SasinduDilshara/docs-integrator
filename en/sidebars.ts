@@ -2140,14 +2140,6 @@ const sidebars: SidebarsConfig = {
                 'manage/icp/user-stores/sso-configuration',
               ],
             },
-            {
-              type: 'category',
-              label: 'MI Profile',
-              items: [
-                'manage/icp/mi-profile/observability-setup-mi',
-                'manage/icp/mi-profile/connect-runtime-mi',
-              ],
-            },
           ],
         },
       ],
