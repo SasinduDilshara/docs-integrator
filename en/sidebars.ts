@@ -1905,9 +1905,7 @@ const sidebars: SidebarsConfig = {
           label: 'Self-Hosted',
           items: [
             'deploy/self-hosted/run-locally',
-            'deploy/self-hosted/docker',
-            'deploy/self-hosted/kubernetes',
-            'deploy/self-hosted/openshift',
+            'deploy/self-hosted/containerized-deployment',
             'deploy-operate/deploy/vm-based-deployment',
             'deploy-operate/deploy/serverless-deployment',
             'deploy-operate/deploy/aws-azure-gcp',
