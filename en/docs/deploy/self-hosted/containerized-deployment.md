@@ -8,7 +8,7 @@ keywords: [wso2 integrator, docker, kubernetes, openshift, containerized deploym
 
 WSO2 Integrator leverages the Ballerina Code to Cloud feature to generate containerized deployment artifacts directly from your source code. You can target Docker, Kubernetes, or Red Hat OpenShift without writing deployment descriptors by hand. The compiler derives images and manifests from your code and the optional `Cloud.toml` configuration file.
 
-## Supported Platforms
+## Supported platforms
 
 The Code to Cloud feature supports the following containerized deployment platforms:
 
@@ -46,7 +46,7 @@ When you build a Ballerina project with a cloud target, the compiler extension g
 
 **`Config.toml`** is intentionally excluded from the container image because it can contain sensitive values. For Docker, you supply it at runtime via a volume mount. For Kubernetes and OpenShift, use the `[[cloud.config.files]]` entry in `Cloud.toml` to mount it as a ConfigMap.
 
-## Docker Deployment
+## Docker deployment
 
 The Docker deployment path generates a Dockerfile and optionally builds the Docker image locally. This is the simplest containerized deployment option and serves as the foundation for Kubernetes and OpenShift deployments.
 
@@ -147,7 +147,7 @@ Verify the integration is running by calling your service endpoint:
 curl http://localhost:9090/<your-service-path>
 ```
 
-## Kubernetes Deployment
+## Kubernetes deployment
 
 The Kubernetes deployment path generates a complete set of Kubernetes manifests (Deployment, Service, ConfigMap, HorizontalPodAutoscaler) alongside the Docker image. This enables you to deploy your integration to any Kubernetes cluster with a single `kubectl apply` command.
 
@@ -321,7 +321,7 @@ curl http://<cluster-ip>:<node-port>/<your-service-path>
 Code to Cloud does not expose every Kubernetes configuration option. For changes beyond what `Cloud.toml` supports, use [Kustomize](https://kustomize.io/) to patch the generated YAML without modifying it directly. This keeps generated files untouched and makes upgrades easier when you rebuild.
 :::
 
-## Red Hat OpenShift Deployment
+## Red Hat OpenShift deployment
 
 The OpenShift deployment path generates manifests that are structurally identical to the Kubernetes output but land in `target/openshift/` and are applied using the `oc` CLI. This makes deploying to Red Hat OpenShift as straightforward as deploying to any Kubernetes cluster.
 
