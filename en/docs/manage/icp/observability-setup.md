@@ -11,8 +11,6 @@ import TabItem from '@theme/TabItem';
 
 ICP provides centralized observability for default profile runtimes. Logs and metrics are collected via Fluent Bit, stored in OpenSearch, and displayed in the ICP console. This page guides you through deploying OpenSearch, creating index templates, configuring the integration, and setting up Fluent Bit to complete the observability stack.
 
-For MI runtimes, see [MI observability setup](mi-profile/observability-setup-mi.md).
-
 :::info Prerequisites
 
 - ICP server running with OpenSearch connection configured in `deployment.toml`. Use `https://` if OpenSearch is running with TLS (including the demo setup). See [Install ICP](install-icp.md).
