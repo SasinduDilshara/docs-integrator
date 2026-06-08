@@ -74,6 +74,14 @@ service "mycontainer/{name}" on new af:BlobListener({path: "mycontainer/{name}"}
 bal build
 ```
 
+:::note
+The `--cloud` flag is optional for Azure Functions. The compiler auto-detects the Azure Functions extension and defaults to `--cloud="azure_functions"`. You can explicitly specify it to avoid the warning:
+
+```bash
+bal build --cloud="azure_functions"
+```
+:::
+
 The compiler extension generates the function artifacts automatically:
 
 ```
@@ -199,6 +207,14 @@ public function processDynamoDB(lambda:Context ctx,
 ```bash
 bal build
 ```
+
+:::note
+The `--cloud` flag is optional for AWS Lambda. The compiler auto-detects the Lambda extension. You can explicitly specify it if needed:
+
+```bash
+bal build --cloud="aws_lambda"
+```
+:::
 
 The compiler extension runs automatically and generates the deployment package:
 
@@ -329,4 +345,4 @@ az functionapp plan create \
 
 - [GraalVM Native Images](graalvm-native-images.md) — Compile to native binaries for minimal cold start
 - [Managing Configurations](managing-configurations.md) — Environment-specific configuration strategies
-- [Deploy to AWS / Azure / GCP](aws-azure-gcp.md) — Container-based cloud deployments
+- [Containerized Deployment](../../deploy/self-hosted/containerized-deployment.md) — Deploy as containers to Kubernetes or Docker
