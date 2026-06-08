@@ -223,6 +223,7 @@ const sidebars: SidebarsConfig = {
                     },
                     'develop/integration-artifacts/supporting/data-mapper/generic-type-mappings',
                     'develop/integration-artifacts/supporting/data-mapper/submappings',
+                    'develop/integration-artifacts/supporting/data-mapper/ai-mapping',
                   ],
                 },
               ],
