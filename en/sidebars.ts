@@ -1905,12 +1905,10 @@ const sidebars: SidebarsConfig = {
           type: 'category',
           label: 'Self-Hosted',
           items: [
-            'deploy/self-hosted/local-and-vm-deployment',
+            'deploy/self-hosted/vm-deployment',
             'deploy/self-hosted/containerized-deployment',
             'deploy-operate/deploy/serverless-deployment',
-            'deploy-operate/deploy/aws-azure-gcp',
             'deploy-operate/deploy/graalvm-native-images',
-            'deploy-operate/deploy/environments',
             'deploy-operate/deploy/managing-configurations',
             'deploy-operate/deploy/scaling-high-availability',
           ],
