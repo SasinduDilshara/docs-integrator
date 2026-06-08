@@ -1,72 +1,17 @@
 ---
-title: Local and VM Deployment
-description: Run WSO2 Integrator projects locally during development or deploy as standalone JAR files on virtual machines.
-keywords: [wso2 integrator, bal run, run locally, vm deployment, jar deployment, ballerina cli]
+title: VM Deployment
+description: Deploy WSO2 Integrator projects as standalone JAR files on virtual machines for self-hosted production deployments.
+keywords: [wso2 integrator, bal run, vm deployment, jar deployment, ballerina cli]
 ---
 
-# Local and VM Deployment
+# VM Deployment
 
-This page explains how to run WSO2 Integrator projects either directly on your local machine during development using `bal run`, or as standalone JAR files on virtual machines for self-hosted production deployments.
+This page explains how to run WSO2 Integrator projects as standalone JAR files on virtual machines for self-hosted production deployments.
 
 :::info Prerequisites
 - [Ballerina installed](https://ballerina.io/downloads/) on any machine where you want to run the project
 - A WSO2 Integrator project based on Ballerina
 - For production VM deployments: Java Runtime (JDK 21 or later)
-:::
-
-## Run locally during development
-
-To run the project on your local machine during development:
-
-1. Open a terminal and navigate to the project directory.
-
-    ```bash
-    cd my-integration
-    ```
-
-2. Start the project.
-
-    ```bash
-    bal run
-    ```
-
-The Ballerina CLI compiles the project and starts the integration runtime. You will see the program output in the terminal. Integrations with listeners keep running until you terminate it by **`CTRL + C`**
-
-## Run on a VM from source
-
-To run the project on a remote virtual machine, install the Ballerina distribution on the VM and run the project directly from source using `bal run`.
-
-### Step 1: Push the project to a remote Git repository
-
-From your local machine, push the project to a remote Git repository such as GitHub, GitLab, or Bitbucket.
-
-```bash
-git add .
-git commit -m "Initial integration project"
-git push origin main
-```
-
-### Step 2: Clone the repository on the VM
-
-SSH into the target VM and clone the repository.
-
-```bash
-git clone https://github.com/your-org/my-integration.git
-cd my-integration
-```
-
-### Step 3: Start the integration
-
-Run the project using the Ballerina CLI.
-
-```bash
-bal run
-```
-
-The runtime starts and the integration begins serving traffic on the configured port.
-
-:::note
-Ballerina must be installed on the VM. Download it from [ballerina.io](https://ballerina.io/downloads/). The version on the VM should match the version used during development.
 :::
 
 ## Deploy with executable JAR
@@ -159,6 +104,43 @@ java \
 ```bash
 curl http://localhost:9090/health
 ```
+
+## Run on a VM from source
+
+To run the project on a remote virtual machine, install the Ballerina distribution on the VM and run the project directly from source using `bal run`.
+
+### Step 1: Push the project to a remote Git repository
+
+From your local machine, push the project to a remote Git repository such as GitHub, GitLab, or Bitbucket.
+
+```bash
+git add .
+git commit -m "Initial integration project"
+git push origin main
+```
+
+### Step 2: Clone the repository on the VM
+
+SSH into the target VM and clone the repository.
+
+```bash
+git clone https://github.com/your-org/my-integration.git
+cd my-integration
+```
+
+### Step 3: Start the integration
+
+Run the project using the Ballerina CLI.
+
+```bash
+bal run
+```
+
+The runtime starts and the integration begins serving traffic on the configured port.
+
+:::note
+Ballerina must be installed on the VM. Download it from [ballerina.io](https://ballerina.io/downloads/). The version on the VM should match the version used during development.
+:::
 
 ## Consolidated package deployment
 
