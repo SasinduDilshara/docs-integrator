@@ -17,12 +17,10 @@ WSO2 Integrator supports multiple deployment targets. Choose the one that fits y
 - **[VM Deployment](./self-hosted/vm-deployment.md)** — Deploy your integration to a virtual machine or bare-metal server as a standalone JAR file.
 - **[Containerized Deployment](./self-hosted/containerized-deployment.md)** — Package your integration as a container and deploy it to Docker, Kubernetes, or Red Hat OpenShift.
 - **[Serverless deployment](../deploy-operate/deploy/serverless-deployment.md)** — Run integrations as serverless functions.
-- **[AWS, Azure, and GCP](../deploy-operate/deploy/aws-azure-gcp.md)** — Deploy to major cloud providers using native services.
 - **[GraalVM native images](../deploy-operate/deploy/graalvm-native-images.md)** — Compile your integration to a native binary for faster startup and lower memory usage.
 
 ## Configuration and scaling
 
-- **[Environments](../deploy-operate/deploy/environments.md)** — Manage dev, staging, and production environment configurations.
 - **[Managing configurations](../deploy-operate/deploy/managing-configurations.md)** — Externalize and manage runtime configuration values.
 - **[Scaling and high availability](../deploy-operate/deploy/scaling-high-availability.md)** — Design your deployment for resilience and scale.
 - **[Capacity planning](../deploy-operate/capacity-planning/overview.md)** — Estimate resource requirements and plan deployment sizing.
