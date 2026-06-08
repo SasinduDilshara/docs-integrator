@@ -16,8 +16,12 @@ Ballerina resolves configuration values from multiple sources, with the followin
 |----------|--------|---------|
 | 1 | Environment variables | `BAL_CONFIG_VAR_PORT=9090` |
 | 2 | Command-line arguments | `-Cport=9090` |
-| 3 | `Config.toml` file(s) or `BAL_CONFIG_DATA` | `port = 9090` |
-| 4 | Default values in code | `configurable int port = 8080;` |
+| 3 | `BAL_CONFIG_FILES` | `BAL_CONFIG_FILES=prod.toml` |
+| 4 | `BAL_CONFIG_DATA` | `BAL_CONFIG_DATA='port=9090'` |
+| 5 | `Config.toml` (default file) | `port = 9090` |
+| 6 | Default values in code | `configurable int port = 8080;` |
+
+When both `BAL_CONFIG_FILES` and `BAL_CONFIG_DATA` are set, `BAL_CONFIG_FILES` takes precedence. The default `Config.toml` in the current directory is only used when neither `BAL_CONFIG_FILES` nor `BAL_CONFIG_DATA` is specified.
 
 ## Defining configurable values
 
@@ -249,31 +253,39 @@ For structured configuration using TOML sections with record types, use `BAL_CON
 
 ### Configuration precedence in practice
 
-Example showing all three configuration methods:
+Example demonstrating the complete precedence order:
 
 ```ballerina
-configurable int port = 8080;  // Default
+configurable int port = 8080;  // Priority 6: Default value
 ```
 
 ```toml
-# Config.toml
+# Config.toml (Priority 5: Default file)
 port = 9090
 ```
 
 ```bash
-# Environment variable (highest priority)
-export BAL_CONFIG_VAR_PORT=7777
+# Priority 4: BAL_CONFIG_DATA
+export BAL_CONFIG_DATA='port=7777'
 
-# Command-line (medium priority)
-java -jar app.jar -Cport=6666
+# Priority 3: BAL_CONFIG_FILES (overrides BAL_CONFIG_DATA)
+export BAL_CONFIG_FILES=custom.toml  # contains port=6666
+
+# Priority 2: Command-line (overrides BAL_CONFIG_FILES)
+java -jar app.jar -Cport=5555
+
+# Priority 1: Environment variable (HIGHEST - overrides everything)
+export BAL_CONFIG_VAR_PORT=4444
 ```
 
-**Result:** `port = 7777` (environment variable wins)
+**Result:** `port = 4444` (environment variable wins)
 
-If `BAL_CONFIG_VAR_PORT` is not set:
-- With `-Cport=6666`: Result is `6666`
-- Without command-line arg: Result is `9090` (from Config.toml)
-- Without Config.toml: Result is `8080` (default)
+**Precedence cascade:**
+- If `BAL_CONFIG_VAR_PORT` not set → uses command-line value `5555`
+- If no command-line → uses `BAL_CONFIG_FILES` value `6666`
+- If no `BAL_CONFIG_FILES` → uses `BAL_CONFIG_DATA` value `7777`
+- If no `BAL_CONFIG_DATA` → uses `Config.toml` value `9090`
+- If no `Config.toml` → uses default value `8080`
 
 ## Kubernetes ConfigMaps and secrets
 
