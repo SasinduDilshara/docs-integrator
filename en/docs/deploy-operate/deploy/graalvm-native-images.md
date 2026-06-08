@@ -8,7 +8,7 @@ description: Compile Ballerina integrations to GraalVM native binaries for insta
 
 GraalVM native image compilation transforms your Ballerina integration into a platform-specific binary that starts in milliseconds and uses significantly less memory than JVM-based deployments. This is ideal for serverless, CLI tools, and resource-constrained environments.
 
-## Benefits
+## JVM vs Native Image
 
 | Metric | JVM (JAR) | GraalVM Native |
 |--------|-----------|----------------|
@@ -22,21 +22,54 @@ GraalVM native image compilation transforms your Ballerina integration into a pl
 
 | Requirement | Details |
 |-------------|---------|
-| GraalVM JDK | GraalVM for JDK 17 or later (Community or Enterprise) |
+| GraalVM JDK | GraalVM for JDK 21 (Community or Enterprise Edition) |
 | Native Image | `gu install native-image` (included in newer distributions) |
 | OS Tools | `gcc`, `zlib` headers (Linux), Xcode Command Line Tools (macOS) |
 | Memory | 8 GB+ RAM recommended for compilation |
+| Docker | 8 GB+ memory allocated to Docker (for container builds) |
 
 ### Install GraalVM
 
 ```bash
 # Using SDKMAN (recommended)
-sdk install java 17.0.9-graal
+sdk install java 21.0.2-graalce
 
 # Verify installation
 java -version
 native-image --version
 ```
+
+Set the `GRAALVM_HOME` environment variable:
+
+**Linux/macOS:**
+```bash
+export GRAALVM_HOME=$HOME/.sdkman/candidates/java/current
+```
+
+**Windows:**
+```cmd
+set GRAALVM_HOME=C:\path\to\graalvm
+```
+
+If using SDKMAN, you can alternatively use `JAVA_HOME` instead of `GRAALVM_HOME`.
+
+### Platform-specific requirements
+
+**Windows:**
+- Install Visual Studio with Microsoft Visual C++ (MSVC)
+- Initialize the **x64 Native Tools Command Prompt** before running `bal build --graalvm`
+
+For more details, see [Prerequisites for Native Image on Windows](https://www.graalvm.org/latest/getting-started/windows/#prerequisites-for-native-image-on-windows).
+
+**macOS (Apple Silicon):**
+- GraalVM native-image support for Apple M1/M2 (darwin-aarch64) is experimental
+- Most features work, but some edge cases may have compatibility issues
+
+For more details, see [GraalVM on macOS](https://www.graalvm.org/latest/getting-started/macos/).
+
+**Linux:**
+
+For distribution-specific requirements, see [GraalVM on Linux](https://www.graalvm.org/latest/getting-started/linux/).
 
 ## Building a native image
 
@@ -59,6 +92,18 @@ target/
 ```bash
 ./target/bin/my_integration
 ```
+
+### Test native compatibility
+
+Test your integration with GraalVM to verify runtime compatibility of dependencies:
+
+```bash
+bal test --graalvm
+```
+
+:::note
+Code coverage and runtime debugging features are not supported with GraalVM native image testing.
+:::
 
 ### Build with Docker isolation
 
