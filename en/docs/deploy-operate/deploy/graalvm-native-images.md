@@ -8,7 +8,7 @@ description: Compile Ballerina integrations to GraalVM native binaries for insta
 
 GraalVM native image compilation transforms your Ballerina integration into a platform-specific binary that starts in milliseconds and uses significantly less memory than JVM-based deployments. This is ideal for serverless, CLI tools, and resource-constrained environments.
 
-## JVM vs Native Image
+## JVM vs native image
 
 | Metric | JVM (JAR) | GraalVM Native |
 |--------|-----------|----------------|
