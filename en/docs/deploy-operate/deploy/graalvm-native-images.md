@@ -160,64 +160,6 @@ Set additional options in `Ballerina.toml`:
 graalvmBuildOptions = "--no-fallback --initialize-at-build-time -march=native"
 ```
 
-## Deploying native images
-
-### Standalone binary on VM
-
-Copy the binary directly -- no JVM installation needed:
-
-```bash
-scp target/bin/my_integration user@production-vm:/opt/integrations/
-ssh user@production-vm "chmod +x /opt/integrations/my_integration"
-```
-
-Create a systemd service:
-
-```ini
-[Unit]
-Description=WSO2 Integration (Native)
-After=network.target
-
-[Service]
-Type=simple
-User=ballerina
-ExecStart=/opt/integrations/my_integration
-Restart=on-failure
-RestartSec=5
-Environment=BAL_CONFIG_FILES=/opt/integrations/Config.toml
-
-[Install]
-WantedBy=multi-user.target
-```
-
-### Minimal Docker image
-
-Use a `distroless` or `scratch` base image for the smallest possible container:
-
-```dockerfile
-FROM gcr.io/distroless/base-debian12
-COPY target/bin/my_integration /app/my_integration
-COPY Config.toml /app/Config.toml
-WORKDIR /app
-EXPOSE 9090
-ENTRYPOINT ["./my_integration"]
-```
-
-Build and run:
-
-```bash
-docker build -t my-integration:native .
-docker run -p 9090:9090 my-integration:native
-```
-
-### AWS lambda with native image
-
-```bash
-bal build --graalvm --cloud=aws_lambda
-```
-
-Deploy the generated ZIP -- cold start drops from seconds to under 100ms.
-
 ## Troubleshooting
 
 | Issue | Solution |
