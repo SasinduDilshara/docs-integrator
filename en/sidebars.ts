@@ -1822,6 +1822,7 @@ const sidebars: SidebarsConfig = {
             'genai/develop/components/vector-stores',
             'genai/develop/components/knowledge-bases',
             'genai/develop/components/chunkers',
+            'genai/develop/components/data-loaders',
           ],
         },
         // Tutorials
